@@ -43,13 +43,18 @@ def main():
         print("请确保数据目录包含必要的输入文件")
         return 1
     
-    # 工作流选项
-    print("请选择工作流模式:")
-    print("1. 完整新架构工作流（推荐）- 从原始数据集开始")
-    print("2. 自定义步骤演示 - 逐步展示各处理阶段")
-    print("3. 测试工作流 - 使用小样本数据")
-    
-    choice = input("请输入选择 (1-3): ").strip()
+    choice = None
+    if len(sys.argv) > 1:
+        choice = sys.argv[1]
+        print(f"✅ 已通过命令行参数选择模式: {choice}")
+    else:
+        # 工作流选项
+        print("请选择工作流模式:")
+        print("1. 完整新架构工作流（推荐）- 从原始数据集开始")
+        print("2. 自定义步骤演示 - 逐步展示各处理阶段")
+        print("3. 测试工作流 - 使用小样本数据")
+        print("\n💡 您也可以通过命令行参数指定模式, 例如: python sql_cleaning_demo.py 1")
+        choice = input("请输入选择 (1-3): ").strip()
     
     try:
         if choice == "1":
@@ -59,7 +64,7 @@ def main():
         elif choice == "3":
             run_test_workflow(data_dir)
         else:
-            print("❌ 无效选择，使用默认完整工作流")
+            print(f"❌ 无效选择: '{choice}'。将运行默认的完整工作流。")
             run_complete_new_workflow(data_dir)
         
         print("\n✅ 工作流演示完成!")

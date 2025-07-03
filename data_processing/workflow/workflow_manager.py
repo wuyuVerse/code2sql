@@ -143,6 +143,8 @@ class WorkflowManager:
             'invalid_sql_removed': cleaning_result['invalid_sql_removed'],
             'valid_sql_retained': cleaning_result['valid_sql_retained'],
             'param_dependent_sql_retained': cleaning_result['param_dependent_sql_retained'],
+            'empty_sql_lists_found': cleaning_result.get('empty_sql_lists_found', 0),
+            'lists_emptied_after_cleaning': cleaning_result.get('lists_emptied_after_cleaning', 0),
             'output_directory': cleaning_result['output_directory']
         }
         
@@ -448,6 +450,10 @@ class WorkflowManager:
                 print(f"     🗑️ 移除无效SQL: {step['invalid_sql_removed']:,}")
                 print(f"     ✏️ 修改记录: {step['records_modified']:,}")
                 print(f"     ✅ 保留有效SQL: {step['valid_sql_retained']:,}")
+                if 'empty_sql_lists_found' in step:
+                    print(f"     📋 原始空列表: {step['empty_sql_lists_found']:,}")
+                if 'lists_emptied_after_cleaning' in step:
+                    print(f"     🧹 清洗后空列表: {step['lists_emptied_after_cleaning']:,}")
                 
             elif step['step_type'] == 'keyword_extraction':
                 print(f"     📊 输入记录: {step['input_records']:,}")

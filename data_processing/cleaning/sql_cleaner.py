@@ -53,6 +53,16 @@ class SQLCleaner:
                                  for pattern in self.sql_patterns]
         
         # 清洗统计
+        self.cleaning_stats = {}
+        self.reset_stats()
+        
+        # 清洗日志
+        self.cleaning_log = []
+        
+        logger.info("SQL清洗器初始化完成")
+    
+    def reset_stats(self):
+        """重置统计信息"""
         self.cleaning_stats = {
             'total_records_processed': 0,
             'total_sql_items_processed': 0,
@@ -60,13 +70,10 @@ class SQLCleaner:
             'invalid_sql_removed': 0,
             'param_dependent_sql_retained': 0,
             'records_modified': 0,
-            'records_unchanged': 0
+            'records_unchanged': 0,
+            'empty_sql_lists_found': 0,
+            'lists_emptied_after_cleaning': 0
         }
-        
-        # 清洗日志
-        self.cleaning_log = []
-        
-        logger.info("SQL清洗器初始化完成")
     
     def is_valid_sql(self, sql_item: Union[str, Dict[str, Any]]) -> bool:
         """
@@ -127,7 +134,7 @@ class SQLCleaner:
         
         return False
     
-    def clean_sql_statement_list(self, sql_statement_list: List[Union[str, Dict[str, Any]]]) -> Tuple[List[Union[str, Dict[str, Any]]], List[str]]:
+    def clean_sql_statement_list(self, sql_statement_list: List[Union[str, Dict[str, Any]]]) -> Tuple[List[Union[str, Dict[str, Any]]], List[Dict[str, Any]]]:
         """
         清洗SQL语句列表
         
@@ -179,22 +186,50 @@ class SQLCleaner:
         
         # 清洗sql_statement_list
         if 'sql_statement_list' in record:
-            cleaned_sql_list, removed_items = self.clean_sql_statement_list(record['sql_statement_list'])
-            cleaned_record['sql_statement_list'] = cleaned_sql_list
-            
-            log_entry['cleaned_sql_count'] = len(cleaned_sql_list)
-            log_entry['removed_sql_count'] = len(removed_items)
-            
-            if removed_items:
+            original_sql_list = record['sql_statement_list']
+            is_originally_empty = isinstance(original_sql_list, list) and not original_sql_list
+
+            if is_originally_empty:
+                self.cleaning_stats['empty_sql_lists_found'] += 1
+                cleaned_record['sql_statement_list'] = "<NO SQL GENERATE>"
                 log_entry['modifications'].append({
                     'field': 'sql_statement_list',
-                    'action': 'removed_invalid_sql',
-                    'removed_items': removed_items
+                    'action': 'set_to_no_sql_generate',
+                    'reason': 'Original list was empty'
                 })
                 self.cleaning_stats['records_modified'] += 1
             else:
-                self.cleaning_stats['records_unchanged'] += 1
-        
+                cleaned_sql_list, removed_items = self.clean_sql_statement_list(original_sql_list)
+                
+                if not cleaned_sql_list and removed_items:
+                    # 列表在清洗后变为空
+                    self.cleaning_stats['lists_emptied_after_cleaning'] += 1
+                    cleaned_record['sql_statement_list'] = "<NO SQL GENERATE>"
+                    log_entry['modifications'].append({
+                        'field': 'sql_statement_list',
+                        'action': 'set_to_no_sql_generate',
+                        'reason': 'List became empty after cleaning'
+                    })
+                else:
+                    cleaned_record['sql_statement_list'] = cleaned_sql_list
+
+                log_entry['cleaned_sql_count'] = len(cleaned_sql_list) if isinstance(cleaned_sql_list, list) else 0
+                log_entry['removed_sql_count'] = len(removed_items)
+
+                if removed_items:
+                    log_entry['modifications'].append({
+                        'field': 'sql_statement_list',
+                        'action': 'removed_invalid_sql',
+                        'removed_items': removed_items
+                    })
+                
+                if removed_items or is_originally_empty:
+                    self.cleaning_stats['records_modified'] += 1
+                else:
+                    self.cleaning_stats['records_unchanged'] += 1
+        else:
+             self.cleaning_stats['records_unchanged'] += 1
+
         return cleaned_record, log_entry
     
     def clean_dataset(self, data: List[Dict[str, Any]], step_name: str = "sql_cleaning") -> Dict[str, Any]:
@@ -211,15 +246,7 @@ class SQLCleaner:
         logger.info(f"开始SQL清洗，数据集大小: {len(data)} 条记录")
         
         # 重置统计信息
-        self.cleaning_stats = {
-            'total_records_processed': 0,
-            'total_sql_items_processed': 0,
-            'valid_sql_retained': 0,
-            'invalid_sql_removed': 0,
-            'param_dependent_sql_retained': 0,
-            'records_modified': 0,
-            'records_unchanged': 0
-        }
+        self.reset_stats()
         self.cleaning_log = []
         
         cleaned_data = []
