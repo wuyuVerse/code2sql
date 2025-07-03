@@ -134,6 +134,14 @@ class SQLCleaner:
         
         return False
     
+    def contains_chinese(self, text: str) -> bool:
+        """
+        判断字符串中是否包含中文字符
+        """
+        if not isinstance(text, str):
+            return False
+        return re.search(r'[\u4e00-\u9fff]', text) is not None
+    
     def clean_sql_statement_list(self, sql_statement_list: List[Union[str, Dict[str, Any]]]) -> Tuple[List[Union[str, Dict[str, Any]]], List[Dict[str, Any]]]:
         """
         清洗SQL语句列表
@@ -149,6 +157,16 @@ class SQLCleaner:
         
         for i, sql_item in enumerate(sql_statement_list):
             self.cleaning_stats['total_sql_items_processed'] += 1
+            
+            # 新增：去除含中文的项
+            if isinstance(sql_item, str) and self.contains_chinese(sql_item):
+                removed_items.append({
+                    'position': i,
+                    'content': str(sql_item)[:200] + '...' if len(str(sql_item)) > 200 else str(sql_item),
+                    'reason': 'Contains Chinese characters'
+                })
+                self.cleaning_stats['invalid_sql_removed'] += 1
+                continue
             
             if self.is_valid_sql(sql_item):
                 cleaned_list.append(sql_item)
