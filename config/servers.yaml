@@ -1,0 +1,26 @@
+# LLM服务器配置文件
+servers:
+  v3:
+    host: "43.143.249.90"
+    port: 8081
+    model_name: "v3"
+    timeout: 45
+    max_retries: 3
+    api_key_env: "V3_API_KEY"  # 环境变量名
+    default_api_key: "your-api-key-here"
+    
+  r1:
+    host: "111.229.79.211"
+    port: 8081
+    model_name: "default"
+    timeout: 45
+    max_retries: 3
+    api_key_env: "R1_API_KEY"  # 环境变量名
+    default_api_key: "your-api-key-here"
+
+# 全局默认配置
+defaults:
+  timeout: 45
+  max_retries: 3
+  temperature: 0.0
+  max_tokens: 2048 

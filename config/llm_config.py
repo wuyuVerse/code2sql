@@ -1,11 +1,9 @@
-"""LLM配置文件"""
-from typing import Dict, Optional
-from pydantic import BaseModel
+"""LLM配置加载器 - 从YAML文件加载配置"""
 import os
-import asyncio
-import aiohttp
-import requests
-from openai import OpenAI
+import yaml
+from typing import Dict, Optional, Any
+from pathlib import Path
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,9 +13,10 @@ class ServerConfig(BaseModel):
     """服务器配置"""
     host: str
     port: int
+    model_name: str
+    timeout: int = 45
+    max_retries: int = 3
     api_key: Optional[str] = None
-    model_name: str = "default"
-    base_url: Optional[str] = None
     
     @property
     def full_url(self) -> str:
@@ -31,95 +30,110 @@ class ServerConfig(BaseModel):
 
 
 class LLMConfig:
-    """LLM配置管理"""
+    """LLM配置管理器 - 从YAML文件加载配置"""
     
-    # 预定义的服务器配置
-    SERVERS = {
-        "v3": ServerConfig(
-            host="43.143.249.90",  # 更新为正确的V3地址
-            port=8081,
-            model_name="v3",
-            api_key=os.getenv("V3_API_KEY", "your-api-key-here")
-        ),
-        "r1": ServerConfig(
-            host="111.229.79.211", 
-            port=8081,
-            model_name="default",
-            api_key=os.getenv("R1_API_KEY", "your-api-key-here")
-        )
-    }
+    def __init__(self, config_file: str = "config/servers.yaml"):
+        """初始化配置管理器
+        
+        Args:
+            config_file: 配置文件路径
+        """
+        self.config_file = Path(config_file)
+        self._config_data = None
+        self._servers = None
+        self.load_config()
     
-    @classmethod
-    def get_server_config(cls, server_name: str) -> ServerConfig:
-        """获取指定服务器的配置"""
-        if server_name not in cls.SERVERS:
-            raise ValueError(f"未知的服务器名称: {server_name}")
-        return cls.SERVERS[server_name]
+    def load_config(self) -> None:
+        """加载YAML配置文件"""
+        try:
+            with open(self.config_file, 'r', encoding='utf-8') as f:
+                self._config_data = yaml.safe_load(f)
+            self._load_servers()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"配置文件未找到: {self.config_file}")
+        except yaml.YAMLError as e:
+            raise ValueError(f"YAML配置文件格式错误: {e}")
     
-    @classmethod
-    def list_servers(cls) -> list[str]:
+    def _load_servers(self) -> None:
+        """从配置数据加载服务器配置"""
+        self._servers = {}
+        servers_config = self._config_data.get('servers', {})
+        defaults = self._config_data.get('defaults', {})
+        
+        for server_name, server_data in servers_config.items():
+            # 合并默认配置和服务器特定配置
+            config = {**defaults, **server_data}
+            
+            # 处理API密钥
+            api_key_env = config.get('api_key_env')
+            api_key = None
+            if api_key_env:
+                api_key = os.getenv(api_key_env, config.get('default_api_key'))
+            
+            # 创建服务器配置对象
+            self._servers[server_name] = ServerConfig(
+                host=config['host'],
+                port=config['port'],
+                model_name=config['model_name'],
+                timeout=config.get('timeout', defaults.get('timeout', 45)),
+                max_retries=config.get('max_retries', defaults.get('max_retries', 3)),
+                api_key=api_key
+            )
+    
+    def get_server_config(self, server_name: str) -> ServerConfig:
+        """获取指定服务器的配置
+        
+        Args:
+            server_name: 服务器名称
+            
+        Returns:
+            服务器配置对象
+        """
+        if server_name not in self._servers:
+            available = list(self._servers.keys())
+            raise ValueError(f"未知的服务器名称: {server_name}，可用服务器: {available}")
+        return self._servers[server_name]
+    
+    def list_servers(self) -> list[str]:
         """列出所有可用的服务器"""
-        return list(cls.SERVERS.keys())
+        return list(self._servers.keys())
     
-    @classmethod
-    def get_openai_client_config(cls, server_name: str) -> Dict[str, str]:
-        """获取OpenAI客户端配置"""
-        config = cls.get_server_config(server_name)
+    def get_openai_client_config(self, server_name: str) -> Dict[str, str]:
+        """获取OpenAI客户端配置
+        
+        Args:
+            server_name: 服务器名称
+            
+        Returns:
+            OpenAI客户端配置字典
+        """
+        config = self.get_server_config(server_name)
         return {
             "api_key": config.api_key or "dummy-key",
             "base_url": f"{config.full_url}/v1"
         }
     
-    @classmethod
-    def call_api_sync(cls, server_name: str, prompt: str, max_tokens: int = 2048) -> str:
-        """同步调用API"""
-        config = cls.get_server_config(server_name)
-        headers = {"Content-Type": "application/json"}
-        
-        data = {
-            "model": config.model_name,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.0,
-            "max_tokens": max_tokens,
-        }
-        
-        try:
-            response = requests.post(
-                config.chat_completions_url,
-                headers=headers,
-                json=data,
-                timeout=45
-            )
-            response.raise_for_status()
-            result = response.json()
-            return result['choices'][0]['message']['content']
-        except Exception as e:
-            print(f"❌ {server_name.upper()} API同步调用失败: {e}")
-            return ""
+    def get_defaults(self) -> Dict[str, Any]:
+        """获取默认配置"""
+        return self._config_data.get('defaults', {})
     
-    @classmethod
-    async def call_api_async(cls, session: aiohttp.ClientSession, server_name: str, prompt: str, max_tokens: int = 2048) -> str:
-        """异步调用API"""
-        config = cls.get_server_config(server_name)
-        headers = {"Content-Type": "application/json"}
-        
-        data = {
-            "model": config.model_name,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.0,
-            "max_tokens": max_tokens,
-        }
-        
-        try:
-            async with session.post(
-                config.chat_completions_url,
-                headers=headers,
-                json=data,
-                timeout=aiohttp.ClientTimeout(total=45)
-            ) as response:
-                response.raise_for_status()
-                result = await response.json()
-                return result['choices'][0]['message']['content']
-        except Exception as e:
-            print(f"❌ {server_name.upper()} API异步调用失败: {e}")
-            return "" 
+    def reload_config(self) -> None:
+        """重新加载配置文件"""
+        self.load_config()
+
+
+# 全局配置实例
+_global_config = None
+
+def get_llm_config() -> LLMConfig:
+    """获取全局LLM配置实例（单例模式）"""
+    global _global_config
+    if _global_config is None:
+        _global_config = LLMConfig()
+    return _global_config
+
+def reload_llm_config() -> LLMConfig:
+    """重新加载全局LLM配置"""
+    global _global_config
+    _global_config = None
+    return get_llm_config() 
