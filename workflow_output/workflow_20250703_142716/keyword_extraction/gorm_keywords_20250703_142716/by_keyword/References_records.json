@@ -1,0 +1,1522 @@
+[
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/KAMP__camp-selfhealing/pkg/recorder/db.go:52:103:Update",
+    "orm_code": "func (d *DBRecorder) Update(ctx context.Context, pod *corev1.Pod, reasons []apis.FailureReason) error {\n\tuid := ctx.Value(\"uid\").(string)\n\n\texistReasons := []*DBFailureReason{}\n\terr := d.db.Model(&DBFailureReason{}).Where(\"f_cluster = ? and f_namespace = ? and f_pod = ? and f_status != ?\",\n\t\td.cluster, pod.Namespace, pod.Name, StatusFinished).Find(&existReasons).Error\n\tif err != nil {\n\t\tklog.ErrorS(err, \"get db record of pod failed\", \"uid\", uid)\n\t\treturn err\n\t}\n\tfor _, reason := range reasons {\n\t\tisExist := false\n\t\tfor _, er := range existReasons {\n\t\t\tif er.Reason == reason.Reason {\n\t\t\t\tisExist = true\n\t\t\t}\n\t\t}\n\n\t\tvar owner string\n\t\tif len(pod.OwnerReferences) > 0 {\n\t\t\towner = pod.OwnerReferences[0].Name\n\t\t}\n\n\t\trow := DBFailureReason{\n\t\t\tCluster:   d.cluster,\n\t\t\tNamespace: pod.Namespace,\n\t\t\tWorkload:  owner,\n\t\t\tPod:       pod.Name,\n\t\t\tStatus:    StatusInit,\n\t\t\tReason:    reason.Reason,\n\t\t\tMessage:   reason.Message,\n\t\t}\n\n\t\tif isExist {\n\t\t\tif err := d.db.Model(&row).Where(\"f_cluster = ? and f_namespace = ? and f_pod = ? and f_reason = ?\",\n\t\t\t\trow.Cluster, row.Namespace, row.Pod, row.Reason).Updates(map[string]interface{}{\"f_message\": row.Message, \"f_status\": row.Status}).Error; err != nil {\n\t\t\t\tklog.ErrorS(err, \"update failure reason in db failed\", \"uid\", uid)\n\t\t\t\treturn err\n\t\t\t}\n\t\t} else {\n\t\t\tif err := d.db.Create(&row).Error; err != nil {\n\t\t\t\tklog.ErrorS(err, \"create failure reason in db failed\", \"uid\", uid)\n\t\t\t\treturn err\n\t\t\t}\n\t\t}\n\t}\n\terr = d.purgeNotUsedRecord(ctx, reasons, existReasons)\n\tif err != nil {\n\t\tklog.ErrorS(err, \"[urge not used record reason failed\", \"uid\", uid)\n\t}\n\treturn nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      "SELECT * FROM t_failure_reason WHERE f_cluster = ? AND f_namespace = ? AND f_pod = ? AND f_status != ?;",
+      "UPDATE t_failure_reason SET f_message = ?, f_status = ? WHERE f_cluster = ? AND f_namespace = ? AND f_pod = ? AND f_reason = ?;",
+      "INSERT INTO t_failure_reason (f_cluster, f_namespace, f_workload, f_pod, f_status, f_reason, f_message) VALUES (?, ?, ?, ?, ?, ?, ?);"
+    ],
+    "sql_types": [
+      "SELECT",
+      "UPDATE",
+      "INSERT"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/KAMP__camp-selfhealing/pkg/recorder/type.go",
+        "code_start_line": 6,
+        "code_end_line": 17,
+        "code_key": "DBFailureReason",
+        "code_value": "type DBFailureReason struct {\n\tID        int64     `gorm:\"column:f_id;primary_key;AUTO_INCREMENT\" json:\"id\"`\n\tCluster   string    `gorm:\"column:f_cluster;NOT NULL\" json:\"cluster\"`                               // 集群\n\tNamespace string    `gorm:\"column:f_namespace;NOT NULL\" json:\"namespace\"`                           // 命名空间\n\tWorkload  string    `gorm:\"column:f_workload;NOT NULL\" json:\"workload\"`                             // 服务名\n\tPod       string    `gorm:\"column:f_pod;NOT NULL\" json:\"pod\"`                                       // pod名\n\tStatus    string    `gorm:\"column:f_status;NOT NULL\" json:\"status\"`                                 // 当前状态\n\tReason    string    `gorm:\"column:f_reason;NOT NULL\" json:\"reason\"`                                 // 故障原因\n\tMessage   string    `gorm:\"column:f_message\" json:\"message\"`                                        // 故障详情\n\tUpdateAt  time.Time `gorm:\"column:f_update_at;default:CURRENT_TIMESTAMP;NOT NULL\" json:\"update_at\"` // 更新时间\n\tCreateAt  time.Time `gorm:\"column:f_create_at;default:CURRENT_TIMESTAMP;NOT NULL\" json:\"create_at\"` // 创建时间\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "666d73f664bb02997ee67a9e22796be26fd12bcf"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/KAMP__camp-selfhealing/pkg/recorder/type.go",
+        "code_start_line": 19,
+        "code_end_line": 21,
+        "code_key": "TableName",
+        "code_value": "func (d *DBFailureReason) TableName() string {\n\treturn \"t_failure_reason\"\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "666d73f664bb02997ee67a9e22796be26fd12bcf"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/KAMP__camp-selfhealing/pkg/apis/types.go",
+        "code_start_line": 7,
+        "code_end_line": 11,
+        "code_key": "FailureReason",
+        "code_value": "type FailureReason struct {\n\tObject  runtime.Object `json:\"-\"`\n\tReason  string         `json:\"reason\"`\n\tMessage string         `json:\"message\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "666d73f664bb02997ee67a9e22796be26fd12bcf"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/KAMP__camp-selfhealing.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/KAMP__camp-selfhealing/pkg/recorder/db.go:52:103:Update",
+    "orm_code": "func (d *DBRecorder) Update(ctx context.Context, pod *corev1.Pod, reasons []apis.FailureReason) error {\n\tuid := ctx.Value(\"uid\").(string)\n\n\texistReasons := []*DBFailureReason{}\n\terr := d.db.Model(&DBFailureReason{}).Where(\"f_cluster = ? and f_namespace = ? and f_pod = ? and f_status != ?\",\n\t\td.cluster, pod.Namespace, pod.Name, StatusFinished).Find(&existReasons).Error\n\tif err != nil {\n\t\tklog.ErrorS(err, \"get db record of pod failed\", \"uid\", uid)\n\t\treturn err\n\t}\n\tfor _, reason := range reasons {\n\t\tisExist := false\n\t\tfor _, er := range existReasons {\n\t\t\tif er.Reason == reason.Reason {\n\t\t\t\tisExist = true\n\t\t\t}\n\t\t}\n\n\t\tvar owner string\n\t\tif len(pod.OwnerReferences) > 0 {\n\t\t\towner = pod.OwnerReferences[0].Name\n\t\t}\n\n\t\trow := DBFailureReason{\n\t\t\tCluster:   d.cluster,\n\t\t\tNamespace: pod.Namespace,\n\t\t\tWorkload:  owner,\n\t\t\tPod:       pod.Name,\n\t\t\tStatus:    StatusInit,\n\t\t\tReason:    reason.Reason,\n\t\t\tMessage:   reason.Message,\n\t\t}\n\n\t\tif isExist {\n\t\t\tif err := d.db.Model(&row).Where(\"f_cluster = ? and f_namespace = ? and f_pod = ? and f_reason = ?\",\n\t\t\t\trow.Cluster, row.Namespace, row.Pod, row.Reason).Updates(map[string]interface{}{\"f_message\": row.Message, \"f_status\": row.Status}).Error; err != nil {\n\t\t\t\tklog.ErrorS(err, \"update failure reason in db failed\", \"uid\", uid)\n\t\t\t\treturn err\n\t\t\t}\n\t\t} else {\n\t\t\tif err := d.db.Create(&row).Error; err != nil {\n\t\t\t\tklog.ErrorS(err, \"create failure reason in db failed\", \"uid\", uid)\n\t\t\t\treturn err\n\t\t\t}\n\t\t}\n\t}\n\terr = d.purgeNotUsedRecord(ctx, reasons, existReasons)\n\tif err != nil {\n\t\tklog.ErrorS(err, \"[urge not used record reason failed\", \"uid\", uid)\n\t}\n\treturn nil\n}",
+    "caller": "func (f *FailureDiscovery) handlePendingPodWorker() {\n\tklog.V(4).Infof(\"start handling pending pod\")\n\tpods, err := f.podLister.List(labels.Everything())\n\tif err != nil {\n\t\tklog.Errorf(\"list pods failed: %v\", err)\n\t\treturn\n\t}\n\n\tfor _, pod := range pods {\n\t\tuid := f.cluster + \"/\" + pod.Namespace + \"/\" + pod.Name\n\t\tctx := context.WithValue(context.Background(), \"uid\", uid)\n\t\tif !f.isPendingPod(pod) {\n\t\t\tcontinue\n\t\t}\n\n\t\tklog.InfoS(\"handling pod\", \"uid\", uid)\n\t\tif f.isAlreadyHandled(ctx, pod) {\n\t\t\tcontinue\n\t\t}\n\n\t\tevents, err := getPodEvents(pod, f.eventLister)\n\t\tif err != nil {\n\t\t\tklog.ErrorS(err, \"get event of pods failed\", \"uid\", uid)\n\t\t\tcontinue\n\t\t}\n\n\t\treasons, err := f.diagnosisFailureReason(ctx, pod, events)\n\t\tif err != nil {\n\t\t\tklog.ErrorS(err, \"diagnosis pod failure reason failed\", \"uid\", uid)\n\t\t\t// TODO: add unknown reason\n\t\t\tcontinue\n\t\t}\n\n\t\terr = f.dbRecorder.Update(ctx, pod, reasons)\n\t\tif err != nil {\n\t\t\tklog.ErrorS(err, \"create db record failed:\", \"uid\", uid)\n\t\t\tcontinue\n\t\t}\n\n\t\terr = f.podAnnotationRecorder.Update(ctx, pod, reasons)\n\t\tif err != nil {\n\t\t\tklog.ErrorS(err, \"create pod annotation record failed:\", \"uid\", uid)\n\t\t}\n\t}\n}",
+    "sql_statement_list": [
+      "SELECT f_id, f_cluster, f_namespace, f_workload, f_pod, f_status, f_reason, f_message, f_update_at, f_create_at FROM t_failure_reason WHERE f_cluster = ? AND f_namespace = ? AND f_pod = ? AND f_status != ?;",
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "当记录存在时更新",
+            "sql": "UPDATE t_failure_reason SET f_message = ?, f_status = ? WHERE f_cluster = ? AND f_namespace = ? AND f_pod = ? AND f_reason = ?;"
+          },
+          {
+            "scenario": "当记录不存在时创建",
+            "sql": "INSERT INTO t_failure_reason (f_cluster, f_namespace, f_workload, f_pod, f_status, f_reason, f_message) VALUES (?, ?, ?, ?, ?, ?, ?);"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "SELECT",
+      "PARAM_DEPENDENT"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/KAMP__camp-selfhealing/pkg/recorder/type.go",
+        "code_start_line": 6,
+        "code_end_line": 17,
+        "code_key": "DBFailureReason",
+        "code_value": "type DBFailureReason struct {\n\tID        int64     `gorm:\"column:f_id;primary_key;AUTO_INCREMENT\" json:\"id\"`\n\tCluster   string    `gorm:\"column:f_cluster;NOT NULL\" json:\"cluster\"`                               // 集群\n\tNamespace string    `gorm:\"column:f_namespace;NOT NULL\" json:\"namespace\"`                           // 命名空间\n\tWorkload  string    `gorm:\"column:f_workload;NOT NULL\" json:\"workload\"`                             // 服务名\n\tPod       string    `gorm:\"column:f_pod;NOT NULL\" json:\"pod\"`                                       // pod名\n\tStatus    string    `gorm:\"column:f_status;NOT NULL\" json:\"status\"`                                 // 当前状态\n\tReason    string    `gorm:\"column:f_reason;NOT NULL\" json:\"reason\"`                                 // 故障原因\n\tMessage   string    `gorm:\"column:f_message\" json:\"message\"`                                        // 故障详情\n\tUpdateAt  time.Time `gorm:\"column:f_update_at;default:CURRENT_TIMESTAMP;NOT NULL\" json:\"update_at\"` // 更新时间\n\tCreateAt  time.Time `gorm:\"column:f_create_at;default:CURRENT_TIMESTAMP;NOT NULL\" json:\"create_at\"` // 创建时间\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "666d73f664bb02997ee67a9e22796be26fd12bcf"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/KAMP__camp-selfhealing/pkg/recorder/type.go",
+        "code_start_line": 19,
+        "code_end_line": 21,
+        "code_key": "TableName",
+        "code_value": "func (d *DBFailureReason) TableName() string {\n\treturn \"t_failure_reason\"\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "666d73f664bb02997ee67a9e22796be26fd12bcf"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/KAMP__camp-selfhealing/pkg/apis/types.go",
+        "code_start_line": 7,
+        "code_end_line": 11,
+        "code_key": "FailureReason",
+        "code_value": "type FailureReason struct {\n\tObject  runtime.Object `json:\"-\"`\n\tReason  string         `json:\"reason\"`\n\tMessage string         `json:\"message\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "666d73f664bb02997ee67a9e22796be26fd12bcf"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/KAMP__camp-selfhealing.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/db.go:54:87:Update",
+    "orm_code": "func (d *DBRecorder) Update(ctx context.Context, pod *corev1.Pod, reason apis.FailureReason) error {\n\tuid := ctx.Value(\"uid\").(string)\n\n\tvar existReason DBFailureReason\n\terr := d.db.Model(&DBFailureReason{}).Where(\"f_cluster = ? and f_namespace = ? and f_pod = ? and f_status != ?\",\n\t\td.cluster, pod.Namespace, pod.Name, StatusFinished).First(&existReason).Error\n\tif err != nil {\n\t\tklog.ErrorS(err, \"get db record of pod failed\", \"uid\", uid)\n\t\treturn err\n\t}\n\n\tvar owner string\n\tif len(pod.OwnerReferences) > 0 {\n\t\towner = pod.OwnerReferences[0].Name\n\t}\n\n\trow := DBFailureReason{\n\t\tID:        existReason.ID,\n\t\tCluster:   d.cluster,\n\t\tNamespace: pod.Namespace,\n\t\tWorkload:  owner,\n\t\tPod:       pod.Name,\n\t\tStatus:    StatusInit,\n\t\tReason:    reason.Reason,\n\t\tMessage:   reason.Message,\n\t}\n\n\tif err := d.db.Save(&row).Error; err != nil {\n\t\tklog.ErrorS(err, \"update failure reason in db failed\", \"uid\", uid)\n\t\treturn err\n\t}\n\n\treturn nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      "SELECT * FROM t_failure_reason WHERE f_cluster = ? AND f_namespace = ? AND f_pod = ? AND f_status != ? LIMIT 1;",
+      "UPDATE t_failure_reason SET f_cluster=?, f_namespace=?, f_workload=?, f_pod=?, f_status=?, f_reason=?, f_message=?, f_update_at=? WHERE f_id=?;"
+    ],
+    "sql_types": [
+      "SELECT",
+      "UPDATE"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/type.go",
+        "code_start_line": 6,
+        "code_end_line": 17,
+        "code_key": "DBFailureReason",
+        "code_value": "type DBFailureReason struct {\n\tID        int64     `gorm:\"column:f_id;primary_key;AUTO_INCREMENT\" json:\"id\"`\n\tCluster   string    `gorm:\"column:f_cluster;NOT NULL\" json:\"cluster\"`                               // 集群\n\tNamespace string    `gorm:\"column:f_namespace;NOT NULL\" json:\"namespace\"`                           // 命名空间\n\tWorkload  string    `gorm:\"column:f_workload;NOT NULL\" json:\"workload\"`                             // 服务名\n\tPod       string    `gorm:\"column:f_pod;NOT NULL\" json:\"pod\"`                                       // pod名\n\tStatus    string    `gorm:\"column:f_status;NOT NULL\" json:\"status\"`                                 // 当前状态\n\tReason    string    `gorm:\"column:f_reason;NOT NULL\" json:\"reason\"`                                 // 故障原因\n\tMessage   string    `gorm:\"column:f_message\" json:\"message\"`                                        // 故障详情\n\tUpdateAt  time.Time `gorm:\"column:f_update_at;default:CURRENT_TIMESTAMP;NOT NULL\" json:\"update_at\"` // 更新时间\n\tCreateAt  time.Time `gorm:\"column:f_create_at;default:CURRENT_TIMESTAMP;NOT NULL\" json:\"create_at\"` // 创建时间\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/type.go",
+        "code_start_line": 19,
+        "code_end_line": 21,
+        "code_key": "TableName",
+        "code_value": "func (d *DBFailureReason) TableName() string {\n\treturn \"t_failure_reason\"\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/apis/types.go",
+        "code_start_line": 7,
+        "code_end_line": 15,
+        "code_key": "FailureReason",
+        "code_value": "type FailureReason struct {\n\tObject runtime.Object `json:\"-\"`\n\n\t// TODO: add zone label\n\tZone string `json:\"zone\"`\n\n\tReason  string `json:\"reason\"`\n\tMessage string `json:\"message\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      }
+    ],
+    "sql_pattern_cnt": 2,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/birdgao__camp-selfhealing.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/db.go:54:87:Update",
+    "orm_code": "func (d *DBRecorder) Update(ctx context.Context, pod *corev1.Pod, reason apis.FailureReason) error {\n\tuid := ctx.Value(\"uid\").(string)\n\n\tvar existReason DBFailureReason\n\terr := d.db.Model(&DBFailureReason{}).Where(\"f_cluster = ? and f_namespace = ? and f_pod = ? and f_status != ?\",\n\t\td.cluster, pod.Namespace, pod.Name, StatusFinished).First(&existReason).Error\n\tif err != nil {\n\t\tklog.ErrorS(err, \"get db record of pod failed\", \"uid\", uid)\n\t\treturn err\n\t}\n\n\tvar owner string\n\tif len(pod.OwnerReferences) > 0 {\n\t\towner = pod.OwnerReferences[0].Name\n\t}\n\n\trow := DBFailureReason{\n\t\tID:        existReason.ID,\n\t\tCluster:   d.cluster,\n\t\tNamespace: pod.Namespace,\n\t\tWorkload:  owner,\n\t\tPod:       pod.Name,\n\t\tStatus:    StatusInit,\n\t\tReason:    reason.Reason,\n\t\tMessage:   reason.Message,\n\t}\n\n\tif err := d.db.Save(&row).Error; err != nil {\n\t\tklog.ErrorS(err, \"update failure reason in db failed\", \"uid\", uid)\n\t\treturn err\n\t}\n\n\treturn nil\n}",
+    "caller": "func (f *FailureDiscovery) handlePod(ctx context.Context, pod *corev1.Pod) {\n\tuid := ctx.Value(\"uid\").(string)\n\n\tevents, err := getPodEvents(pod, f.eventLister)\n\tif err != nil {\n\t\tklog.ErrorS(err, \"get event of pods failed\", \"uid\", uid)\n\t\treturn\n\t}\n\n\treason, err := f.diagnoseFailureReason(ctx, pod, events)\n\tif err != nil {\n\t\tklog.ErrorS(err, \"diagnosis pod failure reason failed\", \"uid\", uid)\n\t\treturn\n\t}\n\n\tif f.hasSameRecorded(ctx, pod, reason) {\n\t\treturn\n\t}\n\n\terr = f.recorder.Update(ctx, pod, reason)\n\tif err != nil {\n\t\tklog.ErrorS(err, \"create db record failed:\", \"uid\", uid)\n\t\treturn\n\t}\n}",
+    "sql_statement_list": [
+      "SELECT * FROM `t_failure_reason` WHERE f_cluster = ? AND f_namespace = ? AND f_pod = ? AND f_status != ? ORDER BY `t_failure_reason`.`f_id` LIMIT 1;",
+      "UPDATE `t_failure_reason` SET `f_cluster`=?,`f_namespace`=?,`f_workload`=?,`f_pod`=?,`f_status`=?,`f_reason`=?,`f_message`=?,`f_update_at`=? WHERE `f_id` = ?;"
+    ],
+    "sql_types": [
+      "SELECT",
+      "UPDATE"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/type.go",
+        "code_start_line": 6,
+        "code_end_line": 17,
+        "code_key": "DBFailureReason",
+        "code_value": "type DBFailureReason struct {\n\tID        int64     `gorm:\"column:f_id;primary_key;AUTO_INCREMENT\" json:\"id\"`\n\tCluster   string    `gorm:\"column:f_cluster;NOT NULL\" json:\"cluster\"`                               // 集群\n\tNamespace string    `gorm:\"column:f_namespace;NOT NULL\" json:\"namespace\"`                           // 命名空间\n\tWorkload  string    `gorm:\"column:f_workload;NOT NULL\" json:\"workload\"`                             // 服务名\n\tPod       string    `gorm:\"column:f_pod;NOT NULL\" json:\"pod\"`                                       // pod名\n\tStatus    string    `gorm:\"column:f_status;NOT NULL\" json:\"status\"`                                 // 当前状态\n\tReason    string    `gorm:\"column:f_reason;NOT NULL\" json:\"reason\"`                                 // 故障原因\n\tMessage   string    `gorm:\"column:f_message\" json:\"message\"`                                        // 故障详情\n\tUpdateAt  time.Time `gorm:\"column:f_update_at;default:CURRENT_TIMESTAMP;NOT NULL\" json:\"update_at\"` // 更新时间\n\tCreateAt  time.Time `gorm:\"column:f_create_at;default:CURRENT_TIMESTAMP;NOT NULL\" json:\"create_at\"` // 创建时间\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/type.go",
+        "code_start_line": 19,
+        "code_end_line": 21,
+        "code_key": "TableName",
+        "code_value": "func (d *DBFailureReason) TableName() string {\n\treturn \"t_failure_reason\"\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/apis/types.go",
+        "code_start_line": 7,
+        "code_end_line": 15,
+        "code_key": "FailureReason",
+        "code_value": "type FailureReason struct {\n\tObject runtime.Object `json:\"-\"`\n\n\t// TODO: add zone label\n\tZone string `json:\"zone\"`\n\n\tReason  string `json:\"reason\"`\n\tMessage string `json:\"message\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      }
+    ],
+    "sql_pattern_cnt": 2,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/birdgao__camp-selfhealing.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/db.go:54:87:Update",
+    "orm_code": "func (d *DBRecorder) Update(ctx context.Context, pod *corev1.Pod, reason apis.FailureReason) error {\n\tuid := ctx.Value(\"uid\").(string)\n\n\tvar existReason DBFailureReason\n\terr := d.db.Model(&DBFailureReason{}).Where(\"f_cluster = ? and f_namespace = ? and f_pod = ? and f_status != ?\",\n\t\td.cluster, pod.Namespace, pod.Name, StatusFinished).First(&existReason).Error\n\tif err != nil {\n\t\tklog.ErrorS(err, \"get db record of pod failed\", \"uid\", uid)\n\t\treturn err\n\t}\n\n\tvar owner string\n\tif len(pod.OwnerReferences) > 0 {\n\t\towner = pod.OwnerReferences[0].Name\n\t}\n\n\trow := DBFailureReason{\n\t\tID:        existReason.ID,\n\t\tCluster:   d.cluster,\n\t\tNamespace: pod.Namespace,\n\t\tWorkload:  owner,\n\t\tPod:       pod.Name,\n\t\tStatus:    StatusInit,\n\t\tReason:    reason.Reason,\n\t\tMessage:   reason.Message,\n\t}\n\n\tif err := d.db.Save(&row).Error; err != nil {\n\t\tklog.ErrorS(err, \"update failure reason in db failed\", \"uid\", uid)\n\t\treturn err\n\t}\n\n\treturn nil\n}",
+    "caller": "func (p *RecorderWrapper) Update(ctx context.Context, pod *corev1.Pod, reason apis.FailureReason) error {\n\tif err := p.dbRecorder.Update(ctx, pod, reason); err != nil {\n\t\treturn err\n\t}\n\treturn p.podAnnotationRecorder.Update(ctx, pod, reason)\n}",
+    "sql_statement_list": [
+      "SELECT * FROM t_failure_reason WHERE f_cluster = ? AND f_namespace = ? AND f_pod = ? AND f_status != ? ORDER BY f_id LIMIT 1;",
+      "UPDATE t_failure_reason SET f_cluster = ?, f_namespace = ?, f_workload = ?, f_pod = ?, f_status = ?, f_reason = ?, f_message = ?, f_update_at = ? WHERE f_id = ?;"
+    ],
+    "sql_types": [
+      "SELECT",
+      "UPDATE"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/type.go",
+        "code_start_line": 6,
+        "code_end_line": 17,
+        "code_key": "DBFailureReason",
+        "code_value": "type DBFailureReason struct {\n\tID        int64     `gorm:\"column:f_id;primary_key;AUTO_INCREMENT\" json:\"id\"`\n\tCluster   string    `gorm:\"column:f_cluster;NOT NULL\" json:\"cluster\"`                               // 集群\n\tNamespace string    `gorm:\"column:f_namespace;NOT NULL\" json:\"namespace\"`                           // 命名空间\n\tWorkload  string    `gorm:\"column:f_workload;NOT NULL\" json:\"workload\"`                             // 服务名\n\tPod       string    `gorm:\"column:f_pod;NOT NULL\" json:\"pod\"`                                       // pod名\n\tStatus    string    `gorm:\"column:f_status;NOT NULL\" json:\"status\"`                                 // 当前状态\n\tReason    string    `gorm:\"column:f_reason;NOT NULL\" json:\"reason\"`                                 // 故障原因\n\tMessage   string    `gorm:\"column:f_message\" json:\"message\"`                                        // 故障详情\n\tUpdateAt  time.Time `gorm:\"column:f_update_at;default:CURRENT_TIMESTAMP;NOT NULL\" json:\"update_at\"` // 更新时间\n\tCreateAt  time.Time `gorm:\"column:f_create_at;default:CURRENT_TIMESTAMP;NOT NULL\" json:\"create_at\"` // 创建时间\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/type.go",
+        "code_start_line": 19,
+        "code_end_line": 21,
+        "code_key": "TableName",
+        "code_value": "func (d *DBFailureReason) TableName() string {\n\treturn \"t_failure_reason\"\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/apis/types.go",
+        "code_start_line": 7,
+        "code_end_line": 15,
+        "code_key": "FailureReason",
+        "code_value": "type FailureReason struct {\n\tObject runtime.Object `json:\"-\"`\n\n\t// TODO: add zone label\n\tZone string `json:\"zone\"`\n\n\tReason  string `json:\"reason\"`\n\tMessage string `json:\"message\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      }
+    ],
+    "sql_pattern_cnt": 2,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/birdgao__camp-selfhealing.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/db.go:54:87:Update",
+    "orm_code": "func (d *DBRecorder) Update(ctx context.Context, pod *corev1.Pod, reason apis.FailureReason) error {\n\tuid := ctx.Value(\"uid\").(string)\n\n\tvar existReason DBFailureReason\n\terr := d.db.Model(&DBFailureReason{}).Where(\"f_cluster = ? and f_namespace = ? and f_pod = ? and f_status != ?\",\n\t\td.cluster, pod.Namespace, pod.Name, StatusFinished).First(&existReason).Error\n\tif err != nil {\n\t\tklog.ErrorS(err, \"get db record of pod failed\", \"uid\", uid)\n\t\treturn err\n\t}\n\n\tvar owner string\n\tif len(pod.OwnerReferences) > 0 {\n\t\towner = pod.OwnerReferences[0].Name\n\t}\n\n\trow := DBFailureReason{\n\t\tID:        existReason.ID,\n\t\tCluster:   d.cluster,\n\t\tNamespace: pod.Namespace,\n\t\tWorkload:  owner,\n\t\tPod:       pod.Name,\n\t\tStatus:    StatusInit,\n\t\tReason:    reason.Reason,\n\t\tMessage:   reason.Message,\n\t}\n\n\tif err := d.db.Save(&row).Error; err != nil {\n\t\tklog.ErrorS(err, \"update failure reason in db failed\", \"uid\", uid)\n\t\treturn err\n\t}\n\n\treturn nil\n}",
+    "caller": "func (d *DBRecorder) Update(ctx context.Context, pod *corev1.Pod, reason apis.FailureReason) error {\n\tuid := ctx.Value(\"uid\").(string)\n\n\tvar existReason DBFailureReason\n\terr := d.db.Model(&DBFailureReason{}).Where(\"f_cluster = ? and f_namespace = ? and f_pod = ? and f_status != ?\",\n\t\td.cluster, pod.Namespace, pod.Name, StatusFinished).First(&existReason).Error\n\tif err != nil {\n\t\tklog.ErrorS(err, \"get db record of pod failed\", \"uid\", uid)\n\t\treturn err\n\t}\n\n\tvar owner string\n\tif len(pod.OwnerReferences) > 0 {\n\t\towner = pod.OwnerReferences[0].Name\n\t}\n\n\trow := DBFailureReason{\n\t\tID:        existReason.ID,\n\t\tCluster:   d.cluster,\n\t\tNamespace: pod.Namespace,\n\t\tWorkload:  owner,\n\t\tPod:       pod.Name,\n\t\tStatus:    StatusInit,\n\t\tReason:    reason.Reason,\n\t\tMessage:   reason.Message,\n\t}\n\n\tif err := d.db.Save(&row).Error; err != nil {\n\t\tklog.ErrorS(err, \"update failure reason in db failed\", \"uid\", uid)\n\t\treturn err\n\t}\n\n\treturn nil\n}",
+    "sql_statement_list": [
+      "SELECT * FROM `t_failure_reason` WHERE f_cluster = ? AND f_namespace = ? AND f_pod = ? AND f_status != ? LIMIT 1;",
+      "UPDATE `t_failure_reason` SET `f_cluster`=?,`f_namespace`=?,`f_workload`=?,`f_pod`=?,`f_status`=?,`f_reason`=?,`f_message`=?,`f_update_at`=? WHERE `f_id` = ?;"
+    ],
+    "sql_types": [
+      "SELECT",
+      "UPDATE"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/type.go",
+        "code_start_line": 6,
+        "code_end_line": 17,
+        "code_key": "DBFailureReason",
+        "code_value": "type DBFailureReason struct {\n\tID        int64     `gorm:\"column:f_id;primary_key;AUTO_INCREMENT\" json:\"id\"`\n\tCluster   string    `gorm:\"column:f_cluster;NOT NULL\" json:\"cluster\"`                               // 集群\n\tNamespace string    `gorm:\"column:f_namespace;NOT NULL\" json:\"namespace\"`                           // 命名空间\n\tWorkload  string    `gorm:\"column:f_workload;NOT NULL\" json:\"workload\"`                             // 服务名\n\tPod       string    `gorm:\"column:f_pod;NOT NULL\" json:\"pod\"`                                       // pod名\n\tStatus    string    `gorm:\"column:f_status;NOT NULL\" json:\"status\"`                                 // 当前状态\n\tReason    string    `gorm:\"column:f_reason;NOT NULL\" json:\"reason\"`                                 // 故障原因\n\tMessage   string    `gorm:\"column:f_message\" json:\"message\"`                                        // 故障详情\n\tUpdateAt  time.Time `gorm:\"column:f_update_at;default:CURRENT_TIMESTAMP;NOT NULL\" json:\"update_at\"` // 更新时间\n\tCreateAt  time.Time `gorm:\"column:f_create_at;default:CURRENT_TIMESTAMP;NOT NULL\" json:\"create_at\"` // 创建时间\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/type.go",
+        "code_start_line": 19,
+        "code_end_line": 21,
+        "code_key": "TableName",
+        "code_value": "func (d *DBFailureReason) TableName() string {\n\treturn \"t_failure_reason\"\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/apis/types.go",
+        "code_start_line": 7,
+        "code_end_line": 15,
+        "code_key": "FailureReason",
+        "code_value": "type FailureReason struct {\n\tObject runtime.Object `json:\"-\"`\n\n\t// TODO: add zone label\n\tZone string `json:\"zone\"`\n\n\tReason  string `json:\"reason\"`\n\tMessage string `json:\"message\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      }
+    ],
+    "sql_pattern_cnt": 2,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/birdgao__camp-selfhealing.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/db.go:54:87:Update",
+    "orm_code": "func (d *DBRecorder) Update(ctx context.Context, pod *corev1.Pod, reason apis.FailureReason) error {\n\tuid := ctx.Value(\"uid\").(string)\n\n\tvar existReason DBFailureReason\n\terr := d.db.Model(&DBFailureReason{}).Where(\"f_cluster = ? and f_namespace = ? and f_pod = ? and f_status != ?\",\n\t\td.cluster, pod.Namespace, pod.Name, StatusFinished).First(&existReason).Error\n\tif err != nil {\n\t\tklog.ErrorS(err, \"get db record of pod failed\", \"uid\", uid)\n\t\treturn err\n\t}\n\n\tvar owner string\n\tif len(pod.OwnerReferences) > 0 {\n\t\towner = pod.OwnerReferences[0].Name\n\t}\n\n\trow := DBFailureReason{\n\t\tID:        existReason.ID,\n\t\tCluster:   d.cluster,\n\t\tNamespace: pod.Namespace,\n\t\tWorkload:  owner,\n\t\tPod:       pod.Name,\n\t\tStatus:    StatusInit,\n\t\tReason:    reason.Reason,\n\t\tMessage:   reason.Message,\n\t}\n\n\tif err := d.db.Save(&row).Error; err != nil {\n\t\tklog.ErrorS(err, \"update failure reason in db failed\", \"uid\", uid)\n\t\treturn err\n\t}\n\n\treturn nil\n}",
+    "caller": "func (p *PodAnnotationFailureRecorder) Update(ctx context.Context, pod *corev1.Pod, reason apis.FailureReason) error {\n\treturn p.Create(ctx, pod, reason)\n}",
+    "sql_statement_list": [
+      "SELECT * FROM `t_failure_reason` WHERE f_cluster = ? AND f_namespace = ? AND f_pod = ? AND f_status != ? ORDER BY `t_failure_reason`.`f_id` LIMIT 1;",
+      "UPDATE `t_failure_reason` SET `f_cluster`=?,`f_namespace`=?,`f_workload`=?,`f_pod`=?,`f_status`=?,`f_reason`=?,`f_message`=?,`f_update_at`=? WHERE `f_id` = ?;"
+    ],
+    "sql_types": [
+      "SELECT",
+      "UPDATE"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/type.go",
+        "code_start_line": 6,
+        "code_end_line": 17,
+        "code_key": "DBFailureReason",
+        "code_value": "type DBFailureReason struct {\n\tID        int64     `gorm:\"column:f_id;primary_key;AUTO_INCREMENT\" json:\"id\"`\n\tCluster   string    `gorm:\"column:f_cluster;NOT NULL\" json:\"cluster\"`                               // 集群\n\tNamespace string    `gorm:\"column:f_namespace;NOT NULL\" json:\"namespace\"`                           // 命名空间\n\tWorkload  string    `gorm:\"column:f_workload;NOT NULL\" json:\"workload\"`                             // 服务名\n\tPod       string    `gorm:\"column:f_pod;NOT NULL\" json:\"pod\"`                                       // pod名\n\tStatus    string    `gorm:\"column:f_status;NOT NULL\" json:\"status\"`                                 // 当前状态\n\tReason    string    `gorm:\"column:f_reason;NOT NULL\" json:\"reason\"`                                 // 故障原因\n\tMessage   string    `gorm:\"column:f_message\" json:\"message\"`                                        // 故障详情\n\tUpdateAt  time.Time `gorm:\"column:f_update_at;default:CURRENT_TIMESTAMP;NOT NULL\" json:\"update_at\"` // 更新时间\n\tCreateAt  time.Time `gorm:\"column:f_create_at;default:CURRENT_TIMESTAMP;NOT NULL\" json:\"create_at\"` // 创建时间\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/recorder/type.go",
+        "code_start_line": 19,
+        "code_end_line": 21,
+        "code_key": "TableName",
+        "code_value": "func (d *DBFailureReason) TableName() string {\n\treturn \"t_failure_reason\"\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/birdgao__camp-selfhealing/pkg/apis/types.go",
+        "code_start_line": 7,
+        "code_end_line": 15,
+        "code_key": "FailureReason",
+        "code_value": "type FailureReason struct {\n\tObject runtime.Object `json:\"-\"`\n\n\t// TODO: add zone label\n\tZone string `json:\"zone\"`\n\n\tReason  string `json:\"reason\"`\n\tMessage string `json:\"message\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "1a4016d5726afaaa7b5bc8c922baecbd250639fb"
+      }
+    ],
+    "sql_pattern_cnt": 2,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/birdgao__camp-selfhealing.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/controllers/nodeoperation/nodeoperation_controller.go:734:882:doRecycle",
+    "orm_code": "func (c *NodeOperationController) doRecycle(nop nopapi.NodeOperation, gpu bool) error {\n\tlabelKey := fmt.Sprintf(\"%s-%s\", known.OperationLabelKey, nop.Name)\n\n\tselectors := []ncov1alpha1.Selector{\n\t\t{\n\t\t\t\"label\",\n\t\t\t\"haslabel\",\n\t\t\tlabelKey,\n\t\t},\n\n\t\t{\n\t\t\t\"label\",\n\t\t\t\"nohaslabel\",\n\t\t\t\"node-role.kubernetes.io/master\",\n\t\t},\n\t\t{\n\t\t\t\"label\",\n\t\t\t\"nohaslabel\",\n\t\t\t\"node-role.kubernetes.io/admin\",\n\t\t},\n\t\t{\n\t\t\t\"label\",\n\t\t\t\"nohaslabel\",\n\t\t\t\"node-role.kubernetes.io/monitor\",\n\t\t},\n\t}\n\n\tif !gpu {\n\t\tselectors = append(selectors, ncov1alpha1.Selector{\n\t\t\t\"gpu\",\n\t\t\t\"=\",\n\t\t\t\"0\",\n\t\t})\n\t}\n\n\tpodScores := []ncov1alpha1.PodScorer{\n\t\t{\n\t\t\tType:   \"namespace\",\n\t\t\tWeight: 1,\n\t\t\tClassify: []string{\n\t\t\t\t\"kube-system,operator,kube-public,lxcfs\",\n\t\t\t\t\"*\",\n\t\t\t},\n\t\t},\n\t\t{\n\t\t\tType:   \"workloadkind\",\n\t\t\tWeight: 1,\n\t\t\tClassify: []string{\n\t\t\t\t\"Deployment\",\n\t\t\t\t\"StatefulSet,StatefulSetPlus\",\n\t\t\t\t\"Job\",\n\t\t\t},\n\t\t},\n\t\t{\n\t\t\tType:   \"svc\",\n\t\t\tWeight: 1,\n\t\t\tClassify: []string{\n\t\t\t\t\"has\",\n\t\t\t\t\"*\",\n\t\t\t},\n\t\t},\n\t\t{\n\t\t\tType:   \"cpuutiliztion\",\n\t\t\tWeight: 5,\n\t\t},\n\t\t{\n\t\t\tType:   \"replicas\",\n\t\t\tWeight: -500,\n\t\t},\n\t\t{\n\t\t\tType:   \"hpa\",\n\t\t\tWeight: 1,\n\t\t\tClassify: []string{\n\t\t\t\t\"has\",\n\t\t\t\t\"*\",\n\t\t\t},\n\t\t},\n\t}\n\n\tnsr := ncov1alpha1.NodeScore{\n\t\tObjectMeta: metav1.ObjectMeta{\n\t\t\tName: nop.Name,\n\t\t\tOwnerReferences: []metav1.OwnerReference{\n\t\t\t\t*GenerateOwnerReferenceFromObject(&nop),\n\t\t\t},\n\t\t},\n\t\tSpec: ncov1alpha1.NodeScoreSpec{\n\t\t\tAnnotateNode:  true,\n\t\t\tNodeSelectors: selectors,\n\t\t\tPodScorers:    podScores,\n\t\t},\n\t}\n\n\t// create nsr\n\terr := c.Client.Create(context.TODO(), &nsr)\n\tif err != nil {\n\t\tif !apierror.IsAlreadyExists(err) {\n\t\t\tklog.Errorf(\"can not create nodescore %s %v\", nsr.Name, err)\n\t\t\treturn err\n\t\t}\n\t}\n\n\t// nor\n\ttaint := true\n\tnor := ncov1alpha1.NodeOperator{\n\t\tObjectMeta: metav1.ObjectMeta{\n\t\t\tName: nop.Name,\n\t\t\tOwnerReferences: []metav1.OwnerReference{\n\t\t\t\t*GenerateOwnerReferenceFromObject(&nop),\n\t\t\t},\n\t\t},\n\t\tSpec: ncov1alpha1.NodeOperatorSpec{\n\t\t\tCurrentQueue: ncov1alpha1.OperatorQueue{\n\t\t\t\tConcurrency: 10,\n\t\t\t\tOperator: ncov1alpha1.Operator{\n\t\t\t\t\tLabelDrainKey:    known.EvictLabel,\n\t\t\t\t\tLabelDravinValue: known.ForceDrain,\n\t\t\t\t\tOffline: &ncov1alpha1.Offline{\n\t\t\t\t\t\tLabelKey:   known.HNAStatus,\n\t\t\t\t\t\tLabelValue: known.ToBeRemoved,\n\t\t\t\t\t},\n\t\t\t\t\tSuccessLabelDrainKey:   known.ClearedLabel,\n\t\t\t\t\tSuccessLabelDrainValue: \"true\",\n\t\t\t\t},\n\t\t\t\tOperatorCount: 20,\n\t\t\t},\n\t\t\tNodeScoreRef:     nop.Name,\n\t\t\tOperableTime:     (*ncov1alpha1.OperableTime)(&nop.Spec.OperableTime),\n\t\t\tOperatorDuration: 120,\n\t\t\tPaused:           false,\n\t\t\tWaitingQueue: ncov1alpha1.OperatorQueue{\n\t\t\t\tConcurrency: 10,\n\t\t\t\tOperator: ncov1alpha1.Operator{\n\t\t\t\t\tTaint: &taint,\n\t\t\t\t},\n\t\t\t\tOperatorCount: 20,\n\t\t\t},\n\t\t},\n\t}\n\t// create nor\n\terr = c.Client.Create(context.TODO(), &nor)\n\tif err != nil {\n\t\tif !apierror.IsAlreadyExists(err) {\n\t\t\tklog.Errorf(\"can not create nodeoperator %s, err %v\", nor.Name, err)\n\t\t\treturn err\n\t\t}\n\t}\n\treturn nil\n}",
+    "caller": "",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/schedule/simulator/ga/selector.go",
+        "code_start_line": 8,
+        "code_end_line": 10,
+        "code_key": "Selector",
+        "code_value": "type Selector interface {\n\tGo([]Genome, int) Genome\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/host/client.go",
+        "code_start_line": 38,
+        "code_end_line": 44,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\tsecretId    string\n\tsecretKey   string\n\tcvmClients  map[string]*cvm.Client\n\tmu          sync.RWMutex\n\trateLimiter ratelimit.Limiter\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/cxmjob/client.go",
+        "code_start_line": 33,
+        "code_end_line": 36,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\turlPattern string\n\trc         *resty.Client\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/opsmanager/opsmanager.go",
+        "code_start_line": 16,
+        "code_end_line": 25,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\turl          string\n\tsecretId     string\n\tsecretKey    string\n\ttimeout      time.Duration\n\thttpExecutor *http.Executor\n\n\t// 限流器，避免qps过高对服务提供方产生压力\n\tgetEKSRunningPodRateLimiter ratelimit.Limiter // getEKSRunningPod\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/vstation/vstation.go",
+        "code_start_line": 15,
+        "code_end_line": 23,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\turl          string // url中包含有地址占位符%s：http://%s.api.vs.tencentyun.com/vstation/cgi\n\ttimeout      time.Duration\n\thttpExecutor *http.Executor\n\n\t// 限流器，避免qps过高对服务提供方产生压力\n\tqueryVMListRateLimiter  ratelimit.Limiter //query_vm_list\n\tqueryVMBasicRateLimiter ratelimit.Limiter //query_vm_basic\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/lingyun/lingyun.go",
+        "code_start_line": 16,
+        "code_end_line": 22,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\turl          string\n\tcallerName   string\n\tcallerKey    string\n\ttimeout      time.Duration\n\thttpExecutor *http.Executor\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/tkex/client.go",
+        "code_start_line": 45,
+        "code_end_line": 48,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\tclient *http.Client\n\tconfig Config\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      }
+    ],
+    "sql_pattern_cnt": 2,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/chasenchen__crane.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/controllers/nodeoperation/nodeoperation_controller.go:734:882:doRecycle",
+    "orm_code": "func (c *NodeOperationController) doRecycle(nop nopapi.NodeOperation, gpu bool) error {\n\tlabelKey := fmt.Sprintf(\"%s-%s\", known.OperationLabelKey, nop.Name)\n\n\tselectors := []ncov1alpha1.Selector{\n\t\t{\n\t\t\t\"label\",\n\t\t\t\"haslabel\",\n\t\t\tlabelKey,\n\t\t},\n\n\t\t{\n\t\t\t\"label\",\n\t\t\t\"nohaslabel\",\n\t\t\t\"node-role.kubernetes.io/master\",\n\t\t},\n\t\t{\n\t\t\t\"label\",\n\t\t\t\"nohaslabel\",\n\t\t\t\"node-role.kubernetes.io/admin\",\n\t\t},\n\t\t{\n\t\t\t\"label\",\n\t\t\t\"nohaslabel\",\n\t\t\t\"node-role.kubernetes.io/monitor\",\n\t\t},\n\t}\n\n\tif !gpu {\n\t\tselectors = append(selectors, ncov1alpha1.Selector{\n\t\t\t\"gpu\",\n\t\t\t\"=\",\n\t\t\t\"0\",\n\t\t})\n\t}\n\n\tpodScores := []ncov1alpha1.PodScorer{\n\t\t{\n\t\t\tType:   \"namespace\",\n\t\t\tWeight: 1,\n\t\t\tClassify: []string{\n\t\t\t\t\"kube-system,operator,kube-public,lxcfs\",\n\t\t\t\t\"*\",\n\t\t\t},\n\t\t},\n\t\t{\n\t\t\tType:   \"workloadkind\",\n\t\t\tWeight: 1,\n\t\t\tClassify: []string{\n\t\t\t\t\"Deployment\",\n\t\t\t\t\"StatefulSet,StatefulSetPlus\",\n\t\t\t\t\"Job\",\n\t\t\t},\n\t\t},\n\t\t{\n\t\t\tType:   \"svc\",\n\t\t\tWeight: 1,\n\t\t\tClassify: []string{\n\t\t\t\t\"has\",\n\t\t\t\t\"*\",\n\t\t\t},\n\t\t},\n\t\t{\n\t\t\tType:   \"cpuutiliztion\",\n\t\t\tWeight: 5,\n\t\t},\n\t\t{\n\t\t\tType:   \"replicas\",\n\t\t\tWeight: -500,\n\t\t},\n\t\t{\n\t\t\tType:   \"hpa\",\n\t\t\tWeight: 1,\n\t\t\tClassify: []string{\n\t\t\t\t\"has\",\n\t\t\t\t\"*\",\n\t\t\t},\n\t\t},\n\t}\n\n\tnsr := ncov1alpha1.NodeScore{\n\t\tObjectMeta: metav1.ObjectMeta{\n\t\t\tName: nop.Name,\n\t\t\tOwnerReferences: []metav1.OwnerReference{\n\t\t\t\t*GenerateOwnerReferenceFromObject(&nop),\n\t\t\t},\n\t\t},\n\t\tSpec: ncov1alpha1.NodeScoreSpec{\n\t\t\tAnnotateNode:  true,\n\t\t\tNodeSelectors: selectors,\n\t\t\tPodScorers:    podScores,\n\t\t},\n\t}\n\n\t// create nsr\n\terr := c.Client.Create(context.TODO(), &nsr)\n\tif err != nil {\n\t\tif !apierror.IsAlreadyExists(err) {\n\t\t\tklog.Errorf(\"can not create nodescore %s %v\", nsr.Name, err)\n\t\t\treturn err\n\t\t}\n\t}\n\n\t// nor\n\ttaint := true\n\tnor := ncov1alpha1.NodeOperator{\n\t\tObjectMeta: metav1.ObjectMeta{\n\t\t\tName: nop.Name,\n\t\t\tOwnerReferences: []metav1.OwnerReference{\n\t\t\t\t*GenerateOwnerReferenceFromObject(&nop),\n\t\t\t},\n\t\t},\n\t\tSpec: ncov1alpha1.NodeOperatorSpec{\n\t\t\tCurrentQueue: ncov1alpha1.OperatorQueue{\n\t\t\t\tConcurrency: 10,\n\t\t\t\tOperator: ncov1alpha1.Operator{\n\t\t\t\t\tLabelDrainKey:    known.EvictLabel,\n\t\t\t\t\tLabelDravinValue: known.ForceDrain,\n\t\t\t\t\tOffline: &ncov1alpha1.Offline{\n\t\t\t\t\t\tLabelKey:   known.HNAStatus,\n\t\t\t\t\t\tLabelValue: known.ToBeRemoved,\n\t\t\t\t\t},\n\t\t\t\t\tSuccessLabelDrainKey:   known.ClearedLabel,\n\t\t\t\t\tSuccessLabelDrainValue: \"true\",\n\t\t\t\t},\n\t\t\t\tOperatorCount: 20,\n\t\t\t},\n\t\t\tNodeScoreRef:     nop.Name,\n\t\t\tOperableTime:     (*ncov1alpha1.OperableTime)(&nop.Spec.OperableTime),\n\t\t\tOperatorDuration: 120,\n\t\t\tPaused:           false,\n\t\t\tWaitingQueue: ncov1alpha1.OperatorQueue{\n\t\t\t\tConcurrency: 10,\n\t\t\t\tOperator: ncov1alpha1.Operator{\n\t\t\t\t\tTaint: &taint,\n\t\t\t\t},\n\t\t\t\tOperatorCount: 20,\n\t\t\t},\n\t\t},\n\t}\n\t// create nor\n\terr = c.Client.Create(context.TODO(), &nor)\n\tif err != nil {\n\t\tif !apierror.IsAlreadyExists(err) {\n\t\t\tklog.Errorf(\"can not create nodeoperator %s, err %v\", nor.Name, err)\n\t\t\treturn err\n\t\t}\n\t}\n\treturn nil\n}",
+    "caller": "func (c *NodeOperationController) doOperation(nop nopapi.NodeOperation, nodes []string, gpu bool) (err error) {\n\toperation := nop.Spec.NodeOperationType\n\n\t// label nodes\n\tlabelKey := fmt.Sprintf(\"%s-%s\", known.OperationLabelKey, nop.Name)\n\tfor _, nodeName := range nodes {\n\t\tnode := &v1.Node{}\n\t\tkey := types.NamespacedName{\n\t\t\tName: nodeName,\n\t\t}\n\n\t\terr = c.Client.Get(context.TODO(), key, node)\n\t\tif err != nil {\n\t\t\tklog.Errorf(\"can not find node %s by the key %s, err %v\", node.Name, key, err)\n\t\t\treturn err\n\t\t}\n\n\t\t_, err := utils.LabelNode(node, labelKey, nop.Name, c.Client)\n\t\tif err != nil {\n\t\t\tklog.Errorf(\"can not label node %s label %s, err %v\", node.Name, key, err)\n\t\t\treturn err\n\t\t}\n\t}\n\n\tif operation == nopapi.NodeOffline {\n\t\terr = c.doOffline(nop, gpu, nodes)\n\t\tif err != nil {\n\t\t\treturn\n\t\t}\n\t} else if operation == nopapi.NodeRecycle {\n\t\terr = c.doRecycle(nop, gpu)\n\t\tif err != nil {\n\t\t\treturn\n\t\t}\n\t}\n\n\terr = fmt.Errorf(\"your node operation %s is not supported yet\", operation)\n\treturn\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/schedule/simulator/ga/selector.go",
+        "code_start_line": 8,
+        "code_end_line": 10,
+        "code_key": "Selector",
+        "code_value": "type Selector interface {\n\tGo([]Genome, int) Genome\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/host/client.go",
+        "code_start_line": 38,
+        "code_end_line": 44,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\tsecretId    string\n\tsecretKey   string\n\tcvmClients  map[string]*cvm.Client\n\tmu          sync.RWMutex\n\trateLimiter ratelimit.Limiter\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/cxmjob/client.go",
+        "code_start_line": 33,
+        "code_end_line": 36,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\turlPattern string\n\trc         *resty.Client\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/opsmanager/opsmanager.go",
+        "code_start_line": 16,
+        "code_end_line": 25,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\turl          string\n\tsecretId     string\n\tsecretKey    string\n\ttimeout      time.Duration\n\thttpExecutor *http.Executor\n\n\t// 限流器，避免qps过高对服务提供方产生压力\n\tgetEKSRunningPodRateLimiter ratelimit.Limiter // getEKSRunningPod\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/vstation/vstation.go",
+        "code_start_line": 15,
+        "code_end_line": 23,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\turl          string // url中包含有地址占位符%s：http://%s.api.vs.tencentyun.com/vstation/cgi\n\ttimeout      time.Duration\n\thttpExecutor *http.Executor\n\n\t// 限流器，避免qps过高对服务提供方产生压力\n\tqueryVMListRateLimiter  ratelimit.Limiter //query_vm_list\n\tqueryVMBasicRateLimiter ratelimit.Limiter //query_vm_basic\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/lingyun/lingyun.go",
+        "code_start_line": 16,
+        "code_end_line": 22,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\turl          string\n\tcallerName   string\n\tcallerKey    string\n\ttimeout      time.Duration\n\thttpExecutor *http.Executor\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/tkex/client.go",
+        "code_start_line": 45,
+        "code_end_line": 48,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\tclient *http.Client\n\tconfig Config\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      }
+    ],
+    "sql_pattern_cnt": 2,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/chasenchen__crane.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/controllers/nodeoperation/nodeoperation_controller.go:734:882:doRecycle",
+    "orm_code": "func (c *NodeOperationController) doRecycle(nop nopapi.NodeOperation, gpu bool) error {\n\tlabelKey := fmt.Sprintf(\"%s-%s\", known.OperationLabelKey, nop.Name)\n\n\tselectors := []ncov1alpha1.Selector{\n\t\t{\n\t\t\t\"label\",\n\t\t\t\"haslabel\",\n\t\t\tlabelKey,\n\t\t},\n\n\t\t{\n\t\t\t\"label\",\n\t\t\t\"nohaslabel\",\n\t\t\t\"node-role.kubernetes.io/master\",\n\t\t},\n\t\t{\n\t\t\t\"label\",\n\t\t\t\"nohaslabel\",\n\t\t\t\"node-role.kubernetes.io/admin\",\n\t\t},\n\t\t{\n\t\t\t\"label\",\n\t\t\t\"nohaslabel\",\n\t\t\t\"node-role.kubernetes.io/monitor\",\n\t\t},\n\t}\n\n\tif !gpu {\n\t\tselectors = append(selectors, ncov1alpha1.Selector{\n\t\t\t\"gpu\",\n\t\t\t\"=\",\n\t\t\t\"0\",\n\t\t})\n\t}\n\n\tpodScores := []ncov1alpha1.PodScorer{\n\t\t{\n\t\t\tType:   \"namespace\",\n\t\t\tWeight: 1,\n\t\t\tClassify: []string{\n\t\t\t\t\"kube-system,operator,kube-public,lxcfs\",\n\t\t\t\t\"*\",\n\t\t\t},\n\t\t},\n\t\t{\n\t\t\tType:   \"workloadkind\",\n\t\t\tWeight: 1,\n\t\t\tClassify: []string{\n\t\t\t\t\"Deployment\",\n\t\t\t\t\"StatefulSet,StatefulSetPlus\",\n\t\t\t\t\"Job\",\n\t\t\t},\n\t\t},\n\t\t{\n\t\t\tType:   \"svc\",\n\t\t\tWeight: 1,\n\t\t\tClassify: []string{\n\t\t\t\t\"has\",\n\t\t\t\t\"*\",\n\t\t\t},\n\t\t},\n\t\t{\n\t\t\tType:   \"cpuutiliztion\",\n\t\t\tWeight: 5,\n\t\t},\n\t\t{\n\t\t\tType:   \"replicas\",\n\t\t\tWeight: -500,\n\t\t},\n\t\t{\n\t\t\tType:   \"hpa\",\n\t\t\tWeight: 1,\n\t\t\tClassify: []string{\n\t\t\t\t\"has\",\n\t\t\t\t\"*\",\n\t\t\t},\n\t\t},\n\t}\n\n\tnsr := ncov1alpha1.NodeScore{\n\t\tObjectMeta: metav1.ObjectMeta{\n\t\t\tName: nop.Name,\n\t\t\tOwnerReferences: []metav1.OwnerReference{\n\t\t\t\t*GenerateOwnerReferenceFromObject(&nop),\n\t\t\t},\n\t\t},\n\t\tSpec: ncov1alpha1.NodeScoreSpec{\n\t\t\tAnnotateNode:  true,\n\t\t\tNodeSelectors: selectors,\n\t\t\tPodScorers:    podScores,\n\t\t},\n\t}\n\n\t// create nsr\n\terr := c.Client.Create(context.TODO(), &nsr)\n\tif err != nil {\n\t\tif !apierror.IsAlreadyExists(err) {\n\t\t\tklog.Errorf(\"can not create nodescore %s %v\", nsr.Name, err)\n\t\t\treturn err\n\t\t}\n\t}\n\n\t// nor\n\ttaint := true\n\tnor := ncov1alpha1.NodeOperator{\n\t\tObjectMeta: metav1.ObjectMeta{\n\t\t\tName: nop.Name,\n\t\t\tOwnerReferences: []metav1.OwnerReference{\n\t\t\t\t*GenerateOwnerReferenceFromObject(&nop),\n\t\t\t},\n\t\t},\n\t\tSpec: ncov1alpha1.NodeOperatorSpec{\n\t\t\tCurrentQueue: ncov1alpha1.OperatorQueue{\n\t\t\t\tConcurrency: 10,\n\t\t\t\tOperator: ncov1alpha1.Operator{\n\t\t\t\t\tLabelDrainKey:    known.EvictLabel,\n\t\t\t\t\tLabelDravinValue: known.ForceDrain,\n\t\t\t\t\tOffline: &ncov1alpha1.Offline{\n\t\t\t\t\t\tLabelKey:   known.HNAStatus,\n\t\t\t\t\t\tLabelValue: known.ToBeRemoved,\n\t\t\t\t\t},\n\t\t\t\t\tSuccessLabelDrainKey:   known.ClearedLabel,\n\t\t\t\t\tSuccessLabelDrainValue: \"true\",\n\t\t\t\t},\n\t\t\t\tOperatorCount: 20,\n\t\t\t},\n\t\t\tNodeScoreRef:     nop.Name,\n\t\t\tOperableTime:     (*ncov1alpha1.OperableTime)(&nop.Spec.OperableTime),\n\t\t\tOperatorDuration: 120,\n\t\t\tPaused:           false,\n\t\t\tWaitingQueue: ncov1alpha1.OperatorQueue{\n\t\t\t\tConcurrency: 10,\n\t\t\t\tOperator: ncov1alpha1.Operator{\n\t\t\t\t\tTaint: &taint,\n\t\t\t\t},\n\t\t\t\tOperatorCount: 20,\n\t\t\t},\n\t\t},\n\t}\n\t// create nor\n\terr = c.Client.Create(context.TODO(), &nor)\n\tif err != nil {\n\t\tif !apierror.IsAlreadyExists(err) {\n\t\t\tklog.Errorf(\"can not create nodeoperator %s, err %v\", nor.Name, err)\n\t\t\treturn err\n\t\t}\n\t}\n\treturn nil\n}",
+    "caller": "func (c *NodeOperationController) doOffline(nop nopapi.NodeOperation, gpu bool, nodes []string) error {\n\t// label node\n\tfor _, nodeName := range nodes {\n\t\tnode := &v1.Node{}\n\t\tkey := types.NamespacedName{\n\t\t\tName: nodeName,\n\t\t}\n\n\t\terr := c.Client.Get(context.TODO(), key, node)\n\t\tif err != nil {\n\t\t\tklog.Errorf(\"can not find node %s by the key %s, err %v\", node.Name, key, err)\n\t\t\treturn err\n\t\t}\n\n\t\t_, err = utils.LabelNode(node, known.HNAType, known.HNAAbolish, c.Client)\n\t\tif err != nil {\n\t\t\tklog.Errorf(\"can not label node %s label %s, err %v\", node.Name, key, err)\n\t\t\treturn err\n\t\t}\n\t}\n\n\t// doRecycle\n\terr := c.doRecycle(nop, gpu)\n\tif err != nil {\n\t\treturn err\n\t}\n\treturn nil\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/schedule/simulator/ga/selector.go",
+        "code_start_line": 8,
+        "code_end_line": 10,
+        "code_key": "Selector",
+        "code_value": "type Selector interface {\n\tGo([]Genome, int) Genome\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/host/client.go",
+        "code_start_line": 38,
+        "code_end_line": 44,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\tsecretId    string\n\tsecretKey   string\n\tcvmClients  map[string]*cvm.Client\n\tmu          sync.RWMutex\n\trateLimiter ratelimit.Limiter\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/cxmjob/client.go",
+        "code_start_line": 33,
+        "code_end_line": 36,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\turlPattern string\n\trc         *resty.Client\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/opsmanager/opsmanager.go",
+        "code_start_line": 16,
+        "code_end_line": 25,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\turl          string\n\tsecretId     string\n\tsecretKey    string\n\ttimeout      time.Duration\n\thttpExecutor *http.Executor\n\n\t// 限流器，避免qps过高对服务提供方产生压力\n\tgetEKSRunningPodRateLimiter ratelimit.Limiter // getEKSRunningPod\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/vstation/vstation.go",
+        "code_start_line": 15,
+        "code_end_line": 23,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\turl          string // url中包含有地址占位符%s：http://%s.api.vs.tencentyun.com/vstation/cgi\n\ttimeout      time.Duration\n\thttpExecutor *http.Executor\n\n\t// 限流器，避免qps过高对服务提供方产生压力\n\tqueryVMListRateLimiter  ratelimit.Limiter //query_vm_list\n\tqueryVMBasicRateLimiter ratelimit.Limiter //query_vm_basic\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/lingyun/lingyun.go",
+        "code_start_line": 16,
+        "code_end_line": 22,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\turl          string\n\tcallerName   string\n\tcallerKey    string\n\ttimeout      time.Duration\n\thttpExecutor *http.Executor\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/chasenchen__crane/pkg/components/tkex/client.go",
+        "code_start_line": 45,
+        "code_end_line": 48,
+        "code_key": "Client",
+        "code_value": "type Client struct {\n\tclient *http.Client\n\tconfig Config\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "32f0dbfca8474ec9a77d1a3e10630d9f6a0cf53a"
+      }
+    ],
+    "sql_pattern_cnt": 2,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/chasenchen__crane.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/admission/plugin/namespace/autoprovision/admission.go:60:100:Admit",
+    "orm_code": "func (p *Provision) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {\n\t// Don't create a namespace if the request is for a dry-run.\n\tif a.IsDryRun() {\n\t\treturn nil\n\t}\n\n\t// if we're here, then we've already passed authentication, so we're allowed to do what we're trying to do\n\t// if we're here, then the API server has found a route, which means that if we have a non-empty namespace\n\t// its a namespaced resource.\n\tif len(a.GetNamespace()) == 0 || a.GetKind().GroupKind() == api.Kind(\"Namespace\") {\n\t\treturn nil\n\t}\n\t// we need to wait for our caches to warm\n\tif !p.WaitForReady() {\n\t\treturn admission.NewForbidden(a, fmt.Errorf(\"not yet ready to handle request\"))\n\t}\n\n\t_, err := p.namespaceLister.Get(a.GetNamespace())\n\tif err == nil {\n\t\treturn nil\n\t}\n\n\tif !errors.IsNotFound(err) {\n\t\treturn admission.NewForbidden(a, err)\n\t}\n\n\tnamespace := &corev1.Namespace{\n\t\tObjectMeta: metav1.ObjectMeta{\n\t\t\tName:      a.GetNamespace(),\n\t\t\tNamespace: \"\",\n\t\t},\n\t\tStatus: corev1.NamespaceStatus{},\n\t}\n\n\t_, err = p.client.CoreV1().Namespaces().Create(context.TODO(), namespace, metav1.CreateOptions{})\n\tif err != nil && !errors.IsAlreadyExists(err) {\n\t\treturn admission.NewForbidden(a, err)\n\t}\n\n\treturn nil\n}",
+    "caller": "",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/core/namespace_types.go",
+        "code_start_line": 24,
+        "code_end_line": 40,
+        "code_key": "Namespace",
+        "code_value": "type Namespace struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\" protobuf:\"bytes,1,opt,name=metadata\"`\n\n\t// Spec defines the behavior of the Namespace.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status\n\t// +optional\n\tSpec NamespaceSpec `json:\"spec,omitempty\" protobuf:\"bytes,2,opt,name=spec\"`\n\n\t// Status describes the current status of a Namespace.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status\n\t// +optional\n\tStatus NamespaceStatus `json:\"status,omitempty\" protobuf:\"bytes,3,opt,name=status\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/core/v1/namespace_types.go",
+        "code_start_line": 24,
+        "code_end_line": 40,
+        "code_key": "Namespace",
+        "code_value": "type Namespace struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\" protobuf:\"bytes,1,opt,name=metadata\"`\n\n\t// Spec defines the behavior of the Namespace.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status\n\t// +optional\n\tSpec NamespaceSpec `json:\"spec,omitempty\" protobuf:\"bytes,2,opt,name=spec\"`\n\n\t// Status describes the current status of a Namespace.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status\n\t// +optional\n\tStatus NamespaceStatus `json:\"status,omitempty\" protobuf:\"bytes,3,opt,name=status\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/provider_type.go",
+        "code_start_line": 44,
+        "code_end_line": 105,
+        "code_key": "ObjectMeta",
+        "code_value": "type ObjectMeta struct {\n\t// Name must be unique within a namespace. Is required when creating resources, although\n\t// some resources may allow a client to request the generation of an appropriate name\n\t// automatically. Name is primarily intended for creation idempotence and configuration\n\t// definition.\n\t// Cannot be updated.\n\t// More info: http://kubernetes.io/docs/user-guide/identifiers#names\n\t// +optional\n\tName string `json:\"name,omitempty\"`\n\n\t// GenerateName is an optional prefix, used by the server, to generate a unique\n\t// name ONLY IF the Name field has not been provided.\n\t// If this field is used, the name returned to the client will be different\n\t// than the name passed. This value will also be combined with a unique suffix.\n\t// The provided value has the same validation rules as the Name field,\n\t// and may be truncated by the length of the suffix required to make the value\n\t// unique on the server.\n\t//\n\t// If this field is specified and the generated name exists, the server will\n\t// NOT return a 409 - instead, it will either return 201 Created or 500 with Reason\n\t// ServerTimeout indicating a unique name could not be found in the time allotted, and the client\n\t// should retry (optionally after the time indicated in the Retry-After header).\n\t//\n\t// Applied only if Name is not specified.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#idempotency\n\t// +optional\n\tGenerateName string `json:\"generateName,omitempty\"`\n\n\t// Namespace defines the space within each name must be unique. An empty namespace is\n\t// equivalent to the \"default\" namespace, but \"default\" is the canonical representation.\n\t// Not all objects are required to be scoped to a namespace - the value of this field for\n\t// those objects will be empty.\n\t//\n\t// Must be a DNS_LABEL.\n\t// Cannot be updated.\n\t// More info: http://kubernetes.io/docs/user-guide/namespaces\n\t// +optional\n\tNamespace string `json:\"namespace,omitempty\"`\n\n\t// Map of string keys and values that can be used to organize and categorize\n\t// (scope and select) objects. May match selectors of replication controllers\n\t// and services.\n\t// More info: http://kubernetes.io/docs/user-guide/labels\n\t// +optional\n\tLabels map[string]string `json:\"labels,omitempty\"`\n\n\t// Annotations is an unstructured key value map stored with a resource that may be\n\t// set by external tools to store and retrieve arbitrary metadata. They are not\n\t// queryable and should be preserved when modifying objects.\n\t// More info: http://kubernetes.io/docs/user-guide/annotations\n\t// +optional\n\tAnnotations map[string]string `json:\"annotations,omitempty\"`\n\n\t// List of objects depended by this object. If ALL objects in the list have\n\t// been deleted, this object will be garbage collected. If this object is managed by a controller,\n\t// then an entry in this list will point to this controller, with the controller field set to true.\n\t// There cannot be more than one managing controller.\n\t// +optional\n\t// +patchMergeKey=uid\n\t// +patchStrategy=merge\n\tOwnerReferences []metav1.OwnerReference `json:\"ownerReferences,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"uid\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/provider_type.go",
+        "code_start_line": 44,
+        "code_end_line": 105,
+        "code_key": "ObjectMeta",
+        "code_value": "type ObjectMeta struct {\n\t// Name must be unique within a namespace. Is required when creating resources, although\n\t// some resources may allow a client to request the generation of an appropriate name\n\t// automatically. Name is primarily intended for creation idempotence and configuration\n\t// definition.\n\t// Cannot be updated.\n\t// More info: http://kubernetes.io/docs/user-guide/identifiers#names\n\t// +optional\n\tName string `json:\"name,omitempty\"`\n\n\t// GenerateName is an optional prefix, used by the server, to generate a unique\n\t// name ONLY IF the Name field has not been provided.\n\t// If this field is used, the name returned to the client will be different\n\t// than the name passed. This value will also be combined with a unique suffix.\n\t// The provided value has the same validation rules as the Name field,\n\t// and may be truncated by the length of the suffix required to make the value\n\t// unique on the server.\n\t//\n\t// If this field is specified and the generated name exists, the server will\n\t// NOT return a 409 - instead, it will either return 201 Created or 500 with Reason\n\t// ServerTimeout indicating a unique name could not be found in the time allotted, and the client\n\t// should retry (optionally after the time indicated in the Retry-After header).\n\t//\n\t// Applied only if Name is not specified.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#idempotency\n\t// +optional\n\tGenerateName string `json:\"generateName,omitempty\"`\n\n\t// Namespace defines the space within each name must be unique. An empty namespace is\n\t// equivalent to the \"default\" namespace, but \"default\" is the canonical representation.\n\t// Not all objects are required to be scoped to a namespace - the value of this field for\n\t// those objects will be empty.\n\t//\n\t// Must be a DNS_LABEL.\n\t// Cannot be updated.\n\t// More info: http://kubernetes.io/docs/user-guide/namespaces\n\t// +optional\n\tNamespace string `json:\"namespace,omitempty\"`\n\n\t// Map of string keys and values that can be used to organize and categorize\n\t// (scope and select) objects. May match selectors of replication controllers\n\t// and services.\n\t// More info: http://kubernetes.io/docs/user-guide/labels\n\t// +optional\n\tLabels map[string]string `json:\"labels,omitempty\"`\n\n\t// Annotations is an unstructured key value map stored with a resource that may be\n\t// set by external tools to store and retrieve arbitrary metadata. They are not\n\t// queryable and should be preserved when modifying objects.\n\t// More info: http://kubernetes.io/docs/user-guide/annotations\n\t// +optional\n\tAnnotations map[string]string `json:\"annotations,omitempty\"`\n\n\t// List of objects depended by this object. If ALL objects in the list have\n\t// been deleted, this object will be garbage collected. If this object is managed by a controller,\n\t// then an entry in this list will point to this controller, with the controller field set to true.\n\t// There cannot be more than one managing controller.\n\t// +optional\n\t// +patchMergeKey=uid\n\t// +patchStrategy=merge\n\tOwnerReferences []metav1.OwnerReference `json:\"ownerReferences,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"uid\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/core/namespace_types.go",
+        "code_start_line": 64,
+        "code_end_line": 70,
+        "code_key": "NamespaceStatus",
+        "code_value": "type NamespaceStatus struct {\n\t// Phase is the current lifecycle phase of the namespace.\n\t// +optional\n\tPhase NamespacePhase\n\t// +optional\n\tConditions []NamespaceCondition\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/core/v1/namespace_types.go",
+        "code_start_line": 64,
+        "code_end_line": 75,
+        "code_key": "NamespaceStatus",
+        "code_value": "type NamespaceStatus struct {\n\t// Phase is the current lifecycle phase of the namespace.\n\t// More info: https://kubernetes.io/docs/tasks/administer-cluster/namespaces/\n\t// +optional\n\tPhase NamespacePhase `json:\"phase,omitempty\" protobuf:\"bytes,1,opt,name=phase,casttype=NamespacePhase\"`\n\n\t// Represents the latest available observations of a namespace's current state.\n\t// +optional\n\t// +patchMergeKey=type\n\t// +patchStrategy=merge\n\tConditions []NamespaceCondition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,2,rep,name=conditions\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "func Init() error {\n\tvar err error\n\tonce.Do(func() {\n\t\tnodeConfig, err = config.CXMControllerConfigName.Read()\n\t})\n\n\treturn err\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "func (cr *CronRunner) Init(upgradeTimeout metav1.Duration, ignoreUpgradeFailures bool) (*CronRunner, error) {\n\truList := &nodev1beta1.RollingUpgradeList{}\n\truList, err := cr.clients.NodeV1beta1().\n\t\tRollingUpgrades(metav1.NamespaceAll).\n\t\tList(context.TODO(), metav1.ListOptions{\n\t\t\tResourceVersion: \"0\",\n\t\t})\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"failed to list machinesets: %v\", err)\n\t}\n\n\tfor _, ru := range ruList.Items {\n\t\tif canDisable(&ru) {\n\t\t\tcontinue\n\t\t}\n\n\t\trollupCtx := NewRollingUpgrader(\n\t\t\tcr.logger,\n\t\t\tcr.client,\n\t\t\tru.NamespacedName(),\n\t\t\tupgradeTimeout,\n\t\t\tignoreUpgradeFailures,\n\t\t)\n\t\tif err := cr.Reconcile(ru.NamespacedName(), ru.Spec.UpgradeOptions, ru.Spec.Strategy, rollupCtx); err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t}\n\n\treturn cr, nil\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "func Init(id uint) {\n\tregionID = id\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "func Init(cvmClient cvm.CVMClient, cxmClient cxm.CXMClient, tkeClient tke.TKEClient, cauthClient cauth.CauthClient, eksClient eks.EKSClient, region string, sync bool) error {\n\tvar err error\n\tonce.Do(func() {\n\t\tif cxmClient == nil {\n\t\t\terr = fmt.Errorf(\"cxm client cannot be empty\")\n\t\t\treturn\n\t\t}\n\n\t\tif tkeClient == nil {\n\t\t\terr = fmt.Errorf(\"tke client cannot be empty\")\n\t\t\treturn\n\t\t}\n\n\t\tif cauthClient == nil {\n\t\t\terr = fmt.Errorf(\"cauth client cannot be empty\")\n\t\t\treturn\n\t\t}\n\n\t\tif eksClient == nil {\n\t\t\terr = fmt.Errorf(\"eks client cannot be empty\")\n\t\t\treturn\n\t\t}\n\n\t\tif region == \"\" {\n\t\t\terr = fmt.Errorf(\"region cannot be empty\")\n\t\t\treturn\n\t\t}\n\n\t\tctxs, newErr := lru.New(100)\n\t\tif newErr != nil {\n\t\t\terr = newErr\n\t\t\treturn\n\t\t}\n\n\t\tinstanceFamilies, newErr := getInstanceFamilies(region)\n\t\tif newErr != nil {\n\t\t\terr = newErr\n\t\t\treturn\n\t\t}\n\n\t\tins = &InsCache{\n\t\t\tcxmClient:        cxmClient,\n\t\t\tcvmClient:        cvmClient,\n\t\t\ttkeClient:        tkeClient,\n\t\t\tcauthClient:      cauthClient,\n\t\t\teksClient:        eksClient,\n\t\t\tregion:           region,\n\t\t\tctxs:             ctxs,\n\t\t\tinstanceFamilies: instanceFamilies,\n\t\t}\n\n\t\tif sync {\n\t\t\t// 如果开启了sync，说明需要及时刷新库存信息（tke-node-cloud-gw、tke-machineset-controller）\n\t\t\tins.data = cache.New(20*time.Minute, 40*time.Minute)\n\t\t} else {\n\t\t\tins.data = cache.New(cache.NoExpiration, cache.NoExpiration)\n\t\t}\n\t})\n\n\tif err != nil {\n\t\treturn err\n\t}\n\n\tif sync {\n\t\tgo ins.Sync()\n\t}\n\n\treturn nil\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "func Init(opts *completedCloudOptions) error {\n\tonce.Do(func() {\n\t\tcloudFactory = &cloudClient{\n\t\t\topts,\n\t\t}\n\t})\n\n\tif cloudFactory == nil {\n\t\treturn fmt.Errorf(\"init cloud factory failed\")\n\t}\n\n\treturn nil\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "func (r *ReconcileMachineSet) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {\n\t// Fetch the MachineSet instance\n\tmachineSet := &v1beta1.MachineSet{}\n\tif err := r.Get(ctx, request.NamespacedName, machineSet); err != nil {\n\t\treturn reconcile.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconcile machineset\", \"machineset\", klog.KObj(machineSet))\n\n\tif machineSet.GetDeletionTimestamp().IsZero() {\n\t\tfinalizerCount := len(machineSet.Finalizers)\n\n\t\tif !controllerutil.ContainsFinalizer(machineSet, v1beta1.HouseKeeperFinalizer) {\n\t\t\tmachineSet.Finalizers = append(machineSet.ObjectMeta.Finalizers, v1beta1.HouseKeeperFinalizer)\n\t\t}\n\n\t\tif len(machineSet.Finalizers) > finalizerCount {\n\t\t\tif err := r.Client.Update(ctx, machineSet); err != nil {\n\t\t\t\tklog.ErrorS(err, \"Failed to add finalizers to machineset\", \"machineset\", klog.KObj(machineSet))\n\t\t\t\treturn reconcile.Result{}, err\n\t\t\t}\n\n\t\t\t// Since adding the finalizer updates the object return to avoid later update issues\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\t}\n\n\tif !machineSet.GetDeletionTimestamp().IsZero() {\n\t\t// no-op if finalizer has been removed.\n\t\tif !controllerutil.ContainsFinalizer(machineSet, v1beta1.HouseKeeperFinalizer) {\n\t\t\tklog.V(2).InfoS(\"Reconciling machineset causes a no-op as there is no finalizer\", \"machineset\", klog.KObj(machineSet))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\tklog.V(2).InfoS(\"Reconciling machineset triggers delete\", \"machineset\", klog.KObj(machineSet))\n\n\t\tundeleteMachines, err := GetUndeleteMachinesFromMachineSet(r.Client, machineSet)\n\t\tif err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\t\tklog.V(4).InfoS(\"Get all undelete machines from machineset\", \"count\", len(undeleteMachines), \"machineset\", klog.KObj(machineSet))\n\n\t\tif len(undeleteMachines) != 0 {\n\t\t\tklog.V(4).InfoS(\"Delete all machines\", \"machineset\", klog.KObj(machineSet))\n\t\t\t// In order to reduce the pressure on the tke-node-apiserver, for each machineset,\n\t\t\t// only `MaxDeleteConcurrency` machines are allowed to be deleted at the same time\n\t\t\tif err := r.deleteAllMachines(ctx, undeleteMachines[0:concurrencyNum(len(undeleteMachines))]); err != nil {\n\t\t\t\treturn reconcile.Result{}, err\n\t\t\t}\n\n\t\t\tklog.V(4).InfoS(\"requeue after delete expected number of machines\", \"machineset\", klog.KObj(machineSet))\n\t\t\treturn reconcile.Result{Requeue: true, RequeueAfter: 1 * time.Second}, nil\n\t\t}\n\n\t\t// Remove finalizer on successful deletion.\n\t\tcontrollerutil.RemoveFinalizer(machineSet, v1beta1.HouseKeeperFinalizer)\n\t\tif err := r.Update(ctx, machineSet); err != nil {\n\t\t\tklog.ErrorS(err, \"Failed to remove finalizers from machineset\", \"machineset\", klog.KObj(machineSet))\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\tklog.V(4).InfoS(\"Successfully delete machineset\", \"machineset\", klog.KObj(machineSet))\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif annotationsutil.HasPausedAnnotation(machineSet) {\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tctx, err := cloud.WithNodeContext(ctx, request.Namespace)\n\tif err != nil {\n\t\tif clusterutil.IsClusterNotFound(err) {\n\t\t\tklog.V(1).InfoS(\"Skip to reconcile when cluster is not exist\", \"clusterID\", request.Namespace)\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\tklog.ErrorS(err, \"Failed to create context with node information\", \"machineset\", klog.KObj(machineSet))\n\t\t//r.recorder.Eventf(machineSet, corev1.EventTypeWarning, \"ReconcileError\", \"%v\", err)\n\t\treturn reconcile.Result{}, err\n\t}\n\n\tif !machineSetHasVersions(machineSet) {\n\t\tklog.V(4).InfoS(\"Set kubernetes version to machineset\", \"machineset\", klog.KObj(machineSet))\n\t\tif err := r.addVersions(ctx, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tresult, err := r.reconcile(ctx, machineSet)\n\tif err != nil {\n\t\tklog.ErrorS(err, \"Failed to reconcile machineset\", \"machineset\", klog.KObj(machineSet))\n\t\t//r.recorder.Eventf(machineSet, corev1.EventTypeWarning, \"ReconcileError\", \"%v\", err)\n\t}\n\n\treturn result, err\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\tlogger := r.Log.WithValues(\"machineset\", req.Name, \"namespace\", req.Namespace)\n\tlogger.V(3).Info(\"Reconciling\")\n\n\tmachineSet := &v1beta1.MachineSet{}\n\tif err := r.Client.Get(ctx, req.NamespacedName, machineSet); err != nil {\n\t\tlogger.Error(err, \"unable to fetch MachineSet\")\n\t\t// we'll ignore not-found errors, since they can't be fixed by an immediate\n\t\t// requeue (we'll need to wait for a new notification), and we can get them\n\t\t// on deleted requests.\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\n\tif machineSet.Spec.Type == v1beta1.ExternalMachineSetType {\n\t\treturn reconcile.Result{}, nil\n\t}\n\t// Ignore deleted MachineSets, this can happen when foregroundDeletion\n\t// is enabled\n\tif !machineSet.DeletionTimestamp.IsZero() {\n\t\treturn ctrl.Result{}, nil\n\t}\n\toriginalMachineSetToPatch := client.MergeFrom(machineSet.DeepCopy())\n\n\t// Make some modifications\n\tresult, err := r.reconcile(machineSet)\n\tif err != nil {\n\t\tlogger.Error(err, \"Failed to reconcile MachineSet\")\n\t\tr.recorder.Eventf(machineSet, corev1.EventTypeWarning, \"ReconcileError\", \"%v\", err)\n\t\t// we don't return here so we want to attempt to patch the machine regardless of an error.\n\t}\n\n\tif err := r.Client.Patch(ctx, machineSet, originalMachineSetToPatch); err != nil {\n\t\treturn ctrl.Result{}, fmt.Errorf(\"failed to patch machineSet: %v\", err)\n\t}\n\n\tif isInvalidConfigurationError(err) {\n\t\t// For situations where requeuing won't help we don't return error.\n\t\t// https://github.com/kubernetes-sigs/controller-runtime/issues/617\n\t\treturn result, nil\n\t}\n\n\treturn result, err\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "func (cr *CronRunner) Reconcile(\n\tnamespacedName types.NamespacedName,\n\topts v1beta1.AutoUpgradeOptions,\n\tstrategy v1beta1.UpdateStrategy,\n\tcomplete IComplete,\n) error {\n\tjob, ok := cr.jobMapping.Load(namespacedName)\n\tif !ok {\n\t\treturn cr.Create(namespacedName, opts, strategy, complete)\n\t}\n\n\tif !equality.Semantic.DeepEqual(job.(JobInfo).SpecOptions, opts) {\n\t\tcr.Delete(namespacedName)\n\t\tcr.Create(namespacedName, opts, strategy, complete)\n\t}\n\n\treturn nil\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "func (r *ReconcileMachine) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {\n\t// Fetch the Machine instance\n\tm := &v1beta1.Machine{}\n\tif err := r.Client.Get(ctx, request.NamespacedName, m); err != nil {\n\t\treturn reconcile.Result{}, client.IgnoreNotFound(err)\n\t}\n\n\t// Only reconcile expected machine\n\tif !r.actuator.Reconcilable(ctx, m) {\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\t// Implement controller logic here\n\tklog.V(4).InfoS(\"Reconciling Machine\", \"machine\", klog.KObj(m))\n\n\t// Get the original state of conditions now so that they can be used to calculate the patch later.\n\t// This must be a copy otherwise the referenced slice will be modified by later machine conditions changes.\n\toriginalConditions := make([]v1beta1.Condition, len(m.Status.Conditions))\n\tcopy(originalConditions, m.Status.Conditions)\n\n\tif errList := validateMachine(m); len(errList) > 0 {\n\t\terr := fmt.Errorf(\"%v: machine validation failed: %v\", m.NamespacedName(), errList.ToAggregate().Error())\n\t\tklog.ErrorS(err, \"Failed to validate machine\", \"machine\", klog.KObj(m))\n\t\t//r.eventRecorder.Eventf(m, corev1.EventTypeWarning, \"FailedValidate\", err.Error())\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// If object hasn't been deleted and doesn't have a finalizer, add one\n\t// Add a finalizer to newly created objects.\n\tif m.ObjectMeta.DeletionTimestamp.IsZero() {\n\t\tfinalizerCount := len(m.Finalizers)\n\n\t\tif !controllerutil.ContainsFinalizer(m, v1beta1.HouseKeeperFinalizer) {\n\t\t\tm.Finalizers = append(m.ObjectMeta.Finalizers, v1beta1.HouseKeeperFinalizer)\n\t\t}\n\n\t\tif len(m.Finalizers) > finalizerCount {\n\t\t\tif err := r.Client.Update(ctx, m); err != nil {\n\t\t\t\tklog.ErrorS(err, \"Failed to add finalizers to machine\", \"machine\", klog.KObj(m))\n\t\t\t\treturn reconcile.Result{}, err\n\t\t\t}\n\n\t\t\t// Since adding the finalizer updates the object return to avoid later update issues\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\t}\n\n\tif m.Spec.ProviderSpec.Type == v1beta1.MachineTypeExternal {\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !m.ObjectMeta.DeletionTimestamp.IsZero() {\n\t\tif err := r.updateStatus(ctx, m, v1beta1.PhaseDeleting, nil, originalConditions); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\t// no-op if finalizer has been removed.\n\t\tif !controllerutil.ContainsFinalizer(m, v1beta1.HouseKeeperFinalizer) {\n\t\t\tklog.V(2).InfoS(\"Reconciling machine causes a no-op as there is no finalizer\", \"machine\", klog.KObj(m))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\tklog.V(2).InfoS(\"Reconciling machine triggers delete\", \"machine\", klog.KObj(m))\n\n\t\tif !nodeHasDrained(m) && time.Now().Before(m.GetDeletionTimestamp().Add(drainTimeoutDuration)) {\n\t\t\t// check if node was already drained\n\t\t\tdrainedCondition := conditions.Get(m, v1beta1.NodeDrained)\n\t\t\tif drainedCondition == nil || drainedCondition.Status != metav1.ConditionTrue {\n\t\t\t\tklog.V(2).InfoS(\"Waiting for node to be drained before deleting machine\", \"machine\", klog.KObj(m))\n\t\t\t\t// this will requeue and proceed when drain controller will set the condition\n\t\t\t\treturn reconcile.Result{}, nil\n\t\t\t}\n\t\t}\n\n\t\tif err := r.actuator.Delete(ctx, m); err != nil {\n\t\t\t// isInvalidMachineConfiguration will take care of the case where the\n\t\t\t// configuration is invalid from the beginning. len(m.Status.Addresses) > 0\n\t\t\t// will handle the case when a machine configuration was invalidated\n\t\t\t// after an instance was created. So only a small window is left when\n\t\t\t// we can loose instances, e.g. right after request to create one\n\t\t\t// was sent and before a list of node addresses was set.\n\t\t\tif len(m.Status.Addresses) > 0 || !isInvalidMachineConfigurationError(err) {\n\t\t\t\tklog.ErrorS(err, \"Failed to delete machine\", \"machine\", klog.KObj(m))\n\t\t\t\treturn delayIfRequeueAfterError(err)\n\t\t\t}\n\t\t}\n\n\t\t// Remove finalizer on successful deletion.\n\t\tcontrollerutil.RemoveFinalizer(m, v1beta1.HouseKeeperFinalizer)\n\t\tif err := r.Update(ctx, m); err != nil {\n\t\t\tklog.ErrorS(err, \"Failed to remove machine finalizers\", \"machine\", klog.KObj(m))\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\tklog.V(2).InfoS(\"Successfully delete machine\", \"machine\", klog.KObj(m))\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tctx, err := cloud.WithNodeContext(ctx, request.Namespace)\n\tif err != nil {\n\t\tif clusterutil.IsClusterNotFound(err) {\n\t\t\tklog.V(1).InfoS(\"Skip to reconcile when cluster is not exist\", \"clusterID\", request.Namespace)\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\t\treturn reconcile.Result{}, err\n\t}\n\n\tif machineIsFailed(m) {\n\t\tklog.V(1).InfoS(fmt.Sprintf(\"Machine has gone %q phase. It won't reconcile\", v1beta1.PhaseFailed), \"machine\", klog.KObj(m))\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasRequiredFields(m) {\n\t\tif err := r.addRequiredFields(ctx, m); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\tklog.V(4).InfoS(\"Add required fields successfully\", \"machine\", klog.KObj(m))\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tinstanceExists, err := r.actuator.Exists(ctx, m)\n\tif err != nil {\n\t\tklog.ErrorS(err, \"Failed to check if machine exists\", \"machine\", klog.KObj(m))\n\n\t\tconditions.Set(m, conditions.UnknownCondition(\n\t\t\tv1beta1.InstanceExistsCondition,\n\t\t\tv1beta1.ErrorCheckingProviderReason,\n\t\t\t\"Failed to check if machine exists: %v\", err,\n\t\t))\n\n\t\tif patchErr := r.updateStatus(ctx, m, stringPointerDeref(m.Status.Phase), nil, originalConditions); patchErr != nil {\n\t\t\tklog.ErrorS(patchErr, \"Failed to patch machine status\", \"machine\", klog.KObj(m))\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\tif instanceExists {\n\t\tconditions.MarkTrue(m, v1beta1.InstanceExistsCondition)\n\t}\n\n\tif machineIsProvisioned(m) {\n\t\tklog.V(2).InfoS(\"Reconciling machine triggers idempotent update\", \"machine\", klog.KObj(m))\n\t\tif err := r.actuator.Update(ctx, m); err != nil {\n\t\t\tklog.ErrorS(err, fmt.Sprintf(\"Failed to update machine, retrying in %v seconds\", requeueAfter), \"machine\", klog.KObj(m))\n\n\t\t\tif patchErr := r.updateStatus(ctx, m, stringPointerDeref(m.Status.Phase), nil, originalConditions); patchErr != nil {\n\t\t\t\tklog.ErrorS(patchErr, \"Failed to patch machine status\", \"machine\", klog.KObj(m))\n\t\t\t}\n\n\t\t\treturn reconcile.Result{RequeueAfter: requeueAfter}, nil\n\t\t}\n\n\t\t// Instance does not exist but the machine has been given a providerID.\n\t\t// This can only be reached if an instance was deleted outside the machine API\n\t\tif !instanceExists {\n\t\t\tconditions.Set(m, conditions.FalseCondition(\n\t\t\t\tv1beta1.InstanceExistsCondition,\n\t\t\t\tv1beta1.InstanceMissingReason,\n\t\t\t\tv1beta1.ConditionSeverityWarning,\n\t\t\t\t\"Instance not found on provider\",\n\t\t\t))\n\n\t\t\tif err := r.updateStatus(ctx, m, v1beta1.PhaseFailed, errors.New(\"Can't find created instance.\"), originalConditions); err != nil {\n\t\t\t\tklog.ErrorS(err, \"Can't found created instance\", \"machine\", klog.KObj(m))\n\t\t\t\treturn reconcile.Result{}, err\n\t\t\t}\n\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\tif cond := conditions.Get(m, v1beta1.NodeReady); cond != nil {\n\t\t\tphase := v1beta1.PhaseRunning\n\t\t\tif cond.Status != metav1.ConditionTrue && !strings.Contains(cond.Message, \"NetworkPluginNotReady\") {\n\t\t\t\tphase = v1beta1.PhaseNotReady\n\t\t\t}\n\n\t\t\tklog.V(2).InfoS(fmt.Sprintf(\"Update machine phase to %q and requeuing\", phase), \"machine\", klog.KObj(m))\n\t\t\tif err := r.updateStatus(ctx, m, phase, nil, originalConditions); err != nil {\n\t\t\t\tklog.ErrorS(err, \"Failed to update machine status\", \"machine\", klog.KObj(m))\n\t\t\t\treturn reconcile.Result{}, err\n\t\t\t}\n\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\tklog.V(2).InfoS(fmt.Sprintf(\"Update machine phase to %q and requeuing\", v1beta1.PhaseProvisioned), \"machine\", klog.KObj(m))\n\t\treturn reconcile.Result{}, r.updateStatus(ctx, m, v1beta1.PhaseProvisioned, nil, originalConditions)\n\t}\n\n\t// Machine resource created and instance does not exist yet.\n\tif stringPointerDeref(m.Status.Phase) == \"\" {\n\t\tconditions.Set(m, conditions.FalseCondition(\n\t\t\tv1beta1.InstanceExistsCondition,\n\t\t\tv1beta1.InstanceNotCreatedReason,\n\t\t\tv1beta1.ConditionSeverityWarning,\n\t\t\t\"Instance status has not been setted\",\n\t\t))\n\n\t\tklog.V(2).InfoS(fmt.Sprintf(\"Update machine phase to %q and requeuing\", v1beta1.PhaseProvisioning), \"machine\", klog.KObj(m))\n\t\tif err := r.updateStatus(ctx, m, v1beta1.PhaseProvisioning, nil, originalConditions); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tklog.V(2).InfoS(\"Reconciling machine triggers idempotent create\", \"machine\", klog.KObj(m))\n\tif err := r.actuator.Create(ctx, m); err != nil {\n\t\tklog.V(1).InfoS(\"Failed to create machine\", \"err\", err, \"machine\", klog.KObj(m))\n\t\tif isInvalidMachineConfigurationError(err) {\n\t\t\tif err := r.updateStatus(ctx, m, v1beta1.PhaseFailed, err, originalConditions); err != nil {\n\t\t\t\treturn reconcile.Result{}, err\n\t\t\t}\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\t\treturn delayIfRequeueAfterError(err)\n\t}\n\n\tklog.V(2).InfoS(\"Created instance, requeuing\", \"machine\", klog.KObj(m))\n\treturn reconcile.Result{RequeueAfter: requeueAfter}, nil\n}",
+    "sql_statement_list": [
+      "您好！我已经准备好帮您将SQL语句分析结果格式化为标准JSON格式。\n\n不过我注意到您提供的\"需要格式化的内容\"部分是空的（显示为`[]`）。\n\n请您提供需要格式化的SQL语句内容，我将按照您指定的格式要求进行处理：\n\n- 将固定的SQL语句直接作为字符串\n- 将因参数变化的SQL语句组织为对象，包含不同场景的变体\n- 移除所有非SQL内容\n- 确保所有SQL语句以分号结尾\n- 返回纯JSON格式\n\n请提供您需要格式化的SQL语句内容。;"
+    ],
+    "sql_types": [
+      "OTHER"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "func (r *MachineSyncer) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\tklog.V(4).InfoS(\"Reconciling Machine\", \"machine\", klog.KRef(req.Namespace, req.Name))\n\tctx, err := cloud.WithNodeContext(ctx, req.Namespace)\n\tif err != nil {\n\t\tif clusterutil.IsClusterNotFound(err) {\n\t\t\treturn ctrl.Result{}, nil\n\t\t}\n\n\t\treturn ctrl.Result{}, err\n\t}\n\n\t// Fetch the Machine instance\n\tm := &v1beta1.Machine{}\n\tif err := r.Client.Get(ctx, req.NamespacedName, m); err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\treturn ctrl.Result{}, r.TKEClient.DeleteVmInstance(ctx, req.Name)\n\t\t}\n\n\t\treturn ctrl.Result{}, err\n\t}\n\n\tif m.Spec.ProviderSpec.Type == v1beta1.MachineTypeExternal {\n\t\treturn ctrl.Result{}, nil\n\t}\n\n\tvm, err := r.TKEClient.GetVmInstance(ctx, req.Name)\n\tif err != nil {\n\t\t// vm record not exist, create it.\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn ctrl.Result{}, addVmInstance(ctx, r.TKEClient, m)\n\t\t}\n\n\t\treturn ctrl.Result{}, err\n\t}\n\n\t// vm record exist, update it\n\toriginVM := new(tke.VmInstance)\n\t*originVM = *vm\n\n\tvm = applyToVmInstance(vm, m)\n\tif !reflect.DeepEqual(vm, originVM) {\n\t\tdata, _ := json.Marshal(vm)\n\t\tklog.V(4).InfoS(\"vmInstance changed\", \"newest\", string(data), \"machine\", klog.KObj(m))\n\t\treturn ctrl.Result{}, r.TKEClient.SaveVmInstance(ctx, vm)\n\t}\n\n\treturn ctrl.Result{}, nil\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "func (r *NamespacedResourcesDeleter) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\tnamespace := &v1.Namespace{}\n\terr := r.Get(ctx, req.NamespacedName, namespace)\n\tif err != nil {\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\n\tif namespace.GetDeletionTimestamp().IsZero() {\n\t\treturn ctrl.Result{}, nil\n\t}\n\n\tklog.V(4).InfoS(\"Reconciling namespace\", \"namespace\", klog.KObj(namespace), \"finalizerToken\", r.finalizerToken)\n\n\t// ensure that the status is up to date on the namespace\n\t// if we get a not found error, we assume the namespace is truly gone\n\tnamespace, err = r.retryOnConflictError(namespace, r.updateNamespaceStatusFunc)\n\tif err != nil {\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\n\t// return if it is already finalized.\n\tif finalized(namespace) {\n\t\treturn ctrl.Result{}, nil\n\t}\n\n\t// there may still be content for us to remove\n\testimate, err := r.deleteAllContent(namespace)\n\tif err != nil {\n\t\treturn ctrl.Result{}, err\n\t}\n\tif estimate > 0 {\n\t\treturn ctrl.Result{}, &ResourcesRemainingError{estimate}\n\t}\n\n\t// we have removed content, so mark it finalized by us\n\t_, err = r.retryOnConflictError(namespace, r.finalizeNamespace)\n\tif err != nil {\n\t\t// in normal practice, this should not be possible, but if a deployment is running\n\t\t// two controllers to do namespace deletion that share a common finalizer token it's\n\t\t// possible that a not found could occur since the other controller would have finished the delete.\n\t\tif apierrors.IsNotFound(err) {\n\t\t\treturn ctrl.Result{}, nil\n\t\t}\n\n\t\treturn ctrl.Result{}, err\n\t}\n\n\treturn ctrl.Result{}, nil\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "func (r *MachineSetSyncer) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\tklog.V(4).InfoS(\"Reconciling MachineSet\", \"machineset\", klog.KRef(req.Namespace, req.Name))\n\tctx, err := cloud.WithNodeContext(ctx, req.Namespace)\n\tif err != nil {\n\t\tif clusterutil.IsClusterNotFound(err) {\n\t\t\treturn ctrl.Result{}, nil\n\t\t}\n\t\treturn ctrl.Result{}, err\n\t}\n\t// Fetch the MachineSet instance\n\tms := &v1beta1.MachineSet{}\n\tif err := r.Client.Get(ctx, req.NamespacedName, ms); err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tif err := r.TKEClient.MarkExternalNodePoolDeleted(ctx, req.Name); err != nil {\n\t\t\t\treturn ctrl.Result{}, err\n\t\t\t}\n\t\t\treturn ctrl.Result{}, r.TKEClient.MarkNodePoolDeleted(ctx, req.Name)\n\t\t}\n\t\treturn ctrl.Result{}, err\n\t}\n\tif ms.Spec.Type == v1beta1.NativeMachineSetType {\n\t\tnp, err := r.TKEClient.GetNodePool(ctx, req.Name)\n\t\tif err != nil {\n\t\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\t\treturn ctrl.Result{}, addNodePool(ctx, r.TKEClient, ms)\n\t\t\t}\n\t\t\treturn ctrl.Result{}, err\n\t\t}\n\n\t\tif !ms.DeletionTimestamp.IsZero() {\n\t\t\treturn ctrl.Result{}, r.TKEClient.MarkNodePoolDeleting(ctx, req.Name)\n\t\t}\n\t\t// nodepool record exist, update it\n\t\toriginNativeNodePool := new(tke.NativeNodePool)\n\t\t*originNativeNodePool = *np\n\t\tnp = applyToNodePool(np, ms)\n\t\tif !reflect.DeepEqual(np, originNativeNodePool) {\n\t\t\tdata, _ := json.Marshal(np)\n\t\t\tklog.V(4).InfoS(\"nativeNodePool changed\", \"newest\", string(data), \"machineset\", klog.KObj(ms))\n\t\t\treturn ctrl.Result{}, r.TKEClient.SaveNodePool(ctx, np)\n\t\t}\n\t}\n\tif ms.Spec.Type == v1beta1.ExternalMachineSetType {\n\t\tep, err := r.TKEClient.GetExternalNodePool(ctx, req.Name)\n\t\tif err != nil {\n\t\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\t\terrs := addExternalNodePool(ctx, r.TKEClient, ms)\n\t\t\t\treturn ctrl.Result{}, errs //addExternalNodePool(ctx, r.TKEClient, ms)\n\t\t\t}\n\n\t\t\treturn ctrl.Result{}, err\n\t\t}\n\n\t\tif !ms.DeletionTimestamp.IsZero() {\n\t\t\treturn ctrl.Result{}, r.TKEClient.MarkExternalNodePoolDeleting(ctx, req.Name)\n\t\t}\n\n\t\t// nodepool record exist, update it\n\t\toriginExternalNodePool := new(tke.ExternalNodePool)\n\t\t*originExternalNodePool = *ep\n\t\tep = applyToExternalNodePool(ep, ms)\n\n\t\tif !reflect.DeepEqual(ep, originExternalNodePool) {\n\t\t\tdata, _ := json.Marshal(ep)\n\t\t\tklog.V(4).InfoS(\"nativeNodePool changed\", \"newest\", string(data), \"machineset\", klog.KObj(ms))\n\t\t\treturn ctrl.Result{}, r.TKEClient.SaveExternalNodePool(ctx, ep)\n\t\t}\n\t}\n\n\treturn ctrl.Result{}, nil\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "orm_code": "func (r *RollingUpgradeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\trollingUpgrade := &v1beta1.RollingUpgrade{}\n\terr := r.Get(ctx, req.NamespacedName, rollingUpgrade)\n\tif err != nil {\n\t\tr.Runner.Delete(req.NamespacedName)\n\t\tklog.V(1).InfoS(\"Rolling upgrade resource not found, deleted object from cronjob list\", \"rollingupgrade\", klog.KRef(req.Namespace, req.Name))\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tklog.V(4).InfoS(\"Reconciling rollingupgrade\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\n\t// if the resource is being deleted, remove it from the cronjob list\n\tif canDisable(rollingUpgrade) {\n\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tif !hasDesiredVersions(rollingUpgrade) {\n\t\tif err := r.addDesiredVersions(ctx, rollingUpgrade); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\tmachineSet, err := r.GetMachineSet(rollingUpgrade)\n\tif err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\tr.Runner.Delete(rollingUpgrade.NamespacedName())\n\t\t\tklog.V(2).InfoS(\"Rolling upgrade has no machineset\", \"rollingupgrade\", klog.KObj(rollingUpgrade))\n\t\t\treturn reconcile.Result{}, nil\n\t\t}\n\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Add OwnerReference, so that RollingUpgrade can be recycled by kubernetes garbage collector.\n\tif !hasOwnerReferences(rollingUpgrade) {\n\t\tif err := r.addOwnerReferences(ctx, rollingUpgrade, machineSet); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\n\t\treturn reconcile.Result{}, nil\n\t}\n\n\trollupCtx := NewRollingUpgrader(\n\t\tr.Logger,\n\t\tr.Client,\n\t\trollingUpgrade.NamespacedName(),\n\t\tr.UpgradeTimeout,\n\t\tr.IgnoreUpgradeFailures,\n\t)\n\tif err := r.Runner.Reconcile(rollingUpgrade.NamespacedName(), rollingUpgrade.Spec.UpgradeOptions, rollingUpgrade.Spec.Strategy, rollupCtx); err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "caller": "func (r *ReconcileMachine) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\tklog.V(4).InfoS(\"Reconciling Machine\", \"machine\", klog.KRef(req.Namespace, req.Name))\n\n\t// Fetch the MachineSet instance\n\tm := &v1beta1.Machine{}\n\tif err := r.Client.Get(ctx, req.NamespacedName, m); err != nil {\n\t\tif apierrors.IsNotFound(err) {\n\t\t\treturn ctrl.Result{}, r.OSSClient.DeleteMachine(ctx, GetInstanceID(m))\n\t\t}\n\t}\n\n\t//gyf debug adapt for externalNode?\n\tinstanceID := GetInstanceID(m)\n\tif instanceID == \"\" {\n\t\treturn ctrl.Result{}, nil\n\t}\n\n\tif !m.GetDeletionTimestamp().IsZero() {\n\t\treturn ctrl.Result{}, r.OSSClient.DeleteMachine(ctx, instanceID)\n\t}\n\n\tossm, err := r.OSSClient.GetMachine(ctx, instanceID)\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn ctrl.Result{}, addMachine(ctx, r.OSSClient, m)\n\t\t}\n\n\t\treturn ctrl.Result{}, err\n\t}\n\n\toriginMachine := new(oss.OSSMachine)\n\t*originMachine = *ossm\n\n\tossm = applyToOSSMachine(ossm, m)\n\tif !reflect.DeepEqual(ossm, originMachine) {\n\t\tdata, _ := json.Marshal(ossm)\n\t\tklog.V(4).InfoS(\"oss machine changed\", \"newest\", string(data), \"machine\", klog.KObj(m))\n\t\treturn ctrl.Result{}, r.OSSClient.SaveMachine(ctx, ossm)\n\t}\n\n\treturn ctrl.Result{}, nil\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/rollingupgrade_types.go",
+        "code_start_line": 18,
+        "code_end_line": 29,
+        "code_key": "RollingUpgrade",
+        "code_value": "type RollingUpgrade struct {\n\tmetav1.TypeMeta `json:\",inline\"`\n\t// Standard object's metadata.\n\t// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n\t// +optional\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\t// Specification of the desired behavior for this RollingUpgrade.\n\t// +optional\n\tSpec   RollingUpgradeSpec   `json:\"spec,omitempty\"`\n\tStatus RollingUpgradeStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/client/vpc/model.go",
+        "code_start_line": 73,
+        "code_end_line": 76,
+        "code_key": "Request",
+        "code_value": "type Request struct {\n\tHeader\n\tInterface apiv2.Interface `json:\"interface\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 3,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/machineset/controller.go:588:592:adoptOrphan",
+    "orm_code": "func (r *ReconcileMachineSet) adoptOrphan(machineSet *v1beta1.MachineSet, machine *v1beta1.Machine) error {\n\tnewRef := *metav1.NewControllerRef(machineSet, ControllerKind)\n\tmachine.OwnerReferences = append(machine.OwnerReferences, newRef)\n\treturn r.Client.Update(context.Background(), machine)\n}",
+    "caller": "",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/machineset_types.go",
+        "code_start_line": 22,
+        "code_end_line": 28,
+        "code_key": "MachineSet",
+        "code_value": "type MachineSet struct {\n\tmetav1.TypeMeta   `json:\",inline\"`\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\tSpec   MachineSetSpec   `json:\"spec,omitempty\"`\n\tStatus MachineSetStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/machineset_types.go",
+        "code_start_line": 22,
+        "code_end_line": 28,
+        "code_key": "MachineSet",
+        "code_value": "type MachineSet struct {\n\tmetav1.TypeMeta   `json:\",inline\"`\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\tSpec   MachineSetSpec   `json:\"spec,omitempty\"`\n\tStatus MachineSetStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/machine_types.go",
+        "code_start_line": 186,
+        "code_end_line": 192,
+        "code_key": "Machine",
+        "code_value": "type Machine struct {\n\tmetav1.TypeMeta   `json:\",inline\"`\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\tSpec   MachineSpec   `json:\"spec,omitempty\"`\n\tStatus MachineStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/machine_types.go",
+        "code_start_line": 186,
+        "code_end_line": 192,
+        "code_key": "Machine",
+        "code_value": "type Machine struct {\n\tmetav1.TypeMeta   `json:\",inline\"`\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\tSpec   MachineSpec   `json:\"spec,omitempty\"`\n\tStatus MachineStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/machineset/controller.go:588:592:adoptOrphan",
+    "orm_code": "func (r *ReconcileMachineSet) adoptOrphan(machineSet *v1beta1.MachineSet, machine *v1beta1.Machine) error {\n\tnewRef := *metav1.NewControllerRef(machineSet, ControllerKind)\n\tmachine.OwnerReferences = append(machine.OwnerReferences, newRef)\n\treturn r.Client.Update(context.Background(), machine)\n}",
+    "caller": "func (r *ReconcileMachineSet) reconcile(ctx context.Context, machineSet *v1beta1.MachineSet) (reconcile.Result, error) {\n\tif errList := r.validateMachineSet(machineSet); len(errList) > 0 {\n\t\terr := fmt.Errorf(\n\t\t\t\"%q machineset validation failed: %v\",\n\t\t\tmachineSet.NamespacedName(),\n\t\t\terrList.ToAggregate().Error(),\n\t\t)\n\t\tklog.ErrorS(err, \"Failed to validate machineset\")\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// NOTE: filteredMachines are pointing to objects from cache - if you need to\n\t// modify them, you need to copy it first.\n\tfilteredMachines, err := nodecontroller.GetMachineFromMachineSet(r.Client, machineSet)\n\tif err != nil {\n\t\treturn reconcile.Result{}, err\n\t}\n\n\t// Attempt to adopt machine if it meets previous conditions and it has no controller references.\n\tfor _, machine := range filteredMachines {\n\t\tif metav1.GetControllerOf(machine) == nil {\n\t\t\tif err := r.adoptOrphan(machineSet, machine); err != nil {\n\t\t\t\tklog.V(1).InfoS(\"Failed to adopt machine into machineset\", \"machine\", klog.KObj(machine),\n\t\t\t\t\t\"machineset\", klog.KObj(machineSet),\n\t\t\t\t\t\"err\", err)\n\t\t\t\tcontinue\n\t\t\t}\n\t\t}\n\t}\n\n\tif cast.ToBool(machineSet.Annotations[known.UpdateExistedNodesAnnotation]) {\n\t\tif err := r.UpdateMachines(machineSet, filteredMachines); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\t}\n\n\tif cast.ToBool(machineSet.Spec.Template.Spec.Annotations[known.SecurityAgent]) {\n\t\tif err := r.UpdateMachinesSecurityAgent(machineSet, filteredMachines); err != nil {\n\t\t\treturn reconcile.Result{}, err\n\t\t}\n\t}\n\n\tif machineSet.Spec.Type == v1beta1.ExternalMachineSetType {\n\t\treturn reconcile.Result{}, nil //m.Spec.ProviderSpec.Value must be set\n\t}\n\n\t// Deep-copy otherwise we are mutating our cache.\n\tms := machineSet.DeepCopy()\n\n\tsyncErr := r.syncReplicas(ctx, machineSet, filteredMachines)\n\n\tnewStatus := r.calculateStatus(ms, filteredMachines, syncErr)\n\n\t// Always updates status as machines come up or die.\n\tupdatedMS, err := updateMachineSetStatus(r.Client, machineSet, newStatus)\n\tif err != nil {\n\t\tif syncErr != nil {\n\t\t\treturn reconcile.Result{}, fmt.Errorf(\"failed to sync machines: %v. failed to update machine set status: %w\", syncErr, err)\n\t\t}\n\t\treturn reconcile.Result{}, fmt.Errorf(\"failed to update machine set status: %w\", err)\n\t}\n\n\tif syncErr != nil {\n\t\treturn reconcile.Result{}, fmt.Errorf(\"failed to sync machines: %w\", syncErr)\n\t}\n\n\tvar replicas int32\n\tif updatedMS.Spec.Replicas != nil {\n\t\treplicas = *updatedMS.Spec.Replicas\n\t}\n\n\t// Resync the MachineSet after MinReadySeconds as a last line of defense to guard against clock-skew.\n\t// Clock-skew is an issue as it may impact whether an available replica is counted as a ready replica.\n\t// A replica is available if the amount of time since last transition exceeds MinReadySeconds.\n\t// If there was a clock skew, checking whether the amount of time since last transition to ready state\n\t// exceeds MinReadySeconds could be incorrect.\n\t// To avoid an available replica stuck in the ready state, we force a reconcile after MinReadySeconds,\n\t// at which point it should confirm any available replica to be available.\n\tif updatedMS.Spec.MinReadySeconds > 0 &&\n\t\tupdatedMS.Status.ReadyReplicas == replicas &&\n\t\tupdatedMS.Status.AvailableReplicas != replicas {\n\n\t\treturn reconcile.Result{Requeue: true}, nil\n\t}\n\n\treturn reconcile.Result{}, nil\n}",
+    "sql_statement_list": [
+      "您好！我已经准备好为您格式化SQL语句为标准JSON格式。\n\n不过我注意到您提供的\"需要格式化的内容\"是空的（[]）。请您提供需要分析和格式化的SQL语句内容，我将按照您指定的格式要求进行处理。\n\n请将您的SQL语句内容放在\"需要格式化的内容：\"后面，我会立即为您转换为标准JSON格式。;"
+    ],
+    "sql_types": [
+      "OTHER"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/machineset_types.go",
+        "code_start_line": 22,
+        "code_end_line": 28,
+        "code_key": "MachineSet",
+        "code_value": "type MachineSet struct {\n\tmetav1.TypeMeta   `json:\",inline\"`\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\tSpec   MachineSetSpec   `json:\"spec,omitempty\"`\n\tStatus MachineSetStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/machineset_types.go",
+        "code_start_line": 22,
+        "code_end_line": 28,
+        "code_key": "MachineSet",
+        "code_value": "type MachineSet struct {\n\tmetav1.TypeMeta   `json:\",inline\"`\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\tSpec   MachineSetSpec   `json:\"spec,omitempty\"`\n\tStatus MachineSetStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/machine_types.go",
+        "code_start_line": 186,
+        "code_end_line": 192,
+        "code_key": "Machine",
+        "code_value": "type Machine struct {\n\tmetav1.TypeMeta   `json:\",inline\"`\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\tSpec   MachineSpec   `json:\"spec,omitempty\"`\n\tStatus MachineStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/machine_types.go",
+        "code_start_line": 186,
+        "code_end_line": 192,
+        "code_key": "Machine",
+        "code_value": "type Machine struct {\n\tmetav1.TypeMeta   `json:\",inline\"`\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\tSpec   MachineSpec   `json:\"spec,omitempty\"`\n\tStatus MachineStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/machineset/controller.go:588:592:adoptOrphan",
+    "orm_code": "func (r *ReconcileMachineSet) adoptOrphan(machineSet *v1beta1.MachineSet, machine *v1beta1.Machine) error {\n\tnewRef := *metav1.NewControllerRef(machineSet, ControllerKind)\n\tmachine.OwnerReferences = append(machine.OwnerReferences, newRef)\n\treturn r.Client.Update(context.Background(), machine)\n}",
+    "caller": "func (r *Reconciler) reconcile(machineSet *v1beta1.MachineSet) (ctrl.Result, error) {\n\tif !machinesetutil.IsAutoscalingEnabled(machineSet) {\n\t\tdeleteClusterAutoscaleAnnotations(machineSet)\n\t} else {\n\t\tscaling := machineSet.Spec.Scaling\n\t\tmachineSet.Annotations[known.NodeGroupMinSizeAnnotationKey] = cast.ToString(scaling.MinReplicas)\n\t\tmachineSet.Annotations[known.NodeGroupMaxSizeAnnotationKey] = cast.ToString(scaling.MaxReplicas)\n\t\tmachineSet.Annotations[known.NodeGroupMinSizeAnnotationKeyV2] = cast.ToString(scaling.MinReplicas)\n\t\tmachineSet.Annotations[known.NodeGroupMaxSizeAnnotationKeyV2] = cast.ToString(scaling.MaxReplicas)\n\t}\n\n\tif hasAnnotations(machineSet) {\n\t\treturn ctrl.Result{}, nil\n\t}\n\n\tctx, err := cloud.WithNodeContext(context.Background(), machineSet.Namespace)\n\tif err != nil {\n\t\treturn ctrl.Result{}, err\n\t}\n\n\tconfigSet, err := inscache.Cache().Get(ctx)\n\tif err != nil {\n\t\treturn ctrl.Result{}, err\n\t}\n\n\tinstanceType := machineSet.Spec.InstanceTypes[0]\n\tinsConfig, ok := configSet.GetInstanceConfigs()[instanceType]\n\tif !ok {\n\t\treturn ctrl.Result{}, nil\n\t}\n\n\tif machineSet.Annotations == nil {\n\t\tmachineSet.Annotations = make(map[string]string)\n\t}\n\tmachineSet.Annotations[known.CPUAnnotation] = strconv.Itoa(insConfig.CPU)\n\tmachineSet.Annotations[known.MemoryAnnotation] = strconv.Itoa(insConfig.Memory)\n\tif machinesetutil.IsAutoscalingEnabled(machineSet) {\n\t\t//machineSet.Annotations[known.ClusterAutoscalerCPUAnnotation] = strconv.Itoa(insConfig.CPU)\n\t\tmachineSet.Annotations[known.ClusterAutoscalerCPUAnnotation] = getReservedCPUQuant(insConfig.CPU).String()\n\t\t// 4*1000*1000*1000 = 4G\n\t\t//q := resource.NewQuantity(int64(insConfig.Memory)*1000*1000*1000, resource.DecimalSI)\n\t\t//machineSet.Annotations[known.ClusterAutoscalerMemoryAnnotation] = q.String()\n\t\tmachineSet.Annotations[known.ClusterAutoscalerMemoryAnnotation] = getReservedMemoryQuant(insConfig.Memory).String()\n\t}\n\tif insConfig.GPU != 0 {\n\t\tmachineSet.Annotations[known.GPUAnnotation] = strconv.Itoa(insConfig.GPU)\n\t\tif machinesetutil.IsAutoscalingEnabled(machineSet) {\n\t\t\tmachineSet.Annotations[known.ClusterAutoscalerGPUAnnotation] = strconv.Itoa(insConfig.GPU)\n\t\t}\n\t}\n\n\tif err := ensureENIAnnotations(ctx, machineSet); err != nil {\n\t\treturn ctrl.Result{}, err\n\t}\n\n\treturn ctrl.Result{}, nil\n}",
+    "sql_statement_list": [],
+    "sql_types": [],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/machineset_types.go",
+        "code_start_line": 22,
+        "code_end_line": 28,
+        "code_key": "MachineSet",
+        "code_value": "type MachineSet struct {\n\tmetav1.TypeMeta   `json:\",inline\"`\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\tSpec   MachineSetSpec   `json:\"spec,omitempty\"`\n\tStatus MachineSetStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/machineset_types.go",
+        "code_start_line": 22,
+        "code_end_line": 28,
+        "code_key": "MachineSet",
+        "code_value": "type MachineSet struct {\n\tmetav1.TypeMeta   `json:\",inline\"`\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\tSpec   MachineSetSpec   `json:\"spec,omitempty\"`\n\tStatus MachineSetStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/machine_types.go",
+        "code_start_line": 186,
+        "code_end_line": 192,
+        "code_key": "Machine",
+        "code_value": "type Machine struct {\n\tmetav1.TypeMeta   `json:\",inline\"`\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\tSpec   MachineSpec   `json:\"spec,omitempty\"`\n\tStatus MachineStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/apis/node/v1beta1/machine_types.go",
+        "code_start_line": 186,
+        "code_end_line": 192,
+        "code_key": "Machine",
+        "code_value": "type Machine struct {\n\tmetav1.TypeMeta   `json:\",inline\"`\n\tmetav1.ObjectMeta `json:\"metadata,omitempty\"`\n\n\tSpec   MachineSpec   `json:\"spec,omitempty\"`\n\tStatus MachineStatus `json:\"status,omitempty\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "cb1a133482fec067fd900fe6a4d47680ab905aef"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/gorm_orm_code/danielxxli__tke-node-server.json",
+    "matched_keywords": [
+      "References"
+    ]
+  }
+]

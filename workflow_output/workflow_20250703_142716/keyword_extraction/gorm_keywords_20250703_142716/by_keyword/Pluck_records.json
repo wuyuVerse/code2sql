@@ -1,0 +1,267 @@
+[
+  {
+    "function_name": "/Users/freedom/llms/singularity/internal/consumer_srv/domain/measure/repositories/base.go:33:46:GetResourceIdsByAppId",
+    "orm_code": "func (repo *BalanceRepo) GetResourceIdsByAppId(ctx context.Context, appId int64, chargeTime time.Time, includeInvalidRes bool, tableName string) ([]string, error) {\n\t// includeInvalidRes为true时，返回所有资源, 目前用在补量场景\n\tvar resourceIds []string\n\t// FIXME 这里是获取到已经被python更新过的balance，临时兼容使用\n\tquery := repo.DB.Table(tableName).Distinct(\"resourceId\")\n\tif !includeInvalidRes {\n\t\tquery = query.Where(\"appId = ? and status = 1 and lastBalanceTime <= ? \", appId, chargeTime)\n\t} else {\n\t\tquery = query.Where(\"appId = ?\", appId)\n\t}\n\tquery.Pluck(\"resourceId\", &resourceIds)\n\n\treturn resourceIds, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "includeInvalidRes = false (不包含无效资源)",
+            "sql": "SELECT DISTINCT resourceId FROM ? WHERE appId = ? AND status = 1 AND lastBalanceTime <= ?;"
+          },
+          {
+            "scenario": "includeInvalidRes = true (包含所有资源，用于补量场景)",
+            "sql": "SELECT DISTINCT resourceId FROM ? WHERE appId = ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "code_meta_data": [],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/5-28-cbs.json",
+    "matched_keywords": [
+      "Pluck"
+    ]
+  },
+  {
+    "function_name": "/Users/freedom/llms/singularity/internal/consumer_srv/domain/measure/repositories/base.go:33:46:GetResourceIdsByAppId",
+    "orm_code": "func (repo *BalanceRepo) GetResourceIdsByAppId(ctx context.Context, appId int64, chargeTime time.Time, includeInvalidRes bool, tableName string) ([]string, error) {\n\t// includeInvalidRes为true时，返回所有资源, 目前用在补量场景\n\tvar resourceIds []string\n\t// FIXME 这里是获取到已经被python更新过的balance，临时兼容使用\n\tquery := repo.DB.Table(tableName).Distinct(\"resourceId\")\n\tif !includeInvalidRes {\n\t\tquery = query.Where(\"appId = ? and status = 1 and lastBalanceTime <= ? \", appId, chargeTime)\n\t} else {\n\t\tquery = query.Where(\"appId = ?\", appId)\n\t}\n\tquery.Pluck(\"resourceId\", &resourceIds)\n\n\treturn resourceIds, nil\n}",
+    "caller": "func (srv *BaseResSrv) GetValidResourceIdsByAppId(appId user.AppId, chargeTime time.Time) []ResourceId {\n\tids, _ := srv.balanceRepo.GetResourceIdsByAppId(srv.ctx, int64(appId), chargeTime, false, srv.balanceRepo.GetBalanceTableName())\n\tredIds := make([]ResourceId, len(ids))\n\tfor i, resId := range ids {\n\t\tredIds[i] = ResourceId(resId)\n\t}\n\treturn redIds\n}",
+    "sql_statement_list": [
+      "SELECT DISTINCT resourceId FROM [动态表名] WHERE appId = ? AND status = 1 AND lastBalanceTime <= ?;"
+    ],
+    "sql_types": [
+      "SELECT"
+    ],
+    "code_meta_data": [],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/5-28-cbs.json",
+    "matched_keywords": [
+      "Pluck"
+    ]
+  },
+  {
+    "function_name": "/Users/freedom/llms/singularity/internal/consumer_srv/domain/measure/repositories/base.go:33:46:GetResourceIdsByAppId",
+    "orm_code": "func (repo *BalanceRepo) GetResourceIdsByAppId(ctx context.Context, appId int64, chargeTime time.Time, includeInvalidRes bool, tableName string) ([]string, error) {\n\t// includeInvalidRes为true时，返回所有资源, 目前用在补量场景\n\tvar resourceIds []string\n\t// FIXME 这里是获取到已经被python更新过的balance，临时兼容使用\n\tquery := repo.DB.Table(tableName).Distinct(\"resourceId\")\n\tif !includeInvalidRes {\n\t\tquery = query.Where(\"appId = ? and status = 1 and lastBalanceTime <= ? \", appId, chargeTime)\n\t} else {\n\t\tquery = query.Where(\"appId = ?\", appId)\n\t}\n\tquery.Pluck(\"resourceId\", &resourceIds)\n\n\treturn resourceIds, nil\n}",
+    "caller": "func (srv *BaseResSrv) GetValidResourceIdsByAppId(appId user.AppId, chargeTime time.Time) []ResourceId {\n\tids, _ := srv.measureRepo.GetResourceIdsByAppId(srv.ctx, int64(appId), chargeTime, false, srv.measureRepo.GetBalanceTableName())\n\tredIds := make([]ResourceId, len(ids))\n\tfor i, snapId := range ids {\n\t\tredIds[i] = ResourceId(snapId)\n\t}\n\treturn redIds\n}",
+    "sql_statement_list": [
+      "SELECT DISTINCT resourceId FROM {tableName} WHERE appId = ? AND status = 1 AND lastBalanceTime <= ?;"
+    ],
+    "sql_types": [
+      "SELECT"
+    ],
+    "code_meta_data": [],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/5-28-cbs.json",
+    "matched_keywords": [
+      "Pluck"
+    ]
+  },
+  {
+    "function_name": "/Users/freedom/llms/singularity/internal/consumer_srv/domain/measure/repositories/base.go:33:46:GetResourceIdsByAppId",
+    "orm_code": "func (repo *BalanceRepo) GetResourceIdsByAppId(ctx context.Context, appId int64, chargeTime time.Time, includeInvalidRes bool, tableName string) ([]string, error) {\n\t// includeInvalidRes为true时，返回所有资源, 目前用在补量场景\n\tvar resourceIds []string\n\t// FIXME 这里是获取到已经被python更新过的balance，临时兼容使用\n\tquery := repo.DB.Table(tableName).Distinct(\"resourceId\")\n\tif !includeInvalidRes {\n\t\tquery = query.Where(\"appId = ? and status = 1 and lastBalanceTime <= ? \", appId, chargeTime)\n\t} else {\n\t\tquery = query.Where(\"appId = ?\", appId)\n\t}\n\tquery.Pluck(\"resourceId\", &resourceIds)\n\n\treturn resourceIds, nil\n}",
+    "caller": "func (t *RepushUserBillingTask) ProcessSingleRepushDetail(detail *measure.RepushDetail) error {\n\tcbsMeasureRepo := registry.GetRegistry(t.ctx).AdapterRepos.CbsMeasureRepo.(measure.CbsMeasureRepoIFace)\n\tappIdResIdMaps := make(map[user.AppId][]measure.ResourceId)\n\tif detail.AppId > 0 {\n\t\tif len(detail.ResIds) > 0 {\n\t\t\tappIdResIdMaps[detail.AppId] = detail.ResIds\n\t\t} else {\n\t\t\tids, err := cbsMeasureRepo.GetResourceIdsByAppId(t.ctx, int64(detail.AppId), time.Time{}, true, cbsMeasureRepo.GetBalanceTableName())\n\t\t\tif err != nil {\n\t\t\t\treturn err\n\t\t\t}\n\t\t\tresIds := make([]measure.ResourceId, 0, len(ids))\n\t\t\tfor _, resId := range ids {\n\t\t\t\tresIds = append(resIds, measure.ResourceId(resId))\n\t\t\t}\n\t\t\tappIdResIdMaps[detail.AppId] = resIds\n\t\t}\n\t} else {\n\t\tif len(detail.ResIds) > 0 {\n\t\t\treturn fmt.Errorf(\"AppId is required when ResIds is set\")\n\t\t}\n\t\tlogs.Info(t.ctx).Msg(\"REPUSH_ALL_FOR_APPID_NOT_SET\")\n\t\tappIds, _ := cbsMeasureRepo.GetAppIdsWithResources(t.ctx, time.Time{}, true, cbsMeasureRepo.GetBalanceTableName())\n\t\tfor _, appId := range appIds {\n\t\t\t// 没有指定资源，则补量所有资源\n\t\t\tids, err := cbsMeasureRepo.GetResourceIdsByAppId(t.ctx, appId, time.Time{}, true, cbsMeasureRepo.GetBalanceTableName())\n\t\t\tif err != nil {\n\t\t\t\treturn err\n\t\t\t}\n\t\t\tresIds := make([]measure.ResourceId, 0, len(ids))\n\t\t\tfor _, resId := range ids {\n\t\t\t\tresIds = append(resIds, measure.ResourceId(resId))\n\t\t\t}\n\t\t\tappIdResIdMaps[user.AppId(appId)] = resIds\n\t\t}\n\n\t}\n\n\tvar repushItems []*RepushItem\n\tfor appId, resIds := range appIdResIdMaps {\n\t\tu, err := t.userSrv.GetUser(appId)\n\t\tif err != nil {\n\t\t\t// 这里可能是新注册的用户，user表里没有用户数据，可能会丢失该用户的量\n\t\t\tlogs.Error(t.ctx).Err(err).Uint64(\"appId\", uint64(appId)).Msg(\"GET_USER_ERROR\")\n\t\t\tpanic(err)\n\t\t}\n\t\tfor _, resId := range resIds {\n\t\t\tvar repushItem RepushItem\n\t\t\trepushItem.user = u\n\t\t\trepushItem.cbsInstanceId = resId\n\t\t\trepushItem.startTime = detail.StartTime\n\t\t\trepushItem.endTime = detail.EndTime\n\t\t\trepushItems = append(repushItems, &repushItem)\n\t\t}\n\t}\n\tlogs.Info(t.ctx).Int(\"count\", len(repushItems)).Msg(\"REPUSH_ITEMS_INFO\")\n\n\tvar wg sync.WaitGroup\n\tfor _, repushItem := range repushItems {\n\t\twg.Add(1)\n\t\tt.semaphore <- struct{}{}\n\t\tgo func(item *RepushItem) {\n\t\t\tdefer wg.Done()\n\t\t\tdefer func() { <-t.semaphore }()\n\t\t\tt.ProcessSingleRepushItem(item)\n\t\t}(repushItem)\n\t}\n\twg.Wait()\n\treturn nil\n}",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "includeInvalidRes = true (调用者上下文)",
+            "sql": "SELECT DISTINCT resourceId FROM ? WHERE appId = ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "code_meta_data": [],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/5-28-cbs.json",
+    "matched_keywords": [
+      "Pluck"
+    ]
+  },
+  {
+    "function_name": "/Users/freedom/llms/singularity/internal/scheduler/internal/adapter/repositories/measure.go:46:64:GetResourceIdsByAppId",
+    "orm_code": "func (repo *MeasureRepo) GetResourceIdsByAppId(ctx context.Context, appId int64, chargeTime time.Time, includeInvalidRes bool, tableName string) ([]string, error) {\n\t// includeInvalidRes为true时，返回所有资源, 目前用在补量场景\n\tdb, err := repo.getCCDBDb(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tvar resourceIds []string\n\t// FIXME 这里是获取到已经被python更新过的balance，临时兼容使用\n\tquery := db.Table(tableName).Distinct(\"resourceId\")\n\tif !includeInvalidRes {\n\t\tquery = query.Where(\"appId = ? and status = 1 and lastBalanceTime <= ? \", appId, chargeTime)\n\t} else {\n\t\tquery = query.Where(\"appId = ?\", appId)\n\t}\n\tquery.Pluck(\"resourceId\", &resourceIds)\n\n\treturn resourceIds, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "includeInvalidRes = false（不包含无效资源）",
+            "sql": "SELECT DISTINCT resourceId FROM ? WHERE appId = ? AND status = 1 AND lastBalanceTime <= ?;"
+          },
+          {
+            "scenario": "includeInvalidRes = true（包含所有资源，用于补量场景）",
+            "sql": "SELECT DISTINCT resourceId FROM ? WHERE appId = ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "code_meta_data": [],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/5-28-cbs.json",
+    "matched_keywords": [
+      "Pluck"
+    ]
+  },
+  {
+    "function_name": "/Users/freedom/llms/singularity/internal/scheduler/internal/adapter/repositories/measure.go:46:64:GetResourceIdsByAppId",
+    "orm_code": "func (repo *MeasureRepo) GetResourceIdsByAppId(ctx context.Context, appId int64, chargeTime time.Time, includeInvalidRes bool, tableName string) ([]string, error) {\n\t// includeInvalidRes为true时，返回所有资源, 目前用在补量场景\n\tdb, err := repo.getCCDBDb(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tvar resourceIds []string\n\t// FIXME 这里是获取到已经被python更新过的balance，临时兼容使用\n\tquery := db.Table(tableName).Distinct(\"resourceId\")\n\tif !includeInvalidRes {\n\t\tquery = query.Where(\"appId = ? and status = 1 and lastBalanceTime <= ? \", appId, chargeTime)\n\t} else {\n\t\tquery = query.Where(\"appId = ?\", appId)\n\t}\n\tquery.Pluck(\"resourceId\", &resourceIds)\n\n\treturn resourceIds, nil\n}",
+    "caller": "func (srv *BaseResSrv) GetValidResourceIdsByAppId(appId user.AppId, chargeTime time.Time) []ResourceId {\n\tids, _ := srv.balanceRepo.GetResourceIdsByAppId(srv.ctx, int64(appId), chargeTime, false, srv.balanceRepo.GetBalanceTableName())\n\tredIds := make([]ResourceId, len(ids))\n\tfor i, resId := range ids {\n\t\tredIds[i] = ResourceId(resId)\n\t}\n\treturn redIds\n}",
+    "sql_statement_list": [
+      "SELECT DISTINCT resourceId FROM {tableName} WHERE appId = ? AND status = 1 AND lastBalanceTime <= ?;"
+    ],
+    "sql_types": [
+      "SELECT"
+    ],
+    "code_meta_data": [],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/5-28-cbs.json",
+    "matched_keywords": [
+      "Pluck"
+    ]
+  },
+  {
+    "function_name": "/Users/freedom/llms/singularity/internal/scheduler/internal/adapter/repositories/measure.go:46:64:GetResourceIdsByAppId",
+    "orm_code": "func (repo *MeasureRepo) GetResourceIdsByAppId(ctx context.Context, appId int64, chargeTime time.Time, includeInvalidRes bool, tableName string) ([]string, error) {\n\t// includeInvalidRes为true时，返回所有资源, 目前用在补量场景\n\tdb, err := repo.getCCDBDb(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tvar resourceIds []string\n\t// FIXME 这里是获取到已经被python更新过的balance，临时兼容使用\n\tquery := db.Table(tableName).Distinct(\"resourceId\")\n\tif !includeInvalidRes {\n\t\tquery = query.Where(\"appId = ? and status = 1 and lastBalanceTime <= ? \", appId, chargeTime)\n\t} else {\n\t\tquery = query.Where(\"appId = ?\", appId)\n\t}\n\tquery.Pluck(\"resourceId\", &resourceIds)\n\n\treturn resourceIds, nil\n}",
+    "caller": "func (srv *BaseResSrv) GetValidResourceIdsByAppId(appId user.AppId, chargeTime time.Time) []ResourceId {\n\tids, _ := srv.measureRepo.GetResourceIdsByAppId(srv.ctx, int64(appId), chargeTime, false, srv.measureRepo.GetBalanceTableName())\n\tredIds := make([]ResourceId, len(ids))\n\tfor i, snapId := range ids {\n\t\tredIds[i] = ResourceId(snapId)\n\t}\n\treturn redIds\n}",
+    "sql_statement_list": [
+      "SELECT DISTINCT resourceId FROM balance WHERE appId = ? AND status = 1 AND lastBalanceTime <= ?;"
+    ],
+    "sql_types": [
+      "SELECT"
+    ],
+    "code_meta_data": [],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/5-28-cbs.json",
+    "matched_keywords": [
+      "Pluck"
+    ]
+  },
+  {
+    "function_name": "/Users/freedom/llms/singularity/internal/scheduler/internal/adapter/repositories/measure.go:46:64:GetResourceIdsByAppId",
+    "orm_code": "func (repo *MeasureRepo) GetResourceIdsByAppId(ctx context.Context, appId int64, chargeTime time.Time, includeInvalidRes bool, tableName string) ([]string, error) {\n\t// includeInvalidRes为true时，返回所有资源, 目前用在补量场景\n\tdb, err := repo.getCCDBDb(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tvar resourceIds []string\n\t// FIXME 这里是获取到已经被python更新过的balance，临时兼容使用\n\tquery := db.Table(tableName).Distinct(\"resourceId\")\n\tif !includeInvalidRes {\n\t\tquery = query.Where(\"appId = ? and status = 1 and lastBalanceTime <= ? \", appId, chargeTime)\n\t} else {\n\t\tquery = query.Where(\"appId = ?\", appId)\n\t}\n\tquery.Pluck(\"resourceId\", &resourceIds)\n\n\treturn resourceIds, nil\n}",
+    "caller": "func (t *RepushUserBillingTask) ProcessSingleRepushDetail(detail *measure.RepushDetail) error {\n\tcbsMeasureRepo := registry.GetRegistry(t.ctx).AdapterRepos.CbsMeasureRepo.(measure.CbsMeasureRepoIFace)\n\tappIdResIdMaps := make(map[user.AppId][]measure.ResourceId)\n\tif detail.AppId > 0 {\n\t\tif len(detail.ResIds) > 0 {\n\t\t\tappIdResIdMaps[detail.AppId] = detail.ResIds\n\t\t} else {\n\t\t\tids, err := cbsMeasureRepo.GetResourceIdsByAppId(t.ctx, int64(detail.AppId), time.Time{}, true, cbsMeasureRepo.GetBalanceTableName())\n\t\t\tif err != nil {\n\t\t\t\treturn err\n\t\t\t}\n\t\t\tresIds := make([]measure.ResourceId, 0, len(ids))\n\t\t\tfor _, resId := range ids {\n\t\t\t\tresIds = append(resIds, measure.ResourceId(resId))\n\t\t\t}\n\t\t\tappIdResIdMaps[detail.AppId] = resIds\n\t\t}\n\t} else {\n\t\tif len(detail.ResIds) > 0 {\n\t\t\treturn fmt.Errorf(\"AppId is required when ResIds is set\")\n\t\t}\n\t\tlogs.Info(t.ctx).Msg(\"REPUSH_ALL_FOR_APPID_NOT_SET\")\n\t\tappIds, _ := cbsMeasureRepo.GetAppIdsWithResources(t.ctx, time.Time{}, true, cbsMeasureRepo.GetBalanceTableName())\n\t\tfor _, appId := range appIds {\n\t\t\t// 没有指定资源，则补量所有资源\n\t\t\tids, err := cbsMeasureRepo.GetResourceIdsByAppId(t.ctx, appId, time.Time{}, true, cbsMeasureRepo.GetBalanceTableName())\n\t\t\tif err != nil {\n\t\t\t\treturn err\n\t\t\t}\n\t\t\tresIds := make([]measure.ResourceId, 0, len(ids))\n\t\t\tfor _, resId := range ids {\n\t\t\t\tresIds = append(resIds, measure.ResourceId(resId))\n\t\t\t}\n\t\t\tappIdResIdMaps[user.AppId(appId)] = resIds\n\t\t}\n\n\t}\n\n\tvar repushItems []*RepushItem\n\tfor appId, resIds := range appIdResIdMaps {\n\t\tu, err := t.userSrv.GetUser(appId)\n\t\tif err != nil {\n\t\t\t// 这里可能是新注册的用户，user表里没有用户数据，可能会丢失该用户的量\n\t\t\tlogs.Error(t.ctx).Err(err).Uint64(\"appId\", uint64(appId)).Msg(\"GET_USER_ERROR\")\n\t\t\tpanic(err)\n\t\t}\n\t\tfor _, resId := range resIds {\n\t\t\tvar repushItem RepushItem\n\t\t\trepushItem.user = u\n\t\t\trepushItem.cbsInstanceId = resId\n\t\t\trepushItem.startTime = detail.StartTime\n\t\t\trepushItem.endTime = detail.EndTime\n\t\t\trepushItems = append(repushItems, &repushItem)\n\t\t}\n\t}\n\tlogs.Info(t.ctx).Int(\"count\", len(repushItems)).Msg(\"REPUSH_ITEMS_INFO\")\n\n\tvar wg sync.WaitGroup\n\tfor _, repushItem := range repushItems {\n\t\twg.Add(1)\n\t\tt.semaphore <- struct{}{}\n\t\tgo func(item *RepushItem) {\n\t\t\tdefer wg.Done()\n\t\t\tdefer func() { <-t.semaphore }()\n\t\t\tt.ProcessSingleRepushItem(item)\n\t\t}(repushItem)\n\t}\n\twg.Wait()\n\treturn nil\n}",
+    "sql_statement_list": [
+      "SELECT DISTINCT resourceId FROM {tableName} WHERE appId = ?;"
+    ],
+    "sql_types": [
+      "SELECT"
+    ],
+    "code_meta_data": [],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/5-28-cbs.json",
+    "matched_keywords": [
+      "Pluck"
+    ]
+  },
+  {
+    "function_name": "/Users/freedom/llms/singularity/internal/scheduler/internal/adapter/repositories/measure.go:29:44:GetAppIdsWithResources",
+    "orm_code": "func (repo *MeasureRepo) GetAppIdsWithResources(ctx context.Context, chargeTime time.Time, includeInvalidRes bool, tableName string) ([]int64, error) {\n\tdb, err := repo.getCCDBDb(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tvar appIdList []int64\n\t// FIXME 这里是获取到已经被python更新过的balance，临时兼容使用\n\tquery := db.Table(tableName).Distinct(\"appId\")\n\tif !includeInvalidRes {\n\t\tquery = query.Where(\"status = 1 and lastBalanceTime <= ?\", chargeTime)\n\t}\n\tquery.Pluck(\"appId\", &appIdList)\n\n\treturn appIdList, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "includeInvalidRes = false (包含过滤条件)",
+            "sql": "SELECT DISTINCT appId FROM ? WHERE status = 1 and lastBalanceTime <= ?;"
+          },
+          {
+            "scenario": "includeInvalidRes = true (无过滤条件)",
+            "sql": "SELECT DISTINCT appId FROM ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "code_meta_data": [],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/5-28-cbs.json",
+    "matched_keywords": [
+      "Pluck"
+    ]
+  },
+  {
+    "function_name": "/Users/freedom/llms/singularity/internal/scheduler/internal/adapter/repositories/measure.go:29:44:GetAppIdsWithResources",
+    "orm_code": "func (repo *MeasureRepo) GetAppIdsWithResources(ctx context.Context, chargeTime time.Time, includeInvalidRes bool, tableName string) ([]int64, error) {\n\tdb, err := repo.getCCDBDb(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tvar appIdList []int64\n\t// FIXME 这里是获取到已经被python更新过的balance，临时兼容使用\n\tquery := db.Table(tableName).Distinct(\"appId\")\n\tif !includeInvalidRes {\n\t\tquery = query.Where(\"status = 1 and lastBalanceTime <= ?\", chargeTime)\n\t}\n\tquery.Pluck(\"appId\", &appIdList)\n\n\treturn appIdList, nil\n}",
+    "caller": "func (t *RepushUserBillingTask) ProcessSingleRepushDetail(detail *measure.RepushDetail) error {\n\tcbsMeasureRepo := registry.GetRegistry(t.ctx).AdapterRepos.CbsMeasureRepo.(measure.CbsMeasureRepoIFace)\n\tappIdResIdMaps := make(map[user.AppId][]measure.ResourceId)\n\tif detail.AppId > 0 {\n\t\tif len(detail.ResIds) > 0 {\n\t\t\tappIdResIdMaps[detail.AppId] = detail.ResIds\n\t\t} else {\n\t\t\tids, err := cbsMeasureRepo.GetResourceIdsByAppId(t.ctx, int64(detail.AppId), time.Time{}, true, cbsMeasureRepo.GetBalanceTableName())\n\t\t\tif err != nil {\n\t\t\t\treturn err\n\t\t\t}\n\t\t\tresIds := make([]measure.ResourceId, 0, len(ids))\n\t\t\tfor _, resId := range ids {\n\t\t\t\tresIds = append(resIds, measure.ResourceId(resId))\n\t\t\t}\n\t\t\tappIdResIdMaps[detail.AppId] = resIds\n\t\t}\n\t} else {\n\t\tif len(detail.ResIds) > 0 {\n\t\t\treturn fmt.Errorf(\"AppId is required when ResIds is set\")\n\t\t}\n\t\tlogs.Info(t.ctx).Msg(\"REPUSH_ALL_FOR_APPID_NOT_SET\")\n\t\tappIds, _ := cbsMeasureRepo.GetAppIdsWithResources(t.ctx, time.Time{}, true, cbsMeasureRepo.GetBalanceTableName())\n\t\tfor _, appId := range appIds {\n\t\t\t// 没有指定资源，则补量所有资源\n\t\t\tids, err := cbsMeasureRepo.GetResourceIdsByAppId(t.ctx, appId, time.Time{}, true, cbsMeasureRepo.GetBalanceTableName())\n\t\t\tif err != nil {\n\t\t\t\treturn err\n\t\t\t}\n\t\t\tresIds := make([]measure.ResourceId, 0, len(ids))\n\t\t\tfor _, resId := range ids {\n\t\t\t\tresIds = append(resIds, measure.ResourceId(resId))\n\t\t\t}\n\t\t\tappIdResIdMaps[user.AppId(appId)] = resIds\n\t\t}\n\n\t}\n\n\tvar repushItems []*RepushItem\n\tfor appId, resIds := range appIdResIdMaps {\n\t\tu, err := t.userSrv.GetUser(appId)\n\t\tif err != nil {\n\t\t\t// 这里可能是新注册的用户，user表里没有用户数据，可能会丢失该用户的量\n\t\t\tlogs.Error(t.ctx).Err(err).Uint64(\"appId\", uint64(appId)).Msg(\"GET_USER_ERROR\")\n\t\t\tpanic(err)\n\t\t}\n\t\tfor _, resId := range resIds {\n\t\t\tvar repushItem RepushItem\n\t\t\trepushItem.user = u\n\t\t\trepushItem.cbsInstanceId = resId\n\t\t\trepushItem.startTime = detail.StartTime\n\t\t\trepushItem.endTime = detail.EndTime\n\t\t\trepushItems = append(repushItems, &repushItem)\n\t\t}\n\t}\n\tlogs.Info(t.ctx).Int(\"count\", len(repushItems)).Msg(\"REPUSH_ITEMS_INFO\")\n\n\tvar wg sync.WaitGroup\n\tfor _, repushItem := range repushItems {\n\t\twg.Add(1)\n\t\tt.semaphore <- struct{}{}\n\t\tgo func(item *RepushItem) {\n\t\t\tdefer wg.Done()\n\t\t\tdefer func() { <-t.semaphore }()\n\t\t\tt.ProcessSingleRepushItem(item)\n\t\t}(repushItem)\n\t}\n\twg.Wait()\n\treturn nil\n}",
+    "sql_statement_list": [
+      "SELECT DISTINCT `appId` FROM `动态表名`;"
+    ],
+    "sql_types": [
+      "SELECT"
+    ],
+    "code_meta_data": [],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/5-28-cbs.json",
+    "matched_keywords": [
+      "Pluck"
+    ]
+  },
+  {
+    "function_name": "/Users/freedom/llms/singularity/internal/scheduler/internal/adapter/repositories/measure.go:29:44:GetAppIdsWithResources",
+    "orm_code": "func (repo *MeasureRepo) GetAppIdsWithResources(ctx context.Context, chargeTime time.Time, includeInvalidRes bool, tableName string) ([]int64, error) {\n\tdb, err := repo.getCCDBDb(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tvar appIdList []int64\n\t// FIXME 这里是获取到已经被python更新过的balance，临时兼容使用\n\tquery := db.Table(tableName).Distinct(\"appId\")\n\tif !includeInvalidRes {\n\t\tquery = query.Where(\"status = 1 and lastBalanceTime <= ?\", chargeTime)\n\t}\n\tquery.Pluck(\"appId\", &appIdList)\n\n\treturn appIdList, nil\n}",
+    "caller": "func (srv *BaseResSrv) GetAppIdsWithValidResources(chargeTime time.Time) []user.AppId {\n\tids, _ := srv.measureRepo.GetAppIdsWithResources(srv.ctx, chargeTime, false, srv.measureRepo.GetBalanceTableName())\n\tappIdList := make([]user.AppId, len(ids))\n\tfor i, appId := range ids {\n\t\tappIdList[i] = user.AppId(appId)\n\t}\n\treturn appIdList\n}",
+    "sql_statement_list": [
+      "SELECT DISTINCT appId FROM {tableName} WHERE status = 1 and lastBalanceTime <= ?;"
+    ],
+    "sql_types": [
+      "SELECT"
+    ],
+    "code_meta_data": [],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/5-28-cbs.json",
+    "matched_keywords": [
+      "Pluck"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/IVC__ivc-urs/internal/model/playerlicense.go:223:234:FindKeys",
+    "orm_code": "func (l *License) FindKeys(Ids []string) ([]string, error) {\n\tvar keys []string\n\tcomment := l.CommentFunc(SELECT_COMMENT)\n\terr := base.GetInstance().IvcDriver().Clauses(comment).Table(IvcPlayerLicenseTable).Where(\"id in (?) and effective_time is null and delete_time is null\", Ids).Pluck(\"license_key\", &keys).Error\n\tif err != nil {\n\t\tif err == db.ErrRecordNotFound {\n\t\t\treturn keys, utils.RecordNotFoundError\n\t\t}\n\t\treturn nil, err\n\t}\n\treturn keys, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      "SELECT license_key FROM ivc_player_license WHERE id IN (?) AND effective_time IS NULL AND delete_time IS NULL;"
+    ],
+    "sql_types": [
+      "SELECT"
+    ],
+    "code_meta_data": [],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-urs.json",
+    "matched_keywords": [
+      "Pluck"
+    ]
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/IVC__ivc-urs/internal/model/playerlicense.go:223:234:FindKeys",
+    "orm_code": "func (l *License) FindKeys(Ids []string) ([]string, error) {\n\tvar keys []string\n\tcomment := l.CommentFunc(SELECT_COMMENT)\n\terr := base.GetInstance().IvcDriver().Clauses(comment).Table(IvcPlayerLicenseTable).Where(\"id in (?) and effective_time is null and delete_time is null\", Ids).Pluck(\"license_key\", &keys).Error\n\tif err != nil {\n\t\tif err == db.ErrRecordNotFound {\n\t\t\treturn keys, utils.RecordNotFoundError\n\t\t}\n\t\treturn nil, err\n\t}\n\treturn keys, nil\n}",
+    "caller": "func (l *BindPlayerLicenseLogic) BindPlayerLicense(req *types.BindPlayerLicenseRequest, log *log.IvcLog) (resp *types.ApprovalGeneralResponse, err error) {\n\thttpreq := model.BindPlsRequest{}\n\n\tlic := model.License{}\n\n\thttpreq.Keys, err = lic.FindKeys(req.Id)\n\tif err != nil {\n\t\tlog.ErrorV(fmt.Sprintf(\"[BindPlayerLicense] FindKeys error: %+v\", err))\n\t\treturn nil, err\n\t}\n\tif len(httpreq.Keys) == 0 {\n\t\tlog.ErrorV(fmt.Sprintf(\"[BindPlayerLicense] :All keys have been bound \", req.RequestId))\n\t\treturn nil, utils.AllKeysHaveBeenBoundError\n\t}\n\thttpreq.SubUin = model.DefaultOpsOwnerUin\n\thttpreq.OwnerUin = model.DefaultOpsOwnerUin\n\thttpreq.RequestId = req.RequestId\n\thttpreq.AppId = req.AppId\n\n\tfc, _ := json.Marshal(httpreq)\n\tec := &types.EventCacheInfo{\n\t\tTaskId:       model.GetTaskId(),\n\t\tFieldCreator: req.UserName,\n\t\tFieldAction:  model.BindPlayerLicense,\n\t\tFieldContent: string(fc),\n\t}\n\tevent.Aem.HandleEventCacheInfo(ec)\n\n\tresp = &types.ApprovalGeneralResponse{\n\t\tTaskId:      ec.TaskId,\n\t\tCallBackUrl: model.GetApprovalCallBackUrl(ec.TaskId),\n\t}\n\treturn resp, nil\n}",
+    "sql_statement_list": [
+      "SELECT license_key FROM IvcPlayerLicenseTable WHERE id in (?) and effective_time is null and delete_time is null;"
+    ],
+    "sql_types": [
+      "SELECT"
+    ],
+    "code_meta_data": [],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-urs.json",
+    "matched_keywords": [
+      "Pluck"
+    ]
+  }
+]

@@ -1,0 +1,235 @@
+[
+  {
+    "function_name": "/Users/freedom/llms/singularity/internal/rdisk_master/adapters/repositories/logical_disk.go:49:74:FindByID",
+    "original_sql_count": 1,
+    "modifications": [
+      {
+        "field": "sql_statement_list",
+        "action": "removed_invalid_sql",
+        "removed_items": [
+          {
+            "position": 0,
+            "content": "我理解您的要求，您希望我将SQL语句分析结果格式化为标准JSON格式。但是我注意到您提供的\"需要格式化的内容\"部分是空的（显示为`[]`）。\n\n请您提供需要格式化的SQL语句内容，我将按照您指定的JSON格式要求进行处理：\n\n1. 将SQL语句组织为数组\n2. 固定SQL语句直接作为字符串\n3. 参数相关的变化SQL语句作为对象，包含不同场景的变体\n4. 移除注释和非SQL内容\n5. 确保所有SQ...",
+            "reason": "Invalid SQL detected"
+          }
+        ]
+      }
+    ],
+    "cleaned_sql_count": 0,
+    "removed_sql_count": 1
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/STKE__jinzhu-gorm/association.go:36:127:Replace",
+    "original_sql_count": 3,
+    "modifications": [
+      {
+        "field": "sql_statement_list",
+        "action": "removed_invalid_sql",
+        "removed_items": [
+          {
+            "position": 0,
+            "content": "固定的SQL语句1",
+            "reason": "Invalid SQL detected"
+          },
+          {
+            "position": 2,
+            "content": "固定的SQL语句2",
+            "reason": "Invalid SQL detected"
+          }
+        ]
+      }
+    ],
+    "cleaned_sql_count": 1,
+    "removed_sql_count": 2
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/STKE__jinzhu-gorm/main.go:593:603:Rollback",
+    "original_sql_count": 1,
+    "modifications": [
+      {
+        "field": "sql_statement_list",
+        "action": "removed_invalid_sql",
+        "removed_items": [
+          {
+            "position": 0,
+            "content": "您好！我已经准备好帮您将SQL语句分析结果格式化为标准JSON格式。\n\n但是我注意到您提供的\"需要格式化的内容\"部分是空的（显示为[]）。\n\n请您提供需要格式化的SQL语句内容，我会按照您指定的格式要求将其转换为标准JSON格式。\n\n格式要求我已理解：\n- 输出SQL语句数组\n- 固定SQL用字符串表示\n- 变化SQL用对象表示（包含type和variants）\n- 移除非SQL内容\n- 所有SQ...",
+            "reason": "Invalid SQL detected"
+          }
+        ]
+      }
+    ],
+    "cleaned_sql_count": 0,
+    "removed_sql_count": 1
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/alanoluo__eb-api/pkg/store/archive.go:134:145:DeleteArchive",
+    "original_sql_count": 1,
+    "modifications": [
+      {
+        "field": "sql_statement_list",
+        "action": "removed_invalid_sql",
+        "removed_items": [
+          {
+            "position": 0,
+            "content": "您好！我已经准备好帮您格式化SQL语句为标准JSON格式，但是我注意到您提供的内容是空的（`[]`）。\n\n请提供您需要格式化的SQL语句分析结果，我将按照您指定的JSON格式要求进行转换。\n\n格式应该类似这样的内容：\n- SQL查询语句\n- 带有参数变化的SQL语句\n- 或者其他需要格式化的SQL相关内容\n\n请粘贴您的SQL内容，我会立即为您转换为标准JSON格式。;",
+            "reason": "Invalid SQL detected"
+          }
+        ]
+      }
+    ],
+    "cleaned_sql_count": 0,
+    "removed_sql_count": 1
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/alanoluo__eb-api/pkg/store/archive.go:134:145:DeleteArchive",
+    "original_sql_count": 1,
+    "modifications": [
+      {
+        "field": "sql_statement_list",
+        "action": "removed_invalid_sql",
+        "removed_items": [
+          {
+            "position": 0,
+            "content": "您提供的内容为空（[]）。请提供需要格式化的SQL语句分析结果，我将按照您指定的JSON格式要求进行格式化。\n\n例如，您可以提供类似以下格式的内容：\n- SQL查询语句\n- 带有条件变化的SQL语句\n- 包含参数的SQL语句等\n\n请提供具体的SQL内容，我将为您转换为标准JSON格式。;",
+            "reason": "Invalid SQL detected"
+          }
+        ]
+      }
+    ],
+    "cleaned_sql_count": 0,
+    "removed_sql_count": 1
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/alanoluo__eb-api/pkg/store/event_bus.go:49:55:DeleteEventBus",
+    "original_sql_count": 1,
+    "modifications": [
+      {
+        "field": "sql_statement_list",
+        "action": "removed_invalid_sql",
+        "removed_items": [
+          {
+            "position": 0,
+            "content": "您提供的内容是空的 `[]`。请提供需要格式化的SQL语句分析结果，我将为您转换为标准JSON格式。\n\n例如，您可以提供类似以下格式的内容：\n- SQL语句文本\n- 带有参数变化的SQL语句\n- 包含注释或说明的SQL代码块\n\n请提供具体的SQL内容，我将按照您要求的格式进行转换。;",
+            "reason": "Invalid SQL detected"
+          }
+        ]
+      }
+    ],
+    "cleaned_sql_count": 0,
+    "removed_sql_count": 1
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/alanoluo__eb-api/pkg/store/event_bus.go:16:46:CreateEventBus",
+    "original_sql_count": 1,
+    "modifications": [
+      {
+        "field": "sql_statement_list",
+        "action": "removed_invalid_sql",
+        "removed_items": [
+          {
+            "position": 0,
+            "content": "您好！我已准备好帮您将SQL语句分析结果格式化为标准JSON格式。\n\n不过我注意到您提供的\"需要格式化的内容\"部分是空的（显示为 `[]`）。\n\n请您提供需要格式化的SQL语句或SQL分析结果，我将按照您指定的JSON格式要求进行处理：\n\n- 移除非SQL内容\n- 区分固定SQL和参数依赖的变体SQL\n- 确保所有SQL语句以分号结尾\n- 输出纯JSON格式\n\n请粘贴您需要格式化的SQL内容，我会...",
+            "reason": "Invalid SQL detected"
+          }
+        ]
+      }
+    ],
+    "cleaned_sql_count": 0,
+    "removed_sql_count": 1
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/alanoluo__eb-api/pkg/store/replay.go:74:102:CreateReplay",
+    "original_sql_count": 1,
+    "modifications": [
+      {
+        "field": "sql_statement_list",
+        "action": "removed_invalid_sql",
+        "removed_items": [
+          {
+            "position": 0,
+            "content": "您提供的内容为空数组 `[]`，没有需要格式化的SQL语句。\n\n请提供具体的SQL语句分析结果，我将帮您格式化为标准JSON格式。\n\n例如，您可以提供类似这样的内容：\n- SQL语句文本\n- 包含多个SQL变体的分析结果\n- 带有参数依赖的SQL语句组合\n\n请提供需要格式化的具体SQL内容。;",
+            "reason": "Invalid SQL detected"
+          }
+        ]
+      }
+    ],
+    "cleaned_sql_count": 0,
+    "removed_sql_count": 1
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/alanoluo__eb-api/pkg/store/replay.go:74:102:CreateReplay",
+    "original_sql_count": 1,
+    "modifications": [
+      {
+        "field": "sql_statement_list",
+        "action": "removed_invalid_sql",
+        "removed_items": [
+          {
+            "position": 0,
+            "content": "我注意到您提供的内容是空的 `[]`。请提供需要格式化的SQL语句分析结果，我将按照您的要求将其转换为标准JSON格式。\n\n请提供具体的SQL语句内容，我会按照以下格式进行处理：\n\n1. 识别固定的SQL语句和参数依赖的SQL语句\n2. 将固定语句直接作为字符串元素\n3. 将参数依赖的语句组织为包含多个场景变体的对象\n4. 移除所有非SQL内容\n5. 确保所有SQL语句以分号结尾\n6. 返回纯JS...",
+            "reason": "Invalid SQL detected"
+          }
+        ]
+      }
+    ],
+    "cleaned_sql_count": 0,
+    "removed_sql_count": 1
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/alanoluo__eb-api/pkg/store/event_bus.go:136:198:ListEventBuses",
+    "original_sql_count": 1,
+    "modifications": [
+      {
+        "field": "sql_statement_list",
+        "action": "removed_invalid_sql",
+        "removed_items": [
+          {
+            "position": 0,
+            "content": "您提供的内容为空（[]）。请提供需要格式化的SQL语句分析结果，我将为您转换为标准JSON格式。\n\n例如，您可以提供类似以下的内容：\n- SQL查询语句\n- 包含参数的SQL语句\n- 多个相关的SQL操作\n- 带有条件分支的SQL逻辑\n\n请将需要格式化的SQL内容放在[]中提供给我。;",
+            "reason": "Invalid SQL detected"
+          }
+        ]
+      }
+    ],
+    "cleaned_sql_count": 0,
+    "removed_sql_count": 1
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/rollingupgrade/rollingupgrade_controller.go:60:116:Reconcile",
+    "original_sql_count": 1,
+    "modifications": [
+      {
+        "field": "sql_statement_list",
+        "action": "removed_invalid_sql",
+        "removed_items": [
+          {
+            "position": 0,
+            "content": "您好！我已经准备好帮您将SQL语句分析结果格式化为标准JSON格式。\n\n不过我注意到您提供的\"需要格式化的内容\"部分是空的（显示为`[]`）。\n\n请您提供需要格式化的SQL语句内容，我将按照您指定的格式要求进行处理：\n\n- 将固定的SQL语句直接作为字符串\n- 将因参数变化的SQL语句组织为对象，包含不同场景的变体\n- 移除所有非SQL内容\n- 确保所有SQL语句以分号结尾\n- 返回纯JSON格式...",
+            "reason": "Invalid SQL detected"
+          }
+        ]
+      }
+    ],
+    "cleaned_sql_count": 0,
+    "removed_sql_count": 1
+  },
+  {
+    "function_name": "/Users/ymhuan/code/git-development/aid-main/aid/risk_sql/code/scripts/danielxxli__tke-node-server/pkg/controller/machineset/controller.go:588:592:adoptOrphan",
+    "original_sql_count": 1,
+    "modifications": [
+      {
+        "field": "sql_statement_list",
+        "action": "removed_invalid_sql",
+        "removed_items": [
+          {
+            "position": 0,
+            "content": "您好！我已经准备好为您格式化SQL语句为标准JSON格式。\n\n不过我注意到您提供的\"需要格式化的内容\"是空的（[]）。请您提供需要分析和格式化的SQL语句内容，我将按照您指定的格式要求进行处理。\n\n请将您的SQL语句内容放在\"需要格式化的内容：\"后面，我会立即为您转换为标准JSON格式。;",
+            "reason": "Invalid SQL detected"
+          }
+        ]
+      }
+    ],
+    "cleaned_sql_count": 0,
+    "removed_sql_count": 1
+  }
+]

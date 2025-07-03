@@ -1,0 +1,14 @@
+{
+  "total_records_processed": 1345,
+  "total_sql_items_processed": 1240,
+  "valid_sql_retained": 869,
+  "invalid_sql_removed": 13,
+  "param_dependent_sql_retained": 358,
+  "records_modified": 12,
+  "records_unchanged": 1333,
+  "step_name": "sql_cleaning_step1",
+  "timestamp": "20250703_141401",
+  "input_records_count": 1345,
+  "output_records_count": 1345,
+  "output_directory": "workflow_output/workflow_20250703_141401/cleaning_steps/sql_cleaning_step1_20250703_141401"
+}

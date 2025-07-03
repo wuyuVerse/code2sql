@@ -1,0 +1,28 @@
+{
+  "workflow_id": "workflow_20250703_141401",
+  "start_time": "2025-07-03T14:14:01.322070",
+  "end_time": "2025-07-03T14:14:01.664498",
+  "total_steps": 2,
+  "steps": [
+    {
+      "step_name": "load_extracted_data",
+      "step_type": "data_loading",
+      "timestamp": "2025-07-03T14:14:01.322070",
+      "input_source": "extracted_data/gorm_keywords_20250703_121119/keyword_matched_records.json",
+      "records_loaded": 1345,
+      "output_file": null
+    },
+    {
+      "step_name": "sql_cleaning_step1",
+      "step_type": "sql_cleaning",
+      "timestamp": "2025-07-03T14:14:01.545021",
+      "input_records": 1345,
+      "output_records": 1345,
+      "records_modified": 12,
+      "invalid_sql_removed": 13,
+      "output_directory": "workflow_output/workflow_20250703_141401/cleaning_steps/sql_cleaning_step1_20250703_141401"
+    }
+  ],
+  "final_data_count": 1345,
+  "workflow_directory": "workflow_output/workflow_20250703_141401"
+}

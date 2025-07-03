@@ -57,6 +57,11 @@ class LLMConfig:
     def _load_servers(self) -> None:
         """从配置数据加载服务器配置"""
         self._servers = {}
+        
+        # 检查配置数据是否已加载
+        if self._config_data is None:
+            raise ValueError("配置数据未加载，请先调用 load_config()")
+            
         servers_config = self._config_data.get('servers', {})
         defaults = self._config_data.get('defaults', {})
         
@@ -89,18 +94,21 @@ class LLMConfig:
         Returns:
             服务器配置对象
         """
+        if self._servers is None:
+            raise ValueError("服务器配置未初始化，请先调用 load_config()")
+        
         if server_name not in self._servers:
             available = list(self._servers.keys())
             raise ValueError(f"未知的服务器名称: {server_name}，可用服务器: {available}")
         return self._servers[server_name]
-    
     def list_servers(self) -> list[str]:
         """列出所有可用的服务器"""
+        if self._servers is None:
+            return []
         return list(self._servers.keys())
     
     def get_openai_client_config(self, server_name: str) -> Dict[str, str]:
         """获取OpenAI客户端配置
-        
         Args:
             server_name: 服务器名称
             
@@ -115,6 +123,8 @@ class LLMConfig:
     
     def get_defaults(self) -> Dict[str, Any]:
         """获取默认配置"""
+        if self._config_data is None:
+            return {}
         return self._config_data.get('defaults', {})
     
     def reload_config(self) -> None:
