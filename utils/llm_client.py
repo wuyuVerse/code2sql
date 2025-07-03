@@ -2,6 +2,7 @@
 import asyncio
 import aiohttp
 import requests
+import re
 from typing import Optional, Dict, Any
 from openai import OpenAI
 from config.llm_config import get_llm_config, ServerConfig
@@ -124,7 +125,15 @@ class LLMClient:
             
             if response and hasattr(response, 'choices') and response.choices:
                 content = response.choices[0].message.content
-                return content if content is not None else ""
+                
+                if content is None:
+                    return ""
+
+                # 如果是r1服务器，则使用正则去除<think>...</think>标签及其内容
+                if self.server_name == 'r1':
+                    content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+                
+                return content
             else:
                 print(f"❌ {self.server_name.upper()} OpenAI调用失败: 响应格式不正确")
                 return ""

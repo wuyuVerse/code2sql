@@ -143,6 +143,8 @@ dmypy.json
 datasets/
 extracted_data/
 workflow_output/
+rerun_outputs/
+nohup.out
 
 # 环境变量文件
 .env
