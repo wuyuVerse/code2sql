@@ -92,29 +92,38 @@ class SQLCleaner:
         if not sql_text:
             return False
         
-        # 检查长度（过长的文本可能是描述而非SQL）
-        if len(sql_text) > 2000:
-            return False
         
-        # 检查是否包含中文字符（通常SQL不包含中文）
-        chinese_pattern = re.compile(r'[\u4e00-\u9fff]')
-        if chinese_pattern.search(sql_text):
-            # 特殊情况：如果包含中文但也包含SQL关键词，可能是混合内容
-            has_sql_keywords = any(keyword.lower() in sql_text.lower() 
-                                  for keyword in self.sql_keywords)
-            if not has_sql_keywords:
-                return False
-        
-        # 检查是否匹配SQL模式
-        for pattern in self.compiled_patterns:
-            if pattern.search(sql_text):
-                return True
-        
-        # 检查是否包含SQL关键词
+        # 检查是否包含SQL关键词（只要包含就认为有效）
         sql_upper = sql_text.upper()
         for keyword in self.sql_keywords:
             if keyword in sql_upper:
                 return True
+        
+        # 如果是JSON数组格式，尝试解析并检查内容
+        if sql_text.startswith('[') and sql_text.endswith(']'):
+            try:
+                import json
+                parsed = json.loads(sql_text)
+                if isinstance(parsed, list):
+                    # 检查数组中是否有SQL语句
+                    for item in parsed:
+                        if isinstance(item, str):
+                            item_upper = item.upper()
+                            for keyword in self.sql_keywords:
+                                if keyword in item_upper:
+                                    return True
+            except:
+                pass
+        
+        # 检查是否匹配基本SQL模式（放宽条件）
+        basic_sql_indicators = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER']
+        for indicator in basic_sql_indicators:
+            if indicator in sql_upper:
+                return True
+        
+        # 检查常见SQL结构
+        if any(x in sql_upper for x in ['FROM ', 'INTO ', 'SET ', 'WHERE ', 'VALUES']):
+            return True
         
         return False
     

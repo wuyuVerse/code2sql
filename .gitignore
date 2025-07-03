@@ -142,6 +142,7 @@ dmypy.json
 # 数据集文件夹 - 包含敏感数据，不应提交到仓库
 datasets/
 extracted_data/
+workflow_output/
 
 # 环境变量文件
 .env
