@@ -5,7 +5,7 @@ import requests
 import re
 from typing import Optional, Dict, Any
 from openai import OpenAI
-from config.llm_config import get_llm_config, ServerConfig
+from config.llm.llm_config import get_llm_config, ServerConfig
 
 
 class LLMClient:

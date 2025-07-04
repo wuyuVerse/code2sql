@@ -6,9 +6,12 @@ Workflow管理器
 
 import json
 import logging
+import asyncio
+import aiohttp
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 from datetime import datetime
+from tqdm.asyncio import tqdm_asyncio
 
 # 尝试相对导入，如果失败则直接导入
 try:
@@ -153,6 +156,195 @@ class WorkflowManager:
         logger.info(f"全体数据集SQL清洗完成 - 移除了 {cleaning_result['invalid_sql_removed']:,} 个无效SQL，修改了 {cleaning_result['records_modified']:,} 条记录")
         return cleaning_result
     
+    async def tag_lack_information_data(self, step_name: str = "sql_completeness_check_step") -> Dict[str, Any]:
+        """
+        使用LLM检查数据的SQL完整性并标记缺少信息的数据
+        
+        Args:
+            step_name: 步骤名称
+            
+        Returns:
+            标记结果信息
+        """
+        if self.current_data is None:
+            raise ValueError("请先加载并清洗数据")
+        
+        logger.info(f"开始使用LLM检查SQL完整性并标记数据: {step_name}")
+        
+        # 动态导入LLM相关模块
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+        
+        try:
+            from utils.llm_client import LLMClient
+            from config.data_clean.sql_completeness_check_prompt import get_sql_completeness_check_prompt  # type: ignore
+        except ImportError as e:
+            logger.error(f"无法导入LLM相关模块: {e}")
+            raise ValueError("LLM模块不可用，无法执行SQL完整性检查")
+        
+        # 创建LLM客户端
+        llm_client = LLMClient("v3")
+        
+        # 并发处理的函数
+        async def check_single_record(session: aiohttp.ClientSession, record: Dict[str, Any]) -> Dict[str, Any]:
+            """检查单条记录的SQL完整性"""
+            try:
+                # 准备检查材料
+                caller = record.get('caller', '')
+                orm_code = record.get('orm_code', '')
+                sql_statements = str(record.get('sql_statement_list', []))
+                
+                # 处理元数据
+                code_meta_data = record.get('code_meta_data', [])
+                if isinstance(code_meta_data, list) and code_meta_data:
+                    code_meta = str(code_meta_data[0]) if code_meta_data else ''
+                else:
+                    code_meta = str(code_meta_data)
+                
+                # 生成提示词
+                prompt = get_sql_completeness_check_prompt(
+                    caller=caller,
+                    code_meta=code_meta,
+                    orm_code=orm_code,
+                    sql_statements=sql_statements
+                )
+                
+                # 调用LLM
+                response = await llm_client.call_async(session, prompt, max_tokens=100, temperature=0.0)
+                
+                # 处理响应
+                is_complete = True
+                reason = ""
+                
+                if response:
+                    response_lower = response.strip().lower()
+                    if response_lower.startswith('否'):
+                        is_complete = False
+                        # 提取原因
+                        if '，' in response:
+                            reason = response.split('，', 1)[1].strip()
+                        elif ',' in response:
+                            reason = response.split(',', 1)[1].strip()
+                        else:
+                            reason = response.replace('否', '').strip()
+                
+                # 创建新记录
+                new_record = record.copy()
+                
+                # 添加检查结果
+                if not is_complete:
+                    new_record['completeness_check'] = {
+                        'is_complete': False,
+                        'reason': reason,
+                        'tag': '<LACK INFORMATION>',
+                        'checked_at': datetime.now().isoformat()
+                    }
+                    # 在function_name中添加标签
+                    if 'function_name' in new_record:
+                        new_record['function_name'] = f"<LACK INFORMATION> {new_record['function_name']}"
+                else:
+                    new_record['completeness_check'] = {
+                        'is_complete': True,
+                        'reason': '',
+                        'tag': '',
+                        'checked_at': datetime.now().isoformat()
+                    }
+                
+                return new_record
+                
+            except Exception as e:
+                logger.warning(f"检查记录失败: {e}")
+                # 出错时保留原记录并标记为未检查
+                error_record = record.copy()
+                error_record['completeness_check'] = {
+                    'is_complete': True,  # 默认认为完整，避免错误标记
+                    'reason': f'检查失败: {str(e)}',
+                    'tag': '',
+                    'checked_at': datetime.now().isoformat(),
+                    'check_error': True
+                }
+                return error_record
+        
+        # 使用100并发处理所有记录
+        semaphore = asyncio.Semaphore(100)
+        
+        async def process_with_semaphore(session: aiohttp.ClientSession, record: Dict[str, Any]) -> Dict[str, Any]:
+            async with semaphore:
+                return await check_single_record(session, record)
+        
+        # 执行并发处理
+        logger.info(f"使用 {semaphore._value} 并发请求处理 {len(self.current_data)} 条记录...")
+        
+        processed_records = []
+        with tqdm_asyncio(total=len(self.current_data), desc=f"检查SQL完整性 ({step_name})") as pbar:
+            async with aiohttp.ClientSession() as session:
+                tasks = []
+                for record in self.current_data:
+                    task = asyncio.ensure_future(process_with_semaphore(session, record))
+                    
+                    def update_progress(fut, pbar=pbar):
+                        pbar.update(1)
+                    
+                    task.add_done_callback(update_progress)
+                    tasks.append(task)
+                
+                processed_records = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # 处理结果
+        tagged_data = []
+        error_count = 0
+        lack_info_count = 0
+        
+        for i, result in enumerate(processed_records):
+            if isinstance(result, Exception):
+                logger.warning(f"处理第{i+1}条记录时出错: {result}")
+                error_record = self.current_data[i].copy()
+                error_record['completeness_check'] = {
+                    'is_complete': True,
+                    'reason': f'处理异常: {str(result)}',
+                    'tag': '',
+                    'checked_at': datetime.now().isoformat(),
+                    'process_error': True
+                }
+                tagged_data.append(error_record)
+                error_count += 1
+            else:
+                tagged_data.append(result)
+                # 检查completeness_check字段，确保result是字典类型
+                if isinstance(result, dict) and not result.get('completeness_check', {}).get('is_complete', True):
+                    lack_info_count += 1
+        
+        # 更新当前数据
+        self.current_data = tagged_data
+        
+        # 保存标记后的数据
+        tagging_output_dir = self.workflow_dir / "sql_completeness_check"
+        tagging_output_dir.mkdir(exist_ok=True)
+        
+        tagged_data_file = tagging_output_dir / f"{step_name}.json"
+        with open(tagged_data_file, 'w', encoding='utf-8') as f:
+            json.dump(self.current_data, f, ensure_ascii=False, indent=2)
+        
+        # 记录工作流步骤
+        step_info = {
+            'step_name': step_name,
+            'step_type': 'sql_completeness_check',
+            'timestamp': datetime.now().isoformat(),
+            'input_records': len(self.current_data),
+            'lack_info_records': lack_info_count,
+            'complete_records': len(self.current_data) - lack_info_count - error_count,
+            'error_records': error_count,
+            'lack_info_rate': lack_info_count / len(self.current_data) * 100,
+            'concurrent_requests': 100,
+            'output_file': str(tagged_data_file)
+        }
+        
+        self.workflow_steps.append(step_info)
+        
+        logger.info(f"SQL完整性检查完成 - 标记了 {lack_info_count:,} 条缺少信息的记录，{error_count:,} 条处理错误")
+        return step_info
+
     def extract_keyword_data(self, keywords: Optional[List[str]] = None, step_name: str = "keyword_extraction_step2") -> Dict[str, Any]:
         """
         从清洗后的数据中提取关键词数据
@@ -455,6 +647,14 @@ class WorkflowManager:
                 if 'lists_emptied_after_cleaning' in step:
                     print(f"     🧹 清洗后空列表: {step['lists_emptied_after_cleaning']:,}")
                 
+            elif step['step_type'] == 'sql_completeness_check':
+                print(f"     📊 输入记录: {step['input_records']:,}")
+                print(f"     🏷️ 标记缺少信息: {step['lack_info_records']:,}")
+                print(f"     ✅ 完整记录: {step['complete_records']:,}")
+                print(f"     ❌ 处理错误: {step['error_records']:,}")
+                print(f"     📈 缺少信息率: {step['lack_info_rate']:.2f}%")
+                print(f"     🔄 并发请求数: {step['concurrent_requests']}")
+                
             elif step['step_type'] == 'keyword_extraction':
                 print(f"     📊 输入记录: {step['input_records']:,}")
                 print(f"     🎯 提取记录: {step['extracted_records']:,}")
@@ -479,7 +679,7 @@ class WorkflowManager:
 
 def run_complete_workflow_from_raw_data(data_dir: str, keywords: Optional[List[str]] = None, base_output_dir: str = "workflow_output") -> Dict[str, Any]:
     """
-    运行完整的数据处理工作流（新架构：清洗 -> 提取 -> 处理 -> 合并）
+    运行完整的数据处理工作流（新架构：清洗 -> 标签 -> 提取 -> 处理 -> 合并）
     
     Args:
         data_dir: 原始数据目录
@@ -501,14 +701,18 @@ def run_complete_workflow_from_raw_data(data_dir: str, keywords: Optional[List[s
         # 步骤2: 对全体数据进行SQL清洗
         cleaning_result = workflow.run_sql_cleaning("sql_cleaning_step1")
         
+        # 步骤2.5: 使用LLM检查SQL完整性并标记缺少信息的数据
+        logger.info("开始执行SQL完整性检查和数据标记...")
+        tagging_result = asyncio.run(workflow.tag_lack_information_data("sql_completeness_check_step2"))
+        
         # 步骤3: 从清洗后的数据中提取关键词数据
-        extraction_result = workflow.extract_keyword_data(keywords, "keyword_extraction_step2")
+        extraction_result = workflow.extract_keyword_data(keywords, "keyword_extraction_step3")
         
         # 步骤4: 对提取的数据进行特殊处理
-        processing_result = workflow.process_extracted_data("special_processing_step3")
+        processing_result = workflow.process_extracted_data("special_processing_step4")
         
         # 步骤5: 将处理后的数据合并回原数据集
-        merge_result = workflow.merge_processed_data_back("merge_back_step4")
+        merge_result = workflow.merge_processed_data_back("merge_back_step5")
         
         # 导出最终数据
         final_data_path = workflow.export_final_data("final_processed_dataset.json")
@@ -526,6 +730,7 @@ def run_complete_workflow_from_raw_data(data_dir: str, keywords: Optional[List[s
             'summary_path': summary_path,
             'load_result': load_result,
             'cleaning_result': cleaning_result,
+            'tagging_result': tagging_result,
             'extraction_result': extraction_result,
             'processing_result': processing_result,
             'merge_result': merge_result

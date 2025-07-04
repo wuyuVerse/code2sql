@@ -32,6 +32,14 @@ def get_workflow_manager():
     except ImportError as e:
         raise ImportError(f"工作流管理器导入失败: {e}")
 
+def get_training_data_converter():
+    """按需导入训练数据转换器"""
+    try:
+        from .training_data_converter import TrainingDataConverter
+        return TrainingDataConverter
+    except ImportError as e:
+        raise ImportError(f"训练数据转换器导入失败: {e}")
+
 __all__ = [
     'DataReader', 
     'DataSampler', 
@@ -39,5 +47,6 @@ __all__ = [
     'CodeMetaData',
     'get_data_cleaner',
     'get_data_analyzer',
-    'get_workflow_manager'
+    'get_workflow_manager',
+    'get_training_data_converter'
 ] 

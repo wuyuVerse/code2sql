@@ -1,0 +1,60 @@
+# 模型基本配置
+model_name: qwen3_14b
+model_path: /data/local_disk0/wuyu/model/qwen/Qwen3-14B
+template: qwen
+trust_remote_code: true
+
+# 全量微调配置
+stage: sft
+do_train: true
+finetuning_type: full
+deepspeed: /home/wuyu/code2sql/model/LLaMA-Factory/examples/deepspeed/ds_z3_config.json
+rope_scaling: linear
+flash_attn: fa2
+use_unsloth: false
+
+# GPU配置
+cuda_visible_devices: "0,1,2,3"  # 指定要使用的GPU设备，用逗号分隔
+
+# 数据集配置 - 使用ORM2SQL数据集
+dataset_dir: /home/wuyu/code2sql/model/LLaMA-Factory/data
+dataset: orm2sql_training  # 使用ORM到SQL转换数据集
+template: qwen
+cutoff_len: 2048
+max_samples: 17761  # 使用全部17761个样本
+overwrite_cache: true
+preprocessing_num_workers: 16
+dataloader_num_workers: 4
+
+# 训练参数
+learning_rate: 2.0e-5  # 针对代码生成任务稍微提高学习率
+num_train_epochs: 2.0  # 训练轮次，总步数 = (max_samples / 实际batch_size) * num_train_epochs
+# max_steps: 100  # 可选：直接指定最大训练步数，会覆盖num_train_epochs
+max_grad_norm: 1.0
+per_device_train_batch_size: 1  # 每GPU的batch size，考虑到内存限制调整为1
+gradient_accumulation_steps: 16  # 梯度累积，实际batch_size = per_device_batch_size * GPU数 * gradient_accumulation_steps
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+bf16: true
+ddp_timeout: 180000000
+resume_from_checkpoint: null
+weight_decay: 0.1
+
+# 当前设置下的Step计算：
+# 实际Batch Size = 1 * 4 GPUs * 16 = 64
+# Steps per Epoch = 17761 samples / 64 = ~278 steps  
+# Total Steps = 278 * 2 epochs = 556 steps
+
+# 日志和保存配置
+logging_steps: 10  # 每10步记录一次日志到SwanLab
+save_steps: 278  # 每个epoch保存一次（约278步）
+eval_steps: 278
+save_total_limit: 3
+save_safetensors: true
+plot_loss: true
+overwrite_output_dir: true
+save_only_model: false
+report_to: swanlab
+
+# 输出路径配置
+output_dir: /home/wuyu/code2sql/model/training/saves/qwen3-14b-orm2sql-ft 

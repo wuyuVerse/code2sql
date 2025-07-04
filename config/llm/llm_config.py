@@ -32,7 +32,7 @@ class ServerConfig(BaseModel):
 class LLMConfig:
     """LLM配置管理器 - 从YAML文件加载配置"""
     
-    def __init__(self, config_file: str = "config/servers.yaml"):
+    def __init__(self, config_file: str = "config/llm/servers.yaml"):
         """初始化配置管理器
         
         Args:
