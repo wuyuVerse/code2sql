@@ -12,6 +12,7 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 from datetime import datetime
 from tqdm.asyncio import tqdm_asyncio
+import re
 
 # 尝试相对导入，如果失败则直接导入
 try:
@@ -171,6 +172,39 @@ class WorkflowManager:
         
         logger.info(f"开始使用LLM检查SQL完整性并标记数据: {step_name}")
         
+        # 筛选出需要处理的记录和直接跳过的记录
+        records_to_process = []
+        excluded_records = []
+        if self.current_data:
+            for record in self.current_data:
+                # 假设 sql_statement_list 存在
+                if record.get('sql_statement_list') == '<NO SQL GENERATE>':
+                    excluded_records.append(record)
+                else:
+                    records_to_process.append(record)
+        
+        logger.info(f"从 {len(self.current_data):,} 条记录中筛选出 {len(records_to_process):,} 条记录进行完整性检查，排除了 {len(excluded_records):,} 条 '<NO SQL GENERATE>' 记录。")
+
+        # 如果没有需要处理的记录，则直接跳过
+        if not records_to_process:
+            logger.info("没有需要处理的记录，跳过LLM完整性检查步骤。")
+            step_info = {
+                'step_name': step_name,
+                'step_type': 'sql_completeness_check',
+                'timestamp': datetime.now().isoformat(),
+                'input_records': len(self.current_data),
+                'records_to_check': 0,
+                'excluded_no_sql_records': len(excluded_records),
+                'lack_info_records': 0,
+                'complete_records': 0,
+                'error_records': 0,
+                'lack_info_rate': 0.0,
+                'concurrent_requests': 0,
+                'output_file': None
+            }
+            self.workflow_steps.append(step_info)
+            return step_info
+
         # 动态导入LLM相关模块
         import sys
         import os
@@ -240,9 +274,7 @@ class WorkflowManager:
                         'tag': '<LACK INFORMATION>',
                         'checked_at': datetime.now().isoformat()
                     }
-                    # 在function_name中添加标签
-                    if 'function_name' in new_record:
-                        new_record['function_name'] = f"<LACK INFORMATION> {new_record['function_name']}"
+                    new_record['sql_statement_list'] = "<LACK INFORMATION>"
                 else:
                     new_record['completeness_check'] = {
                         'is_complete': True,
@@ -274,13 +306,13 @@ class WorkflowManager:
                 return await check_single_record(session, record)
         
         # 执行并发处理
-        logger.info(f"使用 {semaphore._value} 并发请求处理 {len(self.current_data)} 条记录...")
+        logger.info(f"使用 {semaphore._value} 并发请求处理 {len(records_to_process)} 条记录...")
         
         processed_records = []
-        with tqdm_asyncio(total=len(self.current_data), desc=f"检查SQL完整性 ({step_name})") as pbar:
+        with tqdm_asyncio(total=len(records_to_process), desc=f"检查SQL完整性 ({step_name})") as pbar:
             async with aiohttp.ClientSession() as session:
                 tasks = []
-                for record in self.current_data:
+                for record in records_to_process:
                     task = asyncio.ensure_future(process_with_semaphore(session, record))
                     
                     def update_progress(fut, pbar=pbar):
@@ -299,7 +331,7 @@ class WorkflowManager:
         for i, result in enumerate(processed_records):
             if isinstance(result, Exception):
                 logger.warning(f"处理第{i+1}条记录时出错: {result}")
-                error_record = self.current_data[i].copy()
+                error_record = records_to_process[i].copy()
                 error_record['completeness_check'] = {
                     'is_complete': True,
                     'reason': f'处理异常: {str(result)}',
@@ -316,7 +348,7 @@ class WorkflowManager:
                     lack_info_count += 1
         
         # 更新当前数据
-        self.current_data = tagged_data
+        self.current_data = excluded_records + tagged_data
         
         # 保存标记后的数据
         tagging_output_dir = self.workflow_dir / "sql_completeness_check"
@@ -332,17 +364,203 @@ class WorkflowManager:
             'step_type': 'sql_completeness_check',
             'timestamp': datetime.now().isoformat(),
             'input_records': len(self.current_data),
+            'records_to_check': len(records_to_process),
+            'excluded_no_sql_records': len(excluded_records),
             'lack_info_records': lack_info_count,
-            'complete_records': len(self.current_data) - lack_info_count - error_count,
+            'complete_records': len(records_to_process) - lack_info_count - error_count,
             'error_records': error_count,
-            'lack_info_rate': lack_info_count / len(self.current_data) * 100,
+            'lack_info_rate': lack_info_count / len(records_to_process) * 100 if records_to_process else 0.0,
             'concurrent_requests': 100,
             'output_file': str(tagged_data_file)
         }
         
         self.workflow_steps.append(step_info)
         
-        logger.info(f"SQL完整性检查完成 - 标记了 {lack_info_count:,} 条缺少信息的记录，{error_count:,} 条处理错误")
+        logger.info(f"SQL完整性检查完成 - 在 {len(records_to_process):,} 条待查记录中，标记了 {lack_info_count:,} 条缺少信息的记录，{error_count:,} 条处理错误。")
+        return step_info
+
+    async def check_sql_correctness(self, step_name: str = "sql_correctness_check_step") -> Dict[str, Any]:
+        """
+        使用LLM检查数据的SQL正确性并进行标记
+        
+        Args:
+            step_name: 步骤名称
+            
+        Returns:
+            标记结果信息
+        """
+        if self.current_data is None:
+            raise ValueError("请先加载并处理数据")
+
+        logger.info(f"开始使用LLM检查SQL正确性并标记数据: {step_name}")
+
+        # 筛选出需要进行正确性检查的记录
+        records_to_process = []
+        excluded_records = []
+        for record in self.current_data:
+            is_no_sql = record.get('sql_statement_list') == '<NO SQL GENERATE>'
+            has_lack_info_tag = record.get('completeness_check', {}).get('tag') == '<LACK INFORMATION>'
+            
+            if is_no_sql or has_lack_info_tag:
+                excluded_records.append(record)
+            else:
+                records_to_process.append(record)
+
+        logger.info(f"从 {len(self.current_data):,} 条记录中筛选出 {len(records_to_process):,} 条记录进行正确性检查，排除了 {len(excluded_records):,} 条不适用记录。")
+
+        if not records_to_process:
+            logger.info("没有需要进行正确性检查的记录，跳过此步骤。")
+            step_info = {
+                'step_name': step_name,
+                'step_type': 'sql_correctness_check',
+                'timestamp': datetime.now().isoformat(),
+                'input_records': len(self.current_data),
+                'records_to_check': 0,
+                'excluded_records': len(excluded_records),
+                'correct_records': 0,
+                'incorrect_records': 0,
+                'error_records': 0,
+                'incorrect_rate': 0.0,
+                'output_file': None
+            }
+            self.workflow_steps.append(step_info)
+            return step_info
+
+        # 动态导入LLM相关模块
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+        
+        try:
+            from utils.llm_client import LLMClient
+            from config.data_clean.sql_completeness_check_prompt import get_sql_correctness_check_prompt, get_sql_correctness_check_prompt
+        except ImportError as e:
+            logger.error(f"无法导入LLM相关模块: {e}")
+            raise ValueError("LLM模块不可用，无法执行SQL正确性检查")
+        
+        llm_client = LLMClient("v3")
+
+        async def check_single_record(session: aiohttp.ClientSession, record: Dict[str, Any]) -> Dict[str, Any]:
+            """检查单条记录的SQL正确性"""
+            try:
+                prompt = get_sql_correctness_check_prompt(
+                    caller=record.get('caller', ''),
+                    code_meta=str(record.get('code_meta_data', [{}])[0]),
+                    orm_code=record.get('orm_code', ''),
+                    sql_statements=str(record.get('sql_statement_list', []))
+                )
+                
+                response = await llm_client.call_async(session, prompt, max_tokens=100, temperature=0.0)
+                
+                is_correct = True
+                reason = ""
+                correction_override = None
+                
+                if response and response.strip().lower().startswith('否'):
+                    is_correct = False
+                    reason = response.replace('否', '').strip(' ，,')
+
+                    # 新增逻辑：如果理由涉及特定关键词，则覆盖为正确
+                    if re.search(r'事务|表名', reason):
+                        is_correct = True
+                        correction_override = f"Keyword match: {reason}"
+                
+                new_record = record.copy()
+                new_record['correctness_check'] = {
+                    'is_correct': is_correct,
+                    'reason': reason,
+                    'tag': '' if is_correct else '<INCORRECT SQL>',
+                    'checked_at': datetime.now().isoformat(),
+                    'correction_override': correction_override
+                }
+                return new_record
+
+            except Exception as e:
+                logger.warning(f"检查记录正确性失败: {e}")
+                error_record = record.copy()
+                error_record['correctness_check'] = {
+                    'is_correct': True,  # 默认正确
+                    'reason': f'检查失败: {str(e)}',
+                    'tag': '',
+                    'checked_at': datetime.now().isoformat(),
+                    'check_error': True
+                }
+                return error_record
+
+        semaphore = asyncio.Semaphore(100)
+        async def process_with_semaphore(session: aiohttp.ClientSession, record: Dict[str, Any]) -> Dict[str, Any]:
+            async with semaphore:
+                return await check_single_record(session, record)
+
+        processed_records = []
+        with tqdm_asyncio(total=len(records_to_process), desc=f"检查SQL正确性 ({step_name})") as pbar:
+            async with aiohttp.ClientSession() as session:
+                tasks = [asyncio.ensure_future(process_with_semaphore(session, r)) for r in records_to_process]
+                for task in tasks:
+                    task.add_done_callback(lambda p: pbar.update(1))
+                processed_records = await asyncio.gather(*tasks, return_exceptions=True)
+
+        final_data = []
+        error_count = 0
+        incorrect_count = 0
+        override_count = 0
+        for i, result in enumerate(processed_records):
+            if isinstance(result, Exception):
+                error_count += 1
+                error_record = records_to_process[i].copy()
+                error_record['correctness_check'] = {
+                    'is_correct': True,  # 默认正确
+                    'reason': f'处理异常: {str(result)}',
+                    'tag': '',
+                    'checked_at': datetime.now().isoformat(),
+                    'process_error': True
+                }
+                final_data.append(error_record)
+            elif isinstance(result, dict):
+                final_data.append(result)
+                correctness_info = result.get('correctness_check', {})
+                if not correctness_info.get('is_correct', True):
+                    incorrect_count += 1
+                if correctness_info.get('correction_override'):
+                    override_count += 1
+            else:
+                # 处理其他意外情况
+                error_count += 1
+                error_record = records_to_process[i].copy()
+                error_record['correctness_check'] = {
+                    'is_correct': True,
+                    'reason': f'未知处理结果类型: {type(result)}',
+                    'tag': '',
+                    'checked_at': datetime.now().isoformat(),
+                    'process_error': True
+                }
+                final_data.append(error_record)
+
+        self.current_data = excluded_records + final_data
+        
+        output_dir = self.workflow_dir / "sql_correctness_check"
+        output_dir.mkdir(exist_ok=True)
+        output_file = output_dir / f"{step_name}.json"
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(self.current_data, f, ensure_ascii=False, indent=2)
+            
+        step_info = {
+            'step_name': step_name,
+            'step_type': 'sql_correctness_check',
+            'timestamp': datetime.now().isoformat(),
+            'input_records': len(self.current_data),
+            'records_to_check': len(records_to_process),
+            'excluded_records': len(excluded_records),
+            'correct_records': len(records_to_process) - incorrect_count - error_count,
+            'incorrect_records': incorrect_count,
+            'error_records': error_count,
+            'overridden_as_correct': override_count,
+            'incorrect_rate': incorrect_count / len(records_to_process) * 100 if records_to_process else 0.0,
+            'output_file': str(output_file)
+        }
+        
+        self.workflow_steps.append(step_info)
+        logger.info(f"SQL正确性检查完成 - 在 {len(records_to_process):,} 条记录中，发现 {incorrect_count:,} 条不正确，{override_count:,} 条因关键词被覆盖为正确，{error_count:,} 条处理错误。")
         return step_info
 
     def extract_keyword_data(self, keywords: Optional[List[str]] = None, step_name: str = "keyword_extraction_step2") -> Dict[str, Any]:
@@ -655,6 +873,17 @@ class WorkflowManager:
                 print(f"     📈 缺少信息率: {step['lack_info_rate']:.2f}%")
                 print(f"     🔄 并发请求数: {step['concurrent_requests']}")
                 
+            elif step['step_type'] == 'sql_correctness_check':
+                print(f"     📊 输入记录: {step['records_to_check']:,} (从 {step['input_records']:,} 中筛选)")
+                overridden_count = step.get('overridden_as_correct', 0)
+                if overridden_count > 0:
+                    print(f"     ✅ 正确记录: {step['correct_records']:,} (其中 {overridden_count:,} 条为关键词覆盖)")
+                else:
+                    print(f"     ✅ 正确记录: {step['correct_records']:,}")
+                print(f"     ❌ 错误记录: {step['incorrect_records']:,}")
+                print(f"     🔥 处理异常: {step['error_records']:,}")
+                print(f"     📈 错误率: {step['incorrect_rate']:.2f}%")
+                
             elif step['step_type'] == 'keyword_extraction':
                 print(f"     📊 输入记录: {step['input_records']:,}")
                 print(f"     🎯 提取记录: {step['extracted_records']:,}")
@@ -705,6 +934,10 @@ def run_complete_workflow_from_raw_data(data_dir: str, keywords: Optional[List[s
         logger.info("开始执行SQL完整性检查和数据标记...")
         tagging_result = asyncio.run(workflow.tag_lack_information_data("sql_completeness_check_step2"))
         
+        # 步骤2.6: 使用LLM检查SQL正确性
+        logger.info("开始执行SQL正确性检查...")
+        correctness_result = asyncio.run(workflow.check_sql_correctness("sql_correctness_check_step2.6"))
+
         # 步骤3: 从清洗后的数据中提取关键词数据
         extraction_result = workflow.extract_keyword_data(keywords, "keyword_extraction_step3")
         
@@ -731,6 +964,7 @@ def run_complete_workflow_from_raw_data(data_dir: str, keywords: Optional[List[s
             'load_result': load_result,
             'cleaning_result': cleaning_result,
             'tagging_result': tagging_result,
+            'correctness_result': correctness_result,
             'extraction_result': extraction_result,
             'processing_result': processing_result,
             'merge_result': merge_result

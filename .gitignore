@@ -144,6 +144,8 @@ datasets/
 extracted_data/
 workflow_output/
 rerun_outputs/
+cursor-chat/
+saves/
 nohup.out
 
 # 环境变量文件

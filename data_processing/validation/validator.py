@@ -10,11 +10,6 @@ from pathlib import Path
 import yaml
 from tqdm import tqdm
 
-# 添加项目根目录到Python路径, 确保可以找到其他模块
-project_root = Path(__file__).resolve().parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
-
 from utils.llm_client import LLMClientManager
 from config.prompts import REANALYSIS_PROMPT
 from config.validation_prompts import (

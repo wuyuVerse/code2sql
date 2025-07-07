@@ -11,6 +11,7 @@ import yaml
 import subprocess
 from pathlib import Path
 from datetime import datetime
+import argparse
 
 def setup_logging():
     """设置日志"""
@@ -34,7 +35,7 @@ def create_output_dir(output_dir: str):
     """创建输出目录"""
     os.makedirs(output_dir, exist_ok=True)
 
-def run_train_command(config, unique_output_dir: str):
+def run_train_command(config, unique_output_dir: str, unique_run_name: str):
     """使用llamafactory-cli运行训练"""
     cmd = [
         "llamafactory-cli", "train",
@@ -110,9 +111,16 @@ def run_train_command(config, unique_output_dir: str):
         cmd.extend(["--weight_decay", str(config["weight_decay"])])
     
     # 添加实验跟踪配置
-    report_to = config.get("report_to", "none")
-    if report_to != "none":
-        cmd.extend(["--report_to", report_to])
+    if config.get("use_swanlab", False):
+        cmd.extend(["--report_to", "swanlab"])
+        # 如果提供了swanlab_run_name，就使用它，否则使用默认生成的
+        run_name = config.get("swanlab_run_name", unique_run_name)
+        cmd.extend(["--run_name", run_name])
+    else:
+        # 如果不使用swanlab，可以恢复默认或其他的报告方式
+        report_to = config.get("report_to", "none")
+        if report_to != "none":
+            cmd.extend(["--report_to", report_to])
     
     return cmd
 
@@ -122,12 +130,11 @@ def main():
     logger = logging.getLogger(__name__)
     
     # 配置文件路径 - 支持命令行参数
-    import argparse
     parser = argparse.ArgumentParser(description="Qwen3-14B微调训练脚本")
     parser.add_argument("--config", type=str, default="qwen3_14b_ft.yaml", help="配置文件名")
     args = parser.parse_args()
     
-    config_path = str(Path(__file__).parents[2] / "model" / "configs" / args.config)
+    config_path = str(Path(__file__).parents[1] / "configs" / args.config)
     
     if not os.path.exists(config_path):
         logger.error(f"配置文件不存在: {config_path}")
@@ -172,8 +179,8 @@ def main():
     # 强制使用torchrun启动DeepSpeed分布式训练
     os.environ["FORCE_TORCHRUN"] = "1"
     
-    # 禁用 W&B，如果配置了其他实验跟踪
-    if config.get("report_to") == "swanlab":
+    # 禁用 W&B，如果配置了 SwanLab
+    if config.get("use_swanlab", False):
         os.environ["WANDB_DISABLED"] = "true"  # 禁用 W&B
         logger.info("已禁用 W&B，启用 SwanLab 实验跟踪")
     
@@ -185,7 +192,7 @@ def main():
     
     try:
         # 使用命令行方式运行训练
-        cmd = run_train_command(config, unique_output_dir)
+        cmd = run_train_command(config, unique_output_dir, unique_run_name)
         logger.info(f"执行命令: {' '.join(cmd)}")
         
         result = subprocess.run(cmd, check=True, capture_output=False)

@@ -31,8 +31,8 @@ learning_rate: 2.0e-5  # 针对代码生成任务稍微提高学习率
 num_train_epochs: 2.0  # 训练轮次，总步数 = (max_samples / 实际batch_size) * num_train_epochs
 # max_steps: 100  # 可选：直接指定最大训练步数，会覆盖num_train_epochs
 max_grad_norm: 1.0
-per_device_train_batch_size: 1  # 每GPU的batch size，考虑到内存限制调整为1
-gradient_accumulation_steps: 16  # 梯度累积，实际batch_size = per_device_batch_size * GPU数 * gradient_accumulation_steps
+per_device_train_batch_size: 2  # 每GPU的batch size，考虑到内存限制调整为2
+gradient_accumulation_steps: 8  # 梯度累积，实际batch_size = per_device_batch_size * GPU数 * gradient_accumulation_steps
 lr_scheduler_type: cosine
 warmup_ratio: 0.1
 bf16: true
@@ -41,7 +41,7 @@ resume_from_checkpoint: null
 weight_decay: 0.1
 
 # 当前设置下的Step计算：
-# 实际Batch Size = 1 * 4 GPUs * 16 = 64
+# 实际Batch Size = 2 * 4 GPUs * 8 = 64
 # Steps per Epoch = 17761 samples / 64 = ~278 steps  
 # Total Steps = 278 * 2 epochs = 556 steps
 
