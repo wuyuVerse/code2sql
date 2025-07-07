@@ -204,7 +204,7 @@ class WorkflowManager:
             }
             self.workflow_steps.append(step_info)
             return step_info
-
+        
         # 动态导入LLM相关模块
         import sys
         import os
@@ -225,16 +225,17 @@ class WorkflowManager:
             """检查单条记录的SQL完整性"""
             try:
                 # 准备检查材料
-                caller = record.get('caller', '')
+                caller_raw = record.get('caller')
+                caller = str(caller_raw).strip() if caller_raw else '<EMPTY>'
                 orm_code = record.get('orm_code', '')
                 sql_statements = str(record.get('sql_statement_list', []))
                 
                 # 处理元数据
                 code_meta_data = record.get('code_meta_data', [])
                 if isinstance(code_meta_data, list) and code_meta_data:
-                    code_meta = str(code_meta_data[0]) if code_meta_data else ''
+                    code_meta = str(code_meta_data[0])
                 else:
-                    code_meta = str(code_meta_data)
+                    code_meta = '<EMPTY>' if (isinstance(code_meta_data, list) and not code_meta_data) else str(code_meta_data)
                 
                 # 生成提示词
                 prompt = get_sql_completeness_check_prompt(
@@ -443,9 +444,19 @@ class WorkflowManager:
         async def check_single_record(session: aiohttp.ClientSession, record: Dict[str, Any]) -> Dict[str, Any]:
             """检查单条记录的SQL正确性"""
             try:
+                # 安全地处理元数据
+                code_meta_data = record.get('code_meta_data', [])
+                if isinstance(code_meta_data, list) and code_meta_data:
+                    code_meta = str(code_meta_data[0])
+                else:
+                    # 如果是空列表，传递空字符串；否则，转换整个对象
+                    code_meta = '' if isinstance(code_meta_data, list) else str(code_meta_data)
+
+                caller_raw = record.get('caller')
+                caller = str(caller_raw).strip() if caller_raw else '<EMPTY>'
                 prompt = get_sql_correctness_check_prompt(
-                    caller=record.get('caller', ''),
-                    code_meta=str(record.get('code_meta_data', [{}])[0]),
+                    caller=caller,
+                    code_meta=code_meta,
                     orm_code=record.get('orm_code', ''),
                     sql_statements=str(record.get('sql_statement_list', []))
                 )
@@ -937,7 +948,7 @@ def run_complete_workflow_from_raw_data(data_dir: str, keywords: Optional[List[s
         # 步骤2.6: 使用LLM检查SQL正确性
         logger.info("开始执行SQL正确性检查...")
         correctness_result = asyncio.run(workflow.check_sql_correctness("sql_correctness_check_step2.6"))
-
+        
         # 步骤3: 从清洗后的数据中提取关键词数据
         extraction_result = workflow.extract_keyword_data(keywords, "keyword_extraction_step3")
         
