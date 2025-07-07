@@ -3,6 +3,7 @@ import os
 from collections import defaultdict, Counter
 from typing import Dict, List, Set, Tuple, Any
 import logging
+from tqdm import tqdm
 
 # 尝试导入SQL特征提取器
 try:
@@ -147,6 +148,7 @@ class ORM_SQLFingerprintAnalyzer:
                 stmt_type = extractor.stmt_type if hasattr(extractor, 'stmt_type') else None
                 operation = self._get_operation_type(stmt_type) if stmt_type else "UNKNOWN"
             except:
+                print(f"SQL指纹提取失败: {sql_text}")
                 # 如果特征提取失败，使用简单的SQL解析
                 tables = self._simple_table_extraction(sql_text)
                 operation = self._simple_operation_extraction(sql_text)
@@ -247,7 +249,10 @@ class ORM_SQLFingerprintAnalyzer:
         """
         results = {}
         
-        for orm_code, callers_data in self.orm_data.items():
+        # 添加进度条
+        pbar = tqdm(self.orm_data.items(), desc="分析ORM SQL多样性")
+        for orm_code, callers_data in pbar:
+            pbar.set_postfix({'ORM': orm_code[:20]})  # 显示当前处理的ORM代码（限制长度）
             # 统计每个ORM代码的基本信息
             total_sql_count = sum(len(records) for records in callers_data.values())
             unique_fingerprints = set()
@@ -299,7 +304,10 @@ class ORM_SQLFingerprintAnalyzer:
         """
         redundant_info = {}
         
-        for orm_code, callers_data in self.orm_data.items():
+        # 添加进度条
+        pbar = tqdm(self.orm_data.items(), desc="识别冗余SQL")
+        for orm_code, callers_data in pbar:
+            pbar.set_postfix({'ORM': orm_code[:20]})  # 显示当前处理的ORM代码
             orm_redundant = []
             
             for caller, records in callers_data.items():
@@ -336,7 +344,10 @@ class ORM_SQLFingerprintAnalyzer:
         """
         missing_extra_info = {}
         
-        for orm_code, callers_data in self.orm_data.items():
+        # 添加进度条
+        pbar = tqdm(self.orm_data.items(), desc="分析SQL缺漏情况")
+        for orm_code, callers_data in pbar:
+            pbar.set_postfix({'ORM': orm_code[:20]})  # 显示当前处理的ORM代码
             if len(callers_data) < 2:  # 至少需要2个caller才能比较
                 continue
                 
@@ -431,6 +442,54 @@ class ORM_SQLFingerprintAnalyzer:
                 
         return missing_extra_info
     
+    def _generate_simplified_report(self, missing_extra_info: Dict[str, Dict], limit: int = 100) -> Dict[str, Dict]:
+        """
+        生成精简版的缺漏或额外SQL报告
+        
+        Args:
+            missing_extra_info: 完整的缺漏或额外SQL信息
+            limit: 限制记录数量
+            
+        Returns:
+            Dict: 精简版报告
+        """
+        simplified_report = {}
+        record_count = 0
+        
+        for orm_code, analysis in missing_extra_info.items():
+            if record_count >= limit:
+                break
+                
+            simplified_analysis = {
+                'caller_comparisons': [],
+                'potential_missing': [],
+                'potential_extra': []
+            }
+            
+            # 添加caller比较结果（最多添加limit/3条）
+            comparison_limit = min(len(analysis['caller_comparisons']), limit // 3)
+            simplified_analysis['caller_comparisons'] = analysis['caller_comparisons'][:comparison_limit]
+            record_count += comparison_limit
+            
+            # 添加潜在缺失SQL（最多添加limit/3条）
+            if record_count < limit:
+                missing_limit = min(len(analysis['potential_missing']), (limit - record_count) // 2)
+                simplified_analysis['potential_missing'] = analysis['potential_missing'][:missing_limit]
+                record_count += missing_limit
+            
+            # 添加潜在额外SQL（最多添加剩余配额）
+            if record_count < limit:
+                extra_limit = min(len(analysis['potential_extra']), limit - record_count)
+                simplified_analysis['potential_extra'] = analysis['potential_extra'][:extra_limit]
+                record_count += extra_limit
+            
+            if (simplified_analysis['caller_comparisons'] or 
+                simplified_analysis['potential_missing'] or 
+                simplified_analysis['potential_extra']):
+                simplified_report[orm_code] = simplified_analysis
+                
+        return simplified_report
+
     def generate_reports(self, output_dir: str = "."):
         """
         生成分析报告文件
@@ -442,6 +501,7 @@ class ORM_SQLFingerprintAnalyzer:
         os.makedirs(output_dir, exist_ok=True)
         
         # 1. 生成ORM SQL统计报告
+        self.logger.info("开始生成ORM SQL统计报告...")
         orm_stats = self.analyze_orm_diversity()
         stats_file = os.path.join(output_dir, "orm_sql_stats.json")
         with open(stats_file, 'w', encoding='utf-8') as f:
@@ -449,6 +509,7 @@ class ORM_SQLFingerprintAnalyzer:
         self.logger.info(f"ORM SQL统计报告已保存到: {stats_file}")
         
         # 2. 生成冗余SQL标记报告
+        self.logger.info("开始生成冗余SQL标记报告...")
         redundant_sql = self.identify_redundant_sql()
         redundant_file = os.path.join(output_dir, "redundant_sql_marks.json")
         with open(redundant_file, 'w', encoding='utf-8') as f:
@@ -456,16 +517,26 @@ class ORM_SQLFingerprintAnalyzer:
         self.logger.info(f"冗余SQL标记报告已保存到: {redundant_file}")
         
         # 3. 生成缺漏或额外SQL报告
+        self.logger.info("开始生成SQL缺漏分析报告...")
         missing_extra = self.identify_missing_or_extra_sql()
         missing_file = os.path.join(output_dir, "missing_or_extra_sql_report.json")
         with open(missing_file, 'w', encoding='utf-8') as f:
             json.dump(missing_extra, f, ensure_ascii=False, indent=2)
         self.logger.info(f"缺漏或额外SQL报告已保存到: {missing_file}")
         
+        # 4. 生成精简版缺漏或额外SQL报告（限制100条记录）
+        self.logger.info("开始生成精简版SQL缺漏分析报告...")
+        simplified_missing_extra = self._generate_simplified_report(missing_extra, limit=100)
+        simplified_missing_file = os.path.join(output_dir, "missing_or_extra_sql_report_simplified.json")
+        with open(simplified_missing_file, 'w', encoding='utf-8') as f:
+            json.dump(simplified_missing_extra, f, ensure_ascii=False, indent=2)
+        self.logger.info(f"精简版缺漏或额外SQL报告已保存到: {simplified_missing_file}")
+        
         return {
             'orm_stats_file': stats_file,
             'redundant_sql_file': redundant_file,
             'missing_extra_file': missing_file,
+            'simplified_missing_extra_file': simplified_missing_file,
             'summary': {
                 'total_orm_codes': len(orm_stats),
                 'orm_with_redundant_sql': len(redundant_sql),
@@ -501,6 +572,12 @@ class ORM_SQLFingerprintAnalyzer:
             orm_code = record.get('orm_code', '')
             caller = record.get('caller', 'unknown_caller')
             sql_statements = record.get('sql_statement_list', [])
+
+            # 新增：保持"<NO SQL GENERATE>"为字符串类型
+            if isinstance(sql_statements, str) and sql_statements == '<NO SQL GENERATE>':
+                marked_record['sql_statement_list'] = '<NO SQL GENERATE>'
+                marked_dataset.append(marked_record)
+                continue
             
             if not isinstance(sql_statements, list):
                 sql_statements = [sql_statements] if sql_statements else []
@@ -511,7 +588,8 @@ class ORM_SQLFingerprintAnalyzer:
                 marked_sql_item = self._mark_sql_item(sql_item, orm_code, caller, redundant_fingerprints)
                 marked_sql_statements.append(marked_sql_item)
             
-            marked_record['sql_statement_list'] = marked_sql_statements
+            # 如果原始sql_statements是空且返回空，仍保持列表类型
+            marked_record['sql_statement_list'] = marked_sql_statements if marked_sql_statements else sql_statements
             marked_dataset.append(marked_record)
         
         return marked_dataset

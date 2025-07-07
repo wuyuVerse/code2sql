@@ -131,12 +131,22 @@ class WorkflowManager:
         # 执行清洗
         cleaning_result = sql_cleaner.clean_dataset(self.current_data, step_name)
         
-        # 加载清洗后的数据作为当前数据
+        # 优先加载带有冗余标记的数据（如果ORM分析成功）
+        marked_data_file = Path(cleaning_result['output_directory']) / "cleaned_records_with_redundant_marks.json"
         cleaned_data_file = Path(cleaning_result['output_directory']) / "cleaned_records.json"
-        with open(cleaned_data_file, 'r', encoding='utf-8') as f:
-            self.current_data = json.load(f)
         
-        # 记录工作流步骤
+        if marked_data_file.exists():
+            logger.info("检测到ORM指纹分析结果，加载带冗余标记的数据...")
+            with open(marked_data_file, 'r', encoding='utf-8') as f:
+                self.current_data = json.load(f)
+            preferred_data_file = str(marked_data_file)
+        else:
+            logger.info("未检测到ORM指纹分析结果，加载清洗后的数据...")
+            with open(cleaned_data_file, 'r', encoding='utf-8') as f:
+                self.current_data = json.load(f)
+            preferred_data_file = str(cleaned_data_file)
+        
+        # 记录工作流步骤，包含ORM分析信息
         step_info = {
             'step_name': step_name,
             'step_type': 'sql_cleaning',
@@ -149,8 +159,28 @@ class WorkflowManager:
             'param_dependent_sql_retained': cleaning_result['param_dependent_sql_retained'],
             'empty_sql_lists_found': cleaning_result.get('empty_sql_lists_found', 0),
             'lists_emptied_after_cleaning': cleaning_result.get('lists_emptied_after_cleaning', 0),
-            'output_directory': cleaning_result['output_directory']
+            'output_directory': cleaning_result['output_directory'],
+            'preferred_data_file': preferred_data_file
         }
+        
+        # 添加ORM分析结果信息（如果可用）
+        if 'orm_analysis_summary' in cleaning_result and cleaning_result['orm_analysis_summary']:
+            orm_summary = cleaning_result['orm_analysis_summary']
+            step_info.update({
+                'orm_analysis_available': True,
+                'total_orm_codes': orm_summary.get('total_orm_codes', 0),
+                'orm_with_redundant_sql': orm_summary.get('orm_with_redundant_sql', 0),
+                'orm_with_potential_missing_extra': orm_summary.get('orm_with_potential_missing_extra', 0),
+                'total_sql_records': orm_summary.get('total_sql_records', 0),
+                'orm_analysis_reports': cleaning_result.get('orm_analysis_reports')
+            })
+            logger.info(f"ORM指纹分析已完成:")
+            logger.info(f"  - 分析了 {orm_summary.get('total_orm_codes', 0)} 个ORM代码")
+            logger.info(f"  - 发现 {orm_summary.get('orm_with_redundant_sql', 0)} 个ORM代码有冗余SQL")
+            logger.info(f"  - 发现 {orm_summary.get('orm_with_potential_missing_extra', 0)} 个ORM代码有潜在缺漏或额外SQL")
+        else:
+            step_info['orm_analysis_available'] = False
+            logger.info("ORM指纹分析未执行或执行失败")
         
         self.workflow_steps.append(step_info)
         
@@ -177,8 +207,15 @@ class WorkflowManager:
         excluded_records = []
         if self.current_data:
             for record in self.current_data:
-                # 假设 sql_statement_list 存在
-                if record.get('sql_statement_list') == '<NO SQL GENERATE>':
+                sql_list = record.get('sql_statement_list', [])
+                # 检查是否为 <NO SQL GENERATE>（可能是字符串或包含该字符串的列表）
+                is_no_sql = False
+                if isinstance(sql_list, str):
+                    is_no_sql = sql_list == '<NO SQL GENERATE>'
+                elif isinstance(sql_list, list):
+                    is_no_sql = len(sql_list) == 1 and sql_list[0] == '<NO SQL GENERATE>'
+                
+                if is_no_sql:
                     excluded_records.append(record)
                 else:
                     records_to_process.append(record)
@@ -399,7 +436,14 @@ class WorkflowManager:
         records_to_process = []
         excluded_records = []
         for record in self.current_data:
-            is_no_sql = record.get('sql_statement_list') == '<NO SQL GENERATE>'
+            sql_list = record.get('sql_statement_list', [])
+            # 检查是否为 <NO SQL GENERATE>（可能是字符串或包含该字符串的列表）
+            is_no_sql = False
+            if isinstance(sql_list, str):
+                is_no_sql = sql_list == '<NO SQL GENERATE>'
+            elif isinstance(sql_list, list):
+                is_no_sql = len(sql_list) == 1 and sql_list[0] == '<NO SQL GENERATE>'
+            
             has_lack_info_tag = record.get('completeness_check', {}).get('tag') == '<LACK INFORMATION>'
             
             if is_no_sql or has_lack_info_tag:
@@ -572,6 +616,78 @@ class WorkflowManager:
         
         self.workflow_steps.append(step_info)
         logger.info(f"SQL正确性检查完成 - 在 {len(records_to_process):,} 条记录中，发现 {incorrect_count:,} 条不正确，{override_count:,} 条因关键词被覆盖为正确，{error_count:,} 条处理错误。")
+        return step_info
+
+    async def run_redundant_sql_validation(self, apply_fix: bool = False, step_name: str = "redundant_sql_validation_step") -> Dict[str, Any]:
+        """
+        运行冗余SQL验证步骤
+        
+        使用SQLGlot解析SQL并通过LLM验证被标记为 <REDUNDANT SQL> 的语句是否确实冗余
+        
+        Args:
+            apply_fix: 是否应用修复（移除确认冗余的SQL或取消争议标记）
+            step_name: 步骤名称
+            
+        Returns:
+            验证结果信息
+        """
+        if self.current_data is None:
+            raise ValueError("请先加载并处理数据")
+        
+        logger.info(f"开始冗余SQL验证: {step_name}")
+        
+        # 动态导入验证器
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+        
+        try:
+            from data_processing.cleaning.redundant_sql_validator import RedundantSQLValidator
+        except ImportError:
+            from cleaning.redundant_sql_validator import RedundantSQLValidator
+        
+        # 创建验证器输出目录
+        validation_output_dir = self.workflow_dir / "redundant_sql_validation"
+        validator = RedundantSQLValidator(output_dir=str(validation_output_dir), llm_server="v3")
+        
+        # 执行验证
+        validation_result = await validator.validate_redundant_sql_records(
+            dataset=self.current_data,
+            apply_fix=apply_fix
+        )
+        
+        # 如果应用了修复，更新当前数据
+        if apply_fix and 'fixed_dataset' in validation_result:
+            self.current_data = validation_result['fixed_dataset']
+            logger.info(f"已应用冗余SQL修复，更新了 {len(self.current_data):,} 条记录")
+        
+        # 记录工作流步骤
+        step_info = {
+            'step_name': step_name,
+            'step_type': 'redundant_sql_validation',
+            'timestamp': datetime.now().isoformat(),
+            'input_records': validation_result['total_records'],
+            'redundant_records_found': validation_result['redundant_records'],
+            'validation_items_total': validation_result['validation_items'],
+            'confirmed_redundant': validation_result['confirmed_redundant'],
+            'disputed_redundant': validation_result['disputed_redundant'],
+            'parse_errors': validation_result['parse_errors'],
+            'validation_errors': validation_result['validation_errors'],
+            'apply_fix': apply_fix,
+            'output_files': validation_result['output_files'],
+            'confirmation_rate': (validation_result['confirmed_redundant'] / validation_result['validation_items'] * 100) if validation_result['validation_items'] > 0 else 0.0
+        }
+        
+        self.workflow_steps.append(step_info)
+        
+        logger.info(f"冗余SQL验证完成 - 找到 {validation_result['redundant_records']:,} 个冗余记录，验证 {validation_result['validation_items']:,} 个SQL项")
+        logger.info(f"  - 确认冗余: {validation_result['confirmed_redundant']:,} 个")
+        logger.info(f"  - 争议冗余: {validation_result['disputed_redundant']:,} 个") 
+        logger.info(f"  - 解析错误: {validation_result['parse_errors']:,} 个")
+        logger.info(f"  - 验证错误: {validation_result['validation_errors']:,} 个")
+        if apply_fix:
+            logger.info(f"  - 已应用修复到数据集")
+        
         return step_info
 
     def extract_keyword_data(self, keywords: Optional[List[str]] = None, step_name: str = "keyword_extraction_step2") -> Dict[str, Any]:
@@ -875,6 +991,16 @@ class WorkflowManager:
                     print(f"     📋 原始空列表: {step['empty_sql_lists_found']:,}")
                 if 'lists_emptied_after_cleaning' in step:
                     print(f"     🧹 清洗后空列表: {step['lists_emptied_after_cleaning']:,}")
+                
+                # 显示ORM分析信息
+                if step.get('orm_analysis_available', False):
+                    print(f"     🔍 ORM指纹分析:")
+                    print(f"       🏷️ 分析ORM代码数: {step.get('total_orm_codes', 0):,}")
+                    print(f"       🔄 有冗余SQL的ORM: {step.get('orm_with_redundant_sql', 0):,}")
+                    print(f"       ⚠️ 有缺漏/额外SQL的ORM: {step.get('orm_with_potential_missing_extra', 0):,}")
+                    print(f"       📊 总SQL记录数: {step.get('total_sql_records', 0):,}")
+                else:
+                    print(f"     🔍 ORM指纹分析: 未执行")
                 
             elif step['step_type'] == 'sql_completeness_check':
                 print(f"     📊 输入记录: {step['input_records']:,}")

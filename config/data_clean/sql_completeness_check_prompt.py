@@ -80,7 +80,7 @@ def get_sql_completeness_check_prompt(caller: str, code_meta: str, orm_code: str
         code_meta=code_meta,
         orm_code=orm_code,
         sql_statements=sql_statements
-    )
+    ) 
 
 
 SQL_CORRECTNESS_CHECK_PROMPT = """请判断根据以下GORM代码和上下文信息生成的SQL语句是否完善：

@@ -217,6 +217,8 @@ class SQLCleaner:
 
             if is_originally_empty:
                 self.cleaning_stats['empty_sql_lists_found'] += 1
+                # 这里格式未定
+                # cleaned_record['sql_statement_list'] = ["<NO SQL GENERATE>"]
                 cleaned_record['sql_statement_list'] = "<NO SQL GENERATE>"
                 log_entry['modifications'].append({
                     'field': 'sql_statement_list',
