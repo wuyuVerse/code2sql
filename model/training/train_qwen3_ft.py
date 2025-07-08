@@ -13,6 +13,13 @@ from pathlib import Path
 from datetime import datetime
 import argparse
 
+# 将项目根目录加入 sys.path，确保可导入顶级包，如 data_processing
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from data_processing.training_data_converter import TrainingDataConverter
+
 def setup_logging():
     """设置日志"""
     logging.basicConfig(
@@ -111,16 +118,19 @@ def run_train_command(config, unique_output_dir: str, unique_run_name: str):
         cmd.extend(["--weight_decay", str(config["weight_decay"])])
     
     # 添加实验跟踪配置
-    if config.get("use_swanlab", False):
-        cmd.extend(["--report_to", "swanlab"])
-        # 如果提供了swanlab_run_name，就使用它，否则使用默认生成的
-        run_name = config.get("swanlab_run_name", unique_run_name)
-        cmd.extend(["--run_name", run_name])
-    else:
-        # 如果不使用swanlab，可以恢复默认或其他的报告方式
-        report_to = config.get("report_to", "none")
-        if report_to != "none":
-            cmd.extend(["--report_to", report_to])
+    report_to = config.get("report_to", "none")
+    if report_to != "none":
+        cmd.extend(["--report_to", report_to])
+        
+        # SwanLab 特殊配置
+        if report_to == "swanlab":
+            # 添加 SwanLab 项目名称
+            if config.get("swanlab_project"):
+                cmd.extend(["--swanlab_project", config["swanlab_project"]])
+            
+            # 添加运行名称
+            run_name = config.get("swanlab_run_name", unique_run_name)
+            cmd.extend(["--run_name", run_name])
     
     return cmd
 
@@ -134,7 +144,7 @@ def main():
     parser.add_argument("--config", type=str, default="qwen3_14b_ft.yaml", help="配置文件名")
     args = parser.parse_args()
     
-    config_path = str(Path(__file__).parents[1] / "configs" / args.config)
+    config_path = str(Path(__file__).parents[2] / "config" / "training" / "qwen" / args.config)
     
     if not os.path.exists(config_path):
         logger.error(f"配置文件不存在: {config_path}")
@@ -143,6 +153,19 @@ def main():
     # 加载配置
     config = load_config(config_path)
     logger.info(f"已加载配置文件: {config_path}")
+
+    # 在训练前自动执行数据转换，确保最新数据集可用
+    try:
+        converter = TrainingDataConverter(project_root=str(Path(__file__).parents[2]))
+        output_path, dataset_info = converter.run_conversion()
+        dataset_name = next(iter(dataset_info.keys()))
+        # 更新配置中的数据集名称与样本数
+        config["dataset"] = dataset_name
+        config["max_samples"] = dataset_info[dataset_name]["num_samples"]
+        logger.info(f"数据转换完成，新数据集: {dataset_name}，样本数: {config['max_samples']}")
+    except Exception as e:
+        logger.error(f"数据转换失败，将中止训练: {e}")
+        return
     
     # 检查模型路径
     model_path = config.get("model_path", "")
@@ -155,7 +178,9 @@ def main():
     # 生成唯一的运行名称和输出目录（包含时间戳）
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     unique_run_name = f"qwen3-14b-ft-{timestamp}"
-    unique_output_dir = f"saves/qwen3-14b-ft-{timestamp}"
+    # 使用配置文件中的输出目录作为基础，添加时间戳
+    base_output_dir = config.get("output_dir", "saves/qwen3-14b-ft")
+    unique_output_dir = f"{base_output_dir}-{timestamp}"
     
     # 创建输出目录
     create_output_dir(unique_output_dir)
@@ -180,7 +205,7 @@ def main():
     os.environ["FORCE_TORCHRUN"] = "1"
     
     # 禁用 W&B，如果配置了 SwanLab
-    if config.get("use_swanlab", False):
+    if config.get("report_to") == "swanlab":
         os.environ["WANDB_DISABLED"] = "true"  # 禁用 W&B
         logger.info("已禁用 W&B，启用 SwanLab 实验跟踪")
     
@@ -195,7 +220,11 @@ def main():
         cmd = run_train_command(config, unique_output_dir, unique_run_name)
         logger.info(f"执行命令: {' '.join(cmd)}")
         
-        result = subprocess.run(cmd, check=True, capture_output=False)
+        # 切换到 LLaMA-Factory 目录执行训练，确保相对路径正确
+        llamafactory_dir = Path(__file__).parent / "LLaMA-Factory"
+        logger.info(f"切换到 LLaMA-Factory 目录: {llamafactory_dir}")
+        
+        result = subprocess.run(cmd, check=True, capture_output=False, cwd=str(llamafactory_dir))
         logger.info("训练完成！")
         
     except subprocess.CalledProcessError as e:

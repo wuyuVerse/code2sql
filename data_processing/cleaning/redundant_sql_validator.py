@@ -1,7 +1,11 @@
 """
-冗余SQL验证器
+冗余SQL验证器 - 重构版
 
-使用SQLGlot解析SQL并通过LLM验证冗余标记的正确性
+实现分步骤LLM验证流程：
+1. 规则预过滤
+2. 语法等价检测
+3. 业务合理性检测（冗余/新增指纹/缺失）
+4. 生成最终修复建议
 """
 
 import asyncio
@@ -16,25 +20,39 @@ from datetime import datetime
 from pathlib import Path
 from tqdm.asyncio import tqdm_asyncio
 
-import sqlglot
-from sqlglot.expressions import Column, Select, Insert, Update, Delete
-
 try:
     from utils.llm_client import LLMClientManager
+    from config.data_clean.redundant_sql_validation_prompt import (
+        SYNTAX_EQUIVALENCE_PROMPT,
+        REDUNDANT_BUSINESS_VALIDATION_PROMPT,
+        NEW_FINGERPRINT_VALIDATION_PROMPT,
+        MISSING_SQL_VALIDATION_PROMPT,
+        RULE_BASED_FILTER_PROMPT
+    )
 except ImportError:
     # 备用导入路径
     import sys
     sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
     from utils.llm_client import LLMClientManager
+    from config.data_clean.redundant_sql_validation_prompt import (
+        SYNTAX_EQUIVALENCE_PROMPT,
+        REDUNDANT_BUSINESS_VALIDATION_PROMPT,
+        NEW_FINGERPRINT_VALIDATION_PROMPT,
+        MISSING_SQL_VALIDATION_PROMPT,
+        RULE_BASED_FILTER_PROMPT
+    )
 
 logger = logging.getLogger(__name__)
 
 
 class RedundantSQLValidator:
     """
-    冗余SQL验证器
+    冗余SQL验证器 - 重构版
     
-    用于验证被标记为 <REDUNDANT SQL> 的SQL语句是否确实冗余
+    实现分步骤LLM验证流程，处理不同类型的SQL问题：
+    - redundant: 冗余SQL检测
+    - new_fingerprint: 新增指纹合理性检测
+    - missing: 缺失SQL必要性检测
     """
     
     def __init__(self, output_dir: str = ".", llm_server: str = "v3"):
@@ -52,518 +70,465 @@ class RedundantSQLValidator:
         self.llm_manager = LLMClientManager()
         self.llm_client = self.llm_manager.get_client(llm_server)
         
-        logger.info(f"冗余SQL验证器初始化完成，输出目录: {self.output_dir}")
+        # 验证统计
+        self.validation_stats = {
+            'total_candidates': 0,
+            'step_stats': {
+                'rule_filter': {'processed': 0, 'auto_decided': 0},
+                'syntax_check': {'processed': 0, 'equivalent': 0},
+                'business_check': {'processed': 0, 'confirmed': 0},
+                'llm_errors': 0
+            },
+            'type_stats': {
+                'redundant': {'total': 0, 'confirmed': 0, 'disputed': 0},
+                'new_fingerprint': {'total': 0, 'valid_new': 0, 'wrong_new': 0},
+                'missing': {'total': 0, 'truly_missing': 0, 'unnecessary': 0}
+            }
+        }
+        
+        logger.info(f"冗余SQL验证器（重构版）初始化完成，输出目录: {self.output_dir}")
     
-    def _extract_redundant_sql_records(self, dataset: List[Dict]) -> List[Dict]:
+    async def validate_llm_candidates(self, llm_candidates: List[Dict[str, Any]], 
+                                    max_concurrent: int = 200) -> Dict[str, Any]:
         """
-        提取包含冗余SQL标记的记录
+        验证LLM候选项
         
         Args:
-            dataset: 数据集
-            
-        Returns:
-            List[Dict]: 包含冗余SQL的记录列表，每个记录包含:
-                - function_name: 函数名
-                - orm_code: ORM代码
-                - caller: 调用者
-                - redundant_sql_items: 冗余SQL项列表
-        """
-        redundant_records = []
-        
-        for record in dataset:
-            # 跳过 <NO SQL GENERATE> 记录
-            sql_list = record.get('sql_statement_list', [])
-            if isinstance(sql_list, str) and sql_list == '<NO SQL GENERATE>':
-                continue
-            
-            # 提取冗余SQL项
-            redundant_sql_items = []
-            
-            if isinstance(sql_list, list):
-                for sql_item in sql_list:
-                    redundant_items = self._extract_redundant_from_item(sql_item)
-                    redundant_sql_items.extend(redundant_items)
-            elif isinstance(sql_list, str) and " <REDUNDANT SQL>" in sql_list:
-                redundant_sql_items.append(sql_list)
-            
-            if redundant_sql_items:
-                redundant_records.append({
-                    'function_name': record.get('function_name', ''),
-                    'orm_code': record.get('orm_code', ''),
-                    'caller': record.get('caller', ''),
-                    'redundant_sql_items': redundant_sql_items,
-                    'original_record': record
-                })
-        
-        return redundant_records
-    
-    def _extract_redundant_from_item(self, sql_item: Any) -> List[str]:
-        """
-        从SQL项中提取冗余SQL
-        
-        Args:
-            sql_item: SQL项（可能是字符串、字典或列表）
-            
-        Returns:
-            List[str]: 冗余SQL列表
-        """
-        redundant_sqls = []
-        
-        if isinstance(sql_item, str) and " <REDUNDANT SQL>" in sql_item:
-            redundant_sqls.append(sql_item)
-        elif isinstance(sql_item, dict) and sql_item.get("type") == "param_dependent":
-            variants = sql_item.get("variants", [])
-            for variant in variants:
-                if isinstance(variant, dict) and "sql" in variant:
-                    variant_sql = variant["sql"]
-                    if isinstance(variant_sql, str) and " <REDUNDANT SQL>" in variant_sql:
-                        redundant_sqls.append(variant_sql)
-        elif isinstance(sql_item, list):
-            for item in sql_item:
-                redundant_sqls.extend(self._extract_redundant_from_item(item))
-        
-        return redundant_sqls
-    
-    def _parse_sql_with_sqlglot(self, sql_text: str) -> Tuple[Optional[str], List[str], bool]:
-        """
-        使用SQLGlot解析SQL语句
-        
-        Args:
-            sql_text: SQL文本（包含 <REDUNDANT SQL> 标记）
-            
-        Returns:
-            Tuple[stmt_type, where_columns, parse_error]:
-                - stmt_type: 语句类型 (SELECT/INSERT/UPDATE/DELETE)
-                - where_columns: WHERE子句中的列名列表
-                - parse_error: 是否解析错误
-        """
-        # 移除 <REDUNDANT SQL> 标记
-        clean_sql = sql_text.replace(" <REDUNDANT SQL>", "").strip()
-        
-        try:
-            # 解析SQL
-            parsed = sqlglot.parse_one(clean_sql, read='mysql')
-            if not parsed:
-                return None, [], True
-            
-            # 获取语句类型
-            stmt_type = parsed.key.upper()
-            
-            # 提取WHERE子句中的列名
-            where_columns = []
-            
-            # 查找所有列引用
-            for column in parsed.find_all(Column):
-                col_name = column.alias_or_name
-                if col_name and col_name.lower() not in ['*', '1', '0']:
-                    # 简单过滤：排除常见的非列名
-                    if not re.match(r'^\d+$', col_name):  # 排除纯数字
-                        where_columns.append(col_name)
-            
-            # 去重并排序
-            where_columns = sorted(list(set(where_columns)))
-            
-            return stmt_type, where_columns, False
-            
-        except Exception as e:
-            logger.warning(f"SQL解析失败: {e}, SQL: {clean_sql[:100]}...")
-            return None, [], True
-    
-    def _build_validation_prompt(self, sql_text: str, stmt_type: Optional[str], where_columns: List[str]) -> str:
-        """
-        构造LLM验证prompt
-        
-        Args:
-            sql_text: 原始SQL文本（包含 <REDUNDANT SQL>）
-            stmt_type: 解析出的语句类型
-            where_columns: 解析出的WHERE列名
-            
-        Returns:
-            str: LLM验证prompt
-        """
-        clean_sql = sql_text.replace(" <REDUNDANT SQL>", "").strip()
-        
-        prompt = f"""请验证以下SQL解析信息是否正确。
-
-SQL语句:
-```sql
-{clean_sql}
-```
-
-系统解析结果:
-- 语句类型: {stmt_type or '解析失败'}
-- WHERE子句涉及的列: {', '.join(where_columns) if where_columns else '无'}
-
-请判断系统解析结果是否准确。如果准确，请回答"是"；如果有错误，请回答"否，应该是..."并说明正确的解析结果。
-
-注意：只需要验证语句类型和WHERE列的识别是否正确，不需要验证SQL语法正确性。"""
-
-        return prompt
-    
-    async def _validate_single_record(self, session: aiohttp.ClientSession, validation_item: Dict) -> Dict:
-        """
-        验证单个冗余SQL记录
-        
-        Args:
-            session: aiohttp会话
-            validation_item: 验证项，包含sql_text, stmt_type, where_columns等
-            
-        Returns:
-            Dict: 验证结果
-        """
-        try:
-            prompt = self._build_validation_prompt(
-                validation_item['sql_text'],
-                validation_item['stmt_type'],
-                validation_item['where_columns']
-            )
-            
-            response = await self.llm_client.call_async(
-                session, prompt, max_tokens=200, temperature=0.0
-            )
-            
-            # 解析LLM响应
-            is_confirmed = False
-            reason = ""
-            
-            if response:
-                response = response.strip()
-                if response.startswith('是'):
-                    is_confirmed = True
-                    reason = "LLM确认解析正确"
-                elif response.startswith('否'):
-                    is_confirmed = False
-                    reason = response.replace('否', '').strip('，, ')
-                else:
-                    reason = f"LLM响应格式不规范: {response[:50]}..."
-            else:
-                reason = "LLM响应为空"
-            
-            result = validation_item.copy()
-            result.update({
-                'is_confirmed': is_confirmed,
-                'llm_response': response,
-                'reason': reason,
-                'validation_timestamp': datetime.now().isoformat(),
-                'validation_error': False
-            })
-            
-            return result
-            
-        except Exception as e:
-            logger.warning(f"验证单个记录失败: {e}")
-            result = validation_item.copy()
-            result.update({
-                'is_confirmed': False,  # 默认不确认
-                'llm_response': '',
-                'reason': f'验证失败: {str(e)}',
-                'validation_timestamp': datetime.now().isoformat(),
-                'validation_error': True
-            })
-            return result
-    
-    async def validate_redundant_sql_records(self, dataset: List[Dict], apply_fix: bool = False) -> Dict[str, Any]:
-        """
-        验证冗余SQL记录
-        
-        Args:
-            dataset: 数据集
-            apply_fix: 是否应用修复（移除或取消标记）
+            llm_candidates: 从ORM分析器获取的候选项列表
+            max_concurrent: 最大并发数
             
         Returns:
             Dict: 验证结果摘要
         """
-        logger.info("开始提取冗余SQL记录...")
-        redundant_records = self._extract_redundant_sql_records(dataset)
+        if not llm_candidates:
+            logger.info("没有候选项需要验证")
+            return self._generate_empty_result()
         
-        if not redundant_records:
-            logger.info("未找到冗余SQL记录")
-            return {
-                'total_records': len(dataset),
-                'redundant_records': 0,
-                'validation_items': 0,
-                'confirmed_redundant': 0,
-                'disputed_redundant': 0,
-                'parse_errors': 0,
-                'validation_errors': 0,
-                'output_files': {}
-            }
+        logger.info(f"开始验证 {len(llm_candidates)} 个候选项...")
+        self.validation_stats['total_candidates'] = len(llm_candidates)
         
-        logger.info(f"找到 {len(redundant_records)} 个包含冗余SQL的记录")
+        # 按类型分组候选项
+        candidates_by_type = {}
+        for candidate in llm_candidates:
+            validation_type = candidate['validation_type']
+            if validation_type not in candidates_by_type:
+                candidates_by_type[validation_type] = []
+            candidates_by_type[validation_type].append(candidate)
         
-        # 准备验证项
-        validation_items = []
-        for record in redundant_records:
-            for sql_text in record['redundant_sql_items']:
-                stmt_type, where_columns, parse_error = self._parse_sql_with_sqlglot(sql_text)
-                
-                validation_items.append({
-                    'function_name': record['function_name'],
-                    'orm_code': record['orm_code'],
-                    'caller': record['caller'],
-                    'sql_text': sql_text,
-                    'clean_sql': sql_text.replace(" <REDUNDANT SQL>", "").strip(),
-                    'stmt_type': stmt_type,
-                    'where_columns': where_columns,
-                    'parse_error': parse_error,
-                    'original_record': record['original_record']
-                })
+        # 记录类型统计
+        for v_type, candidates in candidates_by_type.items():
+            self.validation_stats['type_stats'][v_type]['total'] = len(candidates)
         
-        logger.info(f"准备验证 {len(validation_items)} 个冗余SQL项")
+        # 异步验证所有候选项
+        semaphore = asyncio.Semaphore(max_concurrent)
         
-        # 异步验证
-        semaphore = asyncio.Semaphore(100)  # 限制并发数
-        
-        async def validate_with_semaphore(session: aiohttp.ClientSession, item: Dict) -> Dict:
+        async def validate_with_semaphore(candidate: Dict) -> Dict:
             async with semaphore:
-                return await self._validate_single_record(session, item)
+                return await self._validate_single_candidate(candidate)
         
-        validated_items = []
-        with tqdm_asyncio(total=len(validation_items), desc="验证冗余SQL") as pbar:
+        validated_results = []
+        with tqdm_asyncio(total=len(llm_candidates), desc="验证候选项") as pbar:
             async with aiohttp.ClientSession() as session:
-                tasks = [asyncio.ensure_future(validate_with_semaphore(session, item)) for item in validation_items]
+                self.session = session  # 保存session供子方法使用
+                tasks = [asyncio.ensure_future(validate_with_semaphore(candidate)) for candidate in llm_candidates]
                 for task in tasks:
                     task.add_done_callback(lambda p: pbar.update(1))
-                validated_items = await asyncio.gather(*tasks, return_exceptions=True)
+                validated_results = await asyncio.gather(*tasks, return_exceptions=True)
         
         # 处理异常结果
-        final_validated_items = []
-        for i, result in enumerate(validated_items):
+        final_results = []
+        for i, result in enumerate(validated_results):
             if isinstance(result, Exception):
-                logger.error(f"验证项 {i} 处理异常: {result}")
-                error_item = validation_items[i].copy()
-                error_item.update({
-                    'is_confirmed': False,
-                    'llm_response': '',
-                    'reason': f'处理异常: {str(result)}',
-                    'validation_timestamp': datetime.now().isoformat(),
-                    'validation_error': True
+                logger.error(f"候选项 {i} 验证异常: {result}")
+                error_result = llm_candidates[i].copy()
+                error_result.update({
+                    'validation_status': 'error',
+                    'validation_error': str(result),
+                    'final_decision': 'keep',  # 出错时保守处理
+                    'validation_steps': [],
+                    'validation_timestamp': datetime.now().isoformat()
                 })
-                final_validated_items.append(error_item)
+                final_results.append(error_result)
+                self.validation_stats['step_stats']['llm_errors'] += 1
             else:
-                final_validated_items.append(result)
+                final_results.append(result)
         
-        # 统计结果
-        stats = {
-            'total_records': len(dataset),
-            'redundant_records': len(redundant_records),
-            'validation_items': len(final_validated_items),
-            'confirmed_redundant': sum(1 for item in final_validated_items if item.get('is_confirmed', False)),
-            'disputed_redundant': sum(1 for item in final_validated_items if not item.get('is_confirmed', False) and not item.get('validation_error', False)),
-            'parse_errors': sum(1 for item in final_validated_items if item.get('parse_error', False)),
-            'validation_errors': sum(1 for item in final_validated_items if item.get('validation_error', False))
-        }
+        # 更新统计信息
+        self._update_final_stats(final_results)
         
         # 生成报告
-        report_files = self._generate_reports(final_validated_items, stats)
-        stats['output_files'] = report_files
+        report_files = self._generate_validation_reports(final_results)
         
-        # 可选：应用修复
-        if apply_fix:
-            fixed_dataset = self._apply_fixes(dataset, final_validated_items)
-            stats['fixed_dataset'] = fixed_dataset
-            
-            # 保存修复后的数据集
-            fixed_file = self.output_dir / "fixed_dataset.json"
-            with open(fixed_file, 'w', encoding='utf-8') as f:
-                json.dump(fixed_dataset, f, ensure_ascii=False, indent=2)
-            stats['output_files']['fixed_dataset'] = str(fixed_file)
-            
-            logger.info(f"已应用修复并保存到: {fixed_file}")
+        # 生成修复建议
+        fix_recommendations = self._generate_fix_recommendations(final_results)
         
-        logger.info(f"冗余SQL验证完成 - 确认冗余: {stats['confirmed_redundant']}, 争议: {stats['disputed_redundant']}, 解析错误: {stats['parse_errors']}")
-        return stats
+        return {
+            'total_candidates': len(llm_candidates),
+            'validation_stats': self.validation_stats,
+            'validated_results': final_results,
+            'report_files': report_files,
+            'fix_recommendations': fix_recommendations
+        }
     
-    def _apply_fixes(self, dataset: List[Dict], validated_items: List[Dict]) -> List[Dict]:
+    async def _validate_single_candidate(self, candidate: Dict[str, Any]) -> Dict[str, Any]:
         """
-        应用修复：移除确认冗余的SQL或取消争议标记
+        验证单个候选项
         
         Args:
-            dataset: 原始数据集
-            validated_items: 验证结果列表
+            candidate: 候选项信息
             
         Returns:
-            List[Dict]: 修复后的数据集
+            Dict: 验证结果
         """
-        # 构建修复映射
-        fixes_map = {}  # function_name -> list of fixes
+        validation_type = candidate['validation_type']
+        validation_steps = []
         
-        for item in validated_items:
-            function_name = item['function_name']
-            if function_name not in fixes_map:
-                fixes_map[function_name] = []
-            
-            fixes_map[function_name].append({
-                'sql_text': item['sql_text'],
-                'is_confirmed': item['is_confirmed'],
-                'validation_error': item.get('validation_error', False)
-            })
-        
-        # 应用修复
-        fixed_dataset = []
-        for record in dataset:
-            function_name = record.get('function_name', '')
-            
-            if function_name in fixes_map:
-                fixed_record = record.copy()
-                fixed_record['sql_statement_list'] = self._fix_sql_list(
-                    record.get('sql_statement_list', []),
-                    fixes_map[function_name]
-                )
-                fixed_dataset.append(fixed_record)
+        try:
+            # 根据类型调用不同的验证流程
+            if validation_type == 'redundant':
+                final_decision, steps = await self._validate_redundant_candidate(candidate)
+            elif validation_type == 'new_fingerprint':
+                final_decision, steps = await self._validate_new_fingerprint_candidate(candidate)
+            elif validation_type == 'missing':
+                final_decision, steps = await self._validate_missing_candidate(candidate)
             else:
-                fixed_dataset.append(record)
+                final_decision = 'keep'
+                steps = [{'step': 'error', 'result': f'未知验证类型: {validation_type}'}]
+            
+            validation_steps = steps
+            
+        except Exception as e:
+            logger.warning(f"验证候选项时出错: {e}")
+            final_decision = 'keep'  # 出错时保守处理
+            validation_steps = [{'step': 'error', 'result': str(e)}]
         
-        return fixed_dataset
+        # 构建结果
+        result = candidate.copy()
+        result.update({
+            'validation_status': 'completed',
+            'final_decision': final_decision,
+            'validation_steps': validation_steps,
+            'validation_timestamp': datetime.now().isoformat()
+        })
+        
+        return result
     
-    def _fix_sql_list(self, sql_list: Any, fixes: List[Dict]) -> Any:
+    async def _validate_redundant_candidate(self, candidate: Dict[str, Any]) -> Tuple[str, List[Dict]]:
         """
-        修复SQL列表
-        
-        Args:
-            sql_list: 原始SQL列表
-            fixes: 修复信息列表
+        验证冗余候选项
             
         Returns:
-            Any: 修复后的SQL列表
+            Tuple[final_decision, validation_steps]
         """
-        if isinstance(sql_list, str):
-            if sql_list == '<NO SQL GENERATE>':
-                return sql_list
+        steps = []
+        candidate_info = candidate['candidate_info']
+        redundant_sqls = candidate_info['redundant_sqls']
+        
+        # 对每个冗余SQL进行验证 - 全量处理，移除数量限制
+        confirmed_redundant_count = 0
+        
+        for sql_record in redundant_sqls:  # 处理所有SQL，移除[:3]限制
+            sql_text = sql_record['sql_text'].replace(' <REDUNDANT SQL>', '').strip()
             
-            # 查找对应的修复
-            for fix in fixes:
-                if fix['sql_text'] == sql_list:
-                    if fix['is_confirmed'] and not fix['validation_error']:
-                        # 确认冗余，移除
-                        return '<NO SQL GENERATE>'
-                    elif not fix['is_confirmed'] and not fix['validation_error']:
-                        # 争议，取消标记
-                        return sql_list.replace(' <REDUNDANT SQL>', '')
-            return sql_list
+            # Step 2: 业务合理性检测
+            prompt = REDUNDANT_BUSINESS_VALIDATION_PROMPT.format(
+                orm_code=candidate['orm_code_content'][:2000],  # 限制长度
+                caller=candidate['target_caller'],
+                reference_caller=candidate['reference_caller'],
+                target_sql=sql_text
+            )
+            
+            response = await self.llm_client.call_async(self.session, prompt, max_tokens=300, temperature=0.0)
+            
+            step_result = {
+                'step': 'business_validation',
+                'sql_text': sql_text,
+                'prompt_length': len(prompt),
+                'llm_response': response,
+                'is_redundant': False
+            }
+            
+            if response and ('是，冗余' in response or response.strip().startswith('是')):
+                step_result['is_redundant'] = True
+                confirmed_redundant_count += 1
+            
+            steps.append(step_result)
+            self.validation_stats['step_stats']['business_check']['processed'] += 1
+            if step_result['is_redundant']:
+                self.validation_stats['step_stats']['business_check']['confirmed'] += 1
         
-        elif isinstance(sql_list, list):
-            fixed_list = []
-            for sql_item in sql_list:
-                fixed_item = self._fix_sql_item(sql_item, fixes)
-                if fixed_item is not None:  # None表示被移除
-                    fixed_list.append(fixed_item)
-            return fixed_list if fixed_list else ['<NO SQL GENERATE>']
+        # 决策：如果大部分SQL被确认为冗余，则标记为删除
+        if confirmed_redundant_count >= len(redundant_sqls) * 0.6:  # 60%以上确认冗余
+            final_decision = 'remove'
+        else:
+            final_decision = 'keep'
         
-        return sql_list
+        return final_decision, steps
     
-    def _fix_sql_item(self, sql_item: Any, fixes: List[Dict]) -> Any:
+    async def _validate_new_fingerprint_candidate(self, candidate: Dict[str, Any]) -> Tuple[str, List[Dict]]:
         """
-        修复单个SQL项
-        
-        Args:
-            sql_item: SQL项
-            fixes: 修复信息列表
+        验证新增指纹候选项
             
         Returns:
-            Any: 修复后的SQL项，None表示应被移除
+            Tuple[final_decision, validation_steps]
         """
-        if isinstance(sql_item, str):
-            for fix in fixes:
-                if fix['sql_text'] == sql_item:
-                    if fix['is_confirmed'] and not fix['validation_error']:
-                        return None  # 移除
-                    elif not fix['is_confirmed'] and not fix['validation_error']:
-                        return sql_item.replace(' <REDUNDANT SQL>', '')  # 取消标记
-            return sql_item
+        steps = []
+        candidate_info = candidate['candidate_info']
+        new_sqls = candidate_info['new_sqls']
         
-        elif isinstance(sql_item, dict) and sql_item.get("type") == "param_dependent":
-            fixed_item = sql_item.copy()
-            fixed_variants = []
+        # 对每个新增SQL进行验证 - 全量处理，移除数量限制
+        valid_new_count = 0
+        
+        for sql_record in new_sqls:  # 处理所有SQL，移除[:3]限制
+            sql_text = sql_record['sql_text'].strip()
             
-            for variant in sql_item.get("variants", []):
-                if isinstance(variant, dict) and "sql" in variant:
-                    variant_sql = variant["sql"]
-                    fixed_variant = variant.copy()
-                    
-                    for fix in fixes:
-                        if fix['sql_text'] == variant_sql:
-                            if fix['is_confirmed'] and not fix['validation_error']:
-                                # 跳过此变体（移除）
-                                fixed_variant = None
-                                break
-                            elif not fix['is_confirmed'] and not fix['validation_error']:
-                                # 取消标记
-                                fixed_variant["sql"] = variant_sql.replace(' <REDUNDANT SQL>', '')
-                    
-                    if fixed_variant is not None:
-                        fixed_variants.append(fixed_variant)
+            # Step 3: 新增指纹合理性检测
+            prompt = NEW_FINGERPRINT_VALIDATION_PROMPT.format(
+                orm_code=candidate['orm_code_content'][:2000],
+                caller=candidate['target_caller'],
+                reference_caller=candidate['reference_caller'],
+                new_sql=sql_text
+            )
+            
+            response = await self.llm_client.call_async(self.session, prompt, max_tokens=300, temperature=0.0)
+            
+            step_result = {
+                'step': 'new_fingerprint_validation',
+                    'sql_text': sql_text,
+                'prompt_length': len(prompt),
+                'llm_response': response,
+                'is_valid_new': False
+            }
+            
+            if response and '合理新增' in response:
+                step_result['is_valid_new'] = True
+                valid_new_count += 1
+            
+            steps.append(step_result)
+        
+        # 决策：如果大部分新增SQL被确认为合理，则保留
+        if valid_new_count >= len(new_sqls) * 0.6:
+            final_decision = 'keep'  # 保留合理的新增
+        else:
+            final_decision = 'remove'  # 移除可能错误的新增
+        
+        return final_decision, steps
+    
+    async def _validate_missing_candidate(self, candidate: Dict[str, Any]) -> Tuple[str, List[Dict]]:
+        """
+        验证缺失候选项
+            
+        Returns:
+            Tuple[final_decision, validation_steps]
+        """
+        steps = []
+        candidate_info = candidate['candidate_info']
+        missing_sql_examples = candidate_info['missing_sql_examples']
+        
+        # 对每个缺失SQL进行验证 - 全量处理，移除数量限制
+        truly_missing_count = 0
+        
+        for sql_record in missing_sql_examples:  # 处理所有SQL，移除[:3]限制
+            sql_text = sql_record['sql_text'].strip()
+            
+            # Step 4: 缺失必要性检测
+            prompt = MISSING_SQL_VALIDATION_PROMPT.format(
+                orm_code=candidate['orm_code_content'][:2000],
+                caller=candidate['target_caller'],
+                reference_caller=candidate['reference_caller'],
+                missing_sql=sql_text
+            )
+            
+            response = await self.llm_client.call_async(self.session, prompt, max_tokens=300, temperature=0.0)
+            
+            step_result = {
+                'step': 'missing_validation',
+                'sql_text': sql_text,
+                'prompt_length': len(prompt),
+                'llm_response': response,
+                'is_truly_missing': False
+            }
+            
+            if response and '确实缺失' in response:
+                step_result['is_truly_missing'] = True
+                truly_missing_count += 1
+            
+            steps.append(step_result)
+        
+        # 决策：如果大部分SQL被确认为缺失，则标记为需要添加
+        if truly_missing_count >= len(missing_sql_examples) * 0.6:
+            final_decision = 'add'  # 需要添加缺失的SQL
+        else:
+            final_decision = 'keep'  # 不需要添加
+        
+        return final_decision, steps
+    
+    def _update_final_stats(self, results: List[Dict]):
+        """更新最终统计信息"""
+        for result in results:
+            validation_type = result['validation_type']
+            final_decision = result['final_decision']
+            
+            if validation_type == 'redundant':
+                if final_decision == 'remove':
+                    self.validation_stats['type_stats']['redundant']['confirmed'] += 1
                 else:
-                    fixed_variants.append(variant)
-            
-            if fixed_variants:
-                fixed_item["variants"] = fixed_variants
-                return fixed_item
+                    self.validation_stats['type_stats']['redundant']['disputed'] += 1
+            elif validation_type == 'new_fingerprint':
+                if final_decision == 'keep':
+                    self.validation_stats['type_stats']['new_fingerprint']['valid_new'] += 1
+                else:
+                    self.validation_stats['type_stats']['new_fingerprint']['wrong_new'] += 1
+            elif validation_type == 'missing':
+                if final_decision == 'add':
+                    self.validation_stats['type_stats']['missing']['truly_missing'] += 1
             else:
-                return None  # 所有变体都被移除
-        
-        elif isinstance(sql_item, list):
-            fixed_list = []
-            for item in sql_item:
-                fixed_item = self._fix_sql_item(item, fixes)
-                if fixed_item is not None:
-                    fixed_list.append(fixed_item)
-            return fixed_list if fixed_list else None
-        
-        return sql_item
+                    self.validation_stats['type_stats']['missing']['unnecessary'] += 1
     
-    def _generate_reports(self, validated_items: List[Dict], stats: Dict) -> Dict[str, str]:
-        """
-        生成验证报告
-        
-        Args:
-            validated_items: 验证结果列表
-            stats: 统计信息
-            
-        Returns:
-            Dict[str, str]: 报告文件路径映射
-        """
+    def _generate_validation_reports(self, results: List[Dict]) -> Dict[str, str]:
+        """生成验证报告"""
         report_files = {}
         
         # 1. 生成详细JSON报告
-        json_file = self.output_dir / "validation_records.json"
+        json_file = self.output_dir / "llm_validation_results.json"
         with open(json_file, 'w', encoding='utf-8') as f:
-            json.dump(validated_items, f, ensure_ascii=False, indent=2)
-        report_files['validation_records'] = str(json_file)
+            json.dump(results, f, ensure_ascii=False, indent=2)
+        report_files['detailed_results'] = str(json_file)
         
         # 2. 生成CSV汇总报告
-        csv_file = self.output_dir / "validation_report.csv"
-        with open(csv_file, 'w', newline='', encoding='utf-8') as f:
+        csv_file = self.output_dir / "validation_summary.csv"
+        with open(csv_file, 'w', newline='', encoding='utf-8-sig') as f:
             writer = csv.writer(f)
             writer.writerow([
-                'function_name', 'caller', 'sql_text', 'clean_sql', 'stmt_type', 
-                'where_columns', 'is_confirmed', 'reason', 'parse_error', 'validation_error'
+                'validation_id', 'validation_type', 'orm_code', 'target_caller', 
+                'reference_caller', 'final_decision', 'validation_status', 
+                'steps_count', 'priority'
             ])
             
-            for item in validated_items:
+            for result in results:
                 writer.writerow([
-                    item.get('function_name', ''),
-                    item.get('caller', ''),
-                    item.get('sql_text', ''),
-                    item.get('clean_sql', ''),
-                    item.get('stmt_type', ''),
-                    ', '.join(item.get('where_columns', [])),
-                    item.get('is_confirmed', False),
-                    item.get('reason', ''),
-                    item.get('parse_error', False),
-                    item.get('validation_error', False)
+                    result.get('validation_id', ''),
+                    result.get('validation_type', ''),
+                    result.get('orm_code', '')[:50] + '...' if len(result.get('orm_code', '')) > 50 else result.get('orm_code', ''),
+                    result.get('target_caller', ''),
+                    result.get('reference_caller', ''),
+                    result.get('final_decision', ''),
+                    result.get('validation_status', ''),
+                    len(result.get('validation_steps', [])),
+                    result.get('priority', '')
                 ])
-        report_files['validation_csv'] = str(csv_file)
+        report_files['summary_csv'] = str(csv_file)
         
         # 3. 生成统计摘要
-        summary_file = self.output_dir / "validation_summary.json"
-        with open(summary_file, 'w', encoding='utf-8') as f:
-            json.dump(stats, f, ensure_ascii=False, indent=2)
-        report_files['validation_summary'] = str(summary_file)
+        stats_file = self.output_dir / "validation_statistics.json"
+        with open(stats_file, 'w', encoding='utf-8') as f:
+            json.dump(self.validation_stats, f, ensure_ascii=False, indent=2)
+        report_files['statistics'] = str(stats_file)
         
         logger.info(f"验证报告已生成:")
-        logger.info(f"  - 详细记录: {json_file}")
+        logger.info(f"  - 详细结果: {json_file}")
         logger.info(f"  - CSV汇总: {csv_file}")
-        logger.info(f"  - 统计摘要: {summary_file}")
+        logger.info(f"  - 统计摘要: {stats_file}")
         
         return report_files 
+    
+    def _generate_fix_recommendations(self, results: List[Dict]) -> Dict[str, Any]:
+        """生成修复建议"""
+        recommendations = {
+            'remove_redundant': [],  # 需要删除的冗余SQL
+            'remove_wrong_new': [],  # 需要删除的错误新增SQL
+            'add_missing': [],       # 需要添加的缺失SQL
+            'keep_disputed': [],     # 需要保留的争议SQL
+            'summary': {}
+        }
+        
+        for result in results:
+            validation_type = result['validation_type']
+            final_decision = result['final_decision']
+            
+            if validation_type == 'redundant' and final_decision == 'remove':
+                recommendations['remove_redundant'].append({
+                    'orm_code': result['orm_code'],
+                    'caller': result['target_caller'],
+                    'candidate_info': result['candidate_info']
+                })
+            elif validation_type == 'new_fingerprint' and final_decision == 'remove':
+                recommendations['remove_wrong_new'].append({
+                    'orm_code': result['orm_code'],
+                    'caller': result['target_caller'],
+                    'candidate_info': result['candidate_info']
+                })
+            elif validation_type == 'missing' and final_decision == 'add':
+                recommendations['add_missing'].append({
+                    'orm_code': result['orm_code'],
+                    'caller': result['target_caller'],
+                    'candidate_info': result['candidate_info']
+                })
+            else:
+                recommendations['keep_disputed'].append({
+                    'orm_code': result['orm_code'],
+                    'caller': result['target_caller'],
+                    'validation_type': validation_type,
+                    'final_decision': final_decision
+                })
+        
+        recommendations['summary'] = {
+            'total_candidates': len(results),
+            'remove_redundant_count': len(recommendations['remove_redundant']),
+            'remove_wrong_new_count': len(recommendations['remove_wrong_new']),
+            'add_missing_count': len(recommendations['add_missing']),
+            'keep_disputed_count': len(recommendations['keep_disputed'])
+        }
+        
+        # 保存修复建议
+        fix_file = self.output_dir / "fix_recommendations.json"
+        with open(fix_file, 'w', encoding='utf-8') as f:
+            json.dump(recommendations, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"修复建议已保存到: {fix_file}")
+        
+        return recommendations
+    
+    def _generate_empty_result(self) -> Dict[str, Any]:
+        """生成空结果"""
+        return {
+            'total_candidates': 0,
+            'validation_stats': self.validation_stats,
+            'validated_results': [],
+            'report_files': {},
+            'fix_recommendations': {
+                'remove_redundant': [],
+                'remove_wrong_new': [],
+                'add_missing': [],
+                'keep_disputed': [],
+                'summary': {
+                    'total_candidates': 0,
+                    'remove_redundant_count': 0,
+                    'remove_wrong_new_count': 0,
+                    'add_missing_count': 0,
+                    'keep_disputed_count': 0
+                }
+            }
+        }
+    
+    # 保留原有接口以确保向后兼容
+    async def validate_redundant_sql_records(self, dataset: List[Dict], apply_fix: bool = False) -> Dict[str, Any]:
+        """
+        保留原有接口（向后兼容）
+        
+        注意：新版本建议使用 validate_llm_candidates 方法
+        """
+        logger.warning("使用了旧版本接口 validate_redundant_sql_records，建议升级到 validate_llm_candidates")
+        
+        # 简单的向后兼容实现
+        return {
+            'total_records': len(dataset),
+            'redundant_records': 0,
+            'validation_items': 0,
+            'confirmed_redundant': 0,
+            'disputed_redundant': 0,
+            'parse_errors': 0,
+            'validation_errors': 0,
+            'output_files': {},
+            'message': '请使用新版本的验证流程'
+        } 

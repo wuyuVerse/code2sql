@@ -329,8 +329,12 @@ class SQLCleaner:
                 
                 logger.info(f"ORM SQL指纹分析完成:")
                 logger.info(f"  - 分析了 {analysis_summary['total_orm_codes']} 个ORM代码")
-                logger.info(f"  - 发现 {analysis_summary['orm_with_redundant_sql']} 个ORM代码有冗余SQL")
-                logger.info(f"  - 发现 {analysis_summary['orm_with_potential_missing_extra']} 个ORM代码有潜在缺漏或额外SQL")
+                
+                # 使用新版字段结构
+                detailed_analysis = analysis_summary.get('detailed_analysis', {})
+                logger.info(f"  - 发现 {detailed_analysis.get('orm_with_redundant_candidates', 0)} 个ORM代码有冗余候选项")
+                logger.info(f"  - 发现 {detailed_analysis.get('orm_with_missing_candidates', 0)} 个ORM代码有缺漏候选项")
+                logger.info(f"  - 发现 {detailed_analysis.get('orm_with_new_fp_candidates', 0)} 个ORM代码有新增指纹候选项")
                 
             except Exception as e:
                 logger.warning(f"ORM SQL指纹分析失败: {str(e)}")

@@ -16,6 +16,8 @@ dependencies = [
     "sqlglot>=20.0.0",
     "tqdm>=4.65.0",
     "pandas>=2.0.0",
+    "pyarrow>=20.0.0",
+    "fastparquet>=2024.11.0",
 ]
 
 [build-system]

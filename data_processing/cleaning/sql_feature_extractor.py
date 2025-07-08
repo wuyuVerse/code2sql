@@ -899,9 +899,8 @@ def process_csv_and_save_fingerprints(csv_filepath, output_filepath, sql_column_
                 # 保存指纹到SQL的映射
                 if fingerprint not in fingerprint_to_sql:
                     fingerprint_to_sql[fingerprint] = []
-                # 限制每个指纹最多保存100个SQL示例
-                if len(fingerprint_to_sql[fingerprint]) < 100:
-                    fingerprint_to_sql[fingerprint].append(sql_text)
+                # 移除数量限制，保存所有SQL示例以支持全量分析
+                fingerprint_to_sql[fingerprint].append(sql_text)
     
     # 保存指纹和指纹到SQL的映射到文件
     with open(output_filepath, 'wb') as f:

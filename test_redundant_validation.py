@@ -71,12 +71,17 @@ async def run_workflow(data_dir: str, apply_fix: bool) -> None:
 
     print("   ✅ 冗余 SQL 验证完成")
     print("   📊 统计:")
-    print(f"      🔁 发现冗余记录: {validation_info['redundant_records_found']:,}")
-    print(f"      📝 验证 SQL 项数: {validation_info['validation_items_total']:,}")
-    print(f"      ✅ 确认冗余: {validation_info['confirmed_redundant']:,}")
-    print(f"      ❓ 争议冗余: {validation_info['disputed_redundant']:,}")
-    print(f"      ⚠️ 解析错误: {validation_info['parse_errors']:,}")
-    print(f"      ⚠️ 验证错误: {validation_info['validation_errors']:,}")
+
+    total_candidates = validation_info.get('total_candidates', 0)
+    v_stats = validation_info.get('validation_stats', {})
+    type_stats = v_stats.get('type_stats', {}).get('redundant', {})
+    step_stats = v_stats.get('step_stats', {})
+
+    print(f"      📝 验证 SQL 项数: {total_candidates:,}")
+    print(f"      🔁 冗余候选: {type_stats.get('total', 0):,}")
+    print(f"      ✅ 确认冗余: {type_stats.get('confirmed', 0):,}")
+    print(f"      ❓ 争议冗余: {type_stats.get('disputed', 0):,}")
+    print(f"      ⚠️ LLM 错误: {step_stats.get('llm_errors', 0):,}")
 
     # 保存工作流摘要
     summary_path = workflow.save_workflow_summary()

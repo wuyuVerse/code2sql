@@ -1,0 +1,124 @@
+# ORM到SQL强化学习训练数据转换配置
+
+# 输入数据配置
+input:
+  # workflow输出目录
+  workflow_output_dir: "workflow_output"
+  # 最终处理数据文件名
+  final_data_filename: "final_processed_dataset.json"
+  # 是否使用最新的workflow输出（如果为false需要指定specific_workflow_dir）
+  use_latest_workflow: true
+  # 指定的workflow目录名（当use_latest_workflow为false时使用）
+  specific_workflow_dir: ""
+
+# 输出数据配置
+output:
+  # RL训练数据输出目录
+  training_data_dir: "model/data/rl_training_data"
+  # 输出文件名前缀
+  output_name_prefix: "rl_orm2sql_training_data"
+  # 是否包含时间戳
+  include_timestamp: true
+  # 数据集信息文件名
+  dataset_info_filename: "rl_dataset_info.json"
+
+# 数据处理配置
+processing:
+  # 批次大小（用于显示进度）
+  batch_size: 1000
+  # 是否包含元数据信息
+  include_metadata: true
+  # 是否跳过错误的记录
+  skip_errors: true
+  # 最大错误数量（超过则终止）
+  max_errors: 100
+
+# RL训练数据格式配置
+format:
+  # 指令字段名
+  instruction_field: "instruction"
+  # 输出字段名
+  output_field: "output"
+  # 奖励字段名（RL特有）
+  reward_field: "reward"
+  # 动作字段名（RL特有）
+  action_field: "action"
+  # 状态字段名（RL特有）
+  state_field: "state"
+  # 元数据字段名
+  metadata_field: "metadata"
+  # JSON格式化选项
+  json_indent: 2
+  ensure_ascii: false
+
+# 提示词模板配置
+prompt_template:
+  # 是否启用上下文优化
+  enable_context_optimization: true
+  # 最大提示词长度
+  max_prompt_length: 8192
+  # 是否包含调用者信息
+  include_caller: true
+  # 是否包含被调用者信息
+  include_callee: true
+  # 是否包含代码元数据
+  include_code_metadata: true
+
+# RL特有配置
+reinforcement_learning:
+  # 奖励函数配置
+  reward_config:
+    # SQL正确性奖励权重
+    sql_correctness_weight: 0.6
+    # 代码效率奖励权重
+    efficiency_weight: 0.2
+    # 代码可读性奖励权重
+    readability_weight: 0.2
+    # 最大奖励值
+    max_reward: 1.0
+    # 最小奖励值
+    min_reward: -1.0
+  
+  # 动作空间配置
+  action_space:
+    # SQL操作类型
+    sql_operations: ["SELECT", "INSERT", "UPDATE", "DELETE", "JOIN"]
+    # WHERE条件操作
+    where_conditions: ["AND", "OR", "IN", "LIKE", "BETWEEN"]
+    # 聚合函数
+    aggregate_functions: ["COUNT", "SUM", "AVG", "MAX", "MIN"]
+  
+  # 状态表示配置
+  state_representation:
+    # 是否包含AST特征
+    include_ast_features: true
+    # 是否包含代码复杂度特征
+    include_complexity_features: true
+    # 是否包含语义特征
+    include_semantic_features: true
+
+# 质量控制配置
+quality_control:
+  # 最小ORM代码长度
+  min_orm_code_length: 50
+  # 最大ORM代码长度
+  max_orm_code_length: 10000
+  # 最小SQL语句数量
+  min_sql_count: 1
+  # 最大SQL语句数量
+  max_sql_count: 20
+  # 是否过滤空SQL语句
+  filter_empty_sql: true
+  # RL特有：最小奖励值过滤
+  min_reward_threshold: -0.5
+
+# 日志配置
+logging:
+  # 日志级别
+  level: "INFO"
+  # 是否输出到文件
+  to_file: true
+  # 日志文件路径
+  log_file: "rl_conversion.log"
+  # 进度报告间隔
+  progress_interval: 1000 

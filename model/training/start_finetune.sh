@@ -11,8 +11,11 @@
 # 3. 在项目根目录下执行: bash model/training/start_finetune.sh
 #================================================================================================
 
+# 获取脚本所在目录（绝对路径）
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 # 激活Python虚拟环境
-VENV_PATH="model/LLaMA-Factory/.venv/bin/activate"
+VENV_PATH="$SCRIPT_DIR/LLaMA-Factory/.venv/bin/activate"
 if [ -f "$VENV_PATH" ]; then
     echo "Activating Python virtual environment from $VENV_PATH"
     source "$VENV_PATH"
@@ -21,15 +24,15 @@ else
     exit 1
 fi
 
-# 训练脚本路径
-TRAIN_SCRIPT="model/training/train_qwen3_ft.py"
+# 训练脚本路径（与当前脚本同目录）
+TRAIN_SCRIPT="$SCRIPT_DIR/train_qwen3_ft.py"
 
 # 配置文件路径
 CONFIG_1="qwen3_14b_ft.yaml"
 CONFIG_2="qwen3_14b_ft_gpu4567.yaml"
 
-# 创建日志目录
-LOG_DIR="model/training/logs"
+# 创建日志目录（在同级 logs/ 文件夹）
+LOG_DIR="$SCRIPT_DIR/logs"
 mkdir -p "$LOG_DIR"
 
 # 获取当前时间戳

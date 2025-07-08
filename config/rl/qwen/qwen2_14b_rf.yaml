@@ -1,0 +1,93 @@
+# Qwen3-32B 强化学习训练配置
+# 基于 VERL 框架的 REINFORCE++ 算法
+# 根据 zuowei.sh 脚本配置
+
+# 数据配置
+data:
+  # 数据文件路径
+  train_files: "/data/local_disk3/zuowei/verl_train_dataset_train_no_think.parquet"
+  val_files: "/data/local_disk3/zuowei/verl_train_dataset_val_no_think.parquet"
+  
+  # 训练参数
+  train_batch_size: 64
+  max_prompt_length: 8192
+  max_response_length: 4096
+  filter_overlong_prompts: true
+  truncation: "left"
+  trust_remote_code: true
+
+# 算法配置
+algorithm:
+  adv_estimator: "reinforce_plus_plus"
+  use_kl_in_reward: false
+
+# Actor, Rollout, Reference 模型配置
+actor_rollout_ref:
+  model:
+    path: "/data/local_disk3/zuowei/models/Qwen3-32B"
+    use_remove_padding: true
+    enable_gradient_checkpointing: true
+    trust_remote_code: true
+  
+  actor:
+    optim:
+      lr: 3e-6
+    ppo_mini_batch_size: 64
+    ppo_micro_batch_size_per_gpu: 2
+    clip_ratio_low: 0.2
+    clip_ratio_high: 0.28
+    use_dynamic_bsz: true
+    use_kl_loss: true
+    kl_loss_coef: 0.001
+    kl_loss_type: "low_var_kl"
+    entropy_coeff: 0.001
+    fsdp_config:
+      param_offload: false
+      optimizer_offload: false
+  
+  rollout:
+    log_prob_micro_batch_size_per_gpu: 1
+    tensor_model_parallel_size: 4
+    name: "vllm"
+    gpu_memory_utilization: 0.9
+    n: 1
+    enable_chunked_prefill: false
+  
+  ref:
+    log_prob_micro_batch_size_per_gpu: 1
+    fsdp_config:
+      param_offload: true
+
+# 奖励模型配置
+reward_model:
+  reward_manager: "batch"
+
+# 自定义奖励函数配置
+custom_reward_function:
+  path: "/data/local_disk3/zuowei/verl-main/reward_lib/composite_reward.py"
+  name: "compute_score_batch"
+
+# 训练器配置
+trainer:
+  critic_warmup: 0
+  logger: ["console", "swanlab"]
+  project_name: "verl_reinforce_plus_plus_formal"
+  experiment_name: "qwen3_32b_rl-0704-reinforce-plus-plus"
+  n_gpus_per_node: 8
+  nnodes: 4
+  save_freq: 20
+  test_freq: 5
+  total_epochs: 20
+
+# 环境变量配置（用于脚本设置）
+environment:
+  GLOO_SOCKET_IFNAME: "eth0"
+  NCCL_SOCKET_IFNAME: "eth0"
+  NCCL_IB_DISABLE: "1"
+  GLOO_SOCKET_FAMILY: "AF_INET"
+  NCCL_DEBUG: "INFO"
+
+# 日志配置
+logging:
+  log_dir: "/data/local_disk3/zuowei/logs"
+  log_prefix: "grpo_qwen3_32b" 

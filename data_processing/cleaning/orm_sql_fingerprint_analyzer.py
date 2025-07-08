@@ -1,8 +1,9 @@
 import json
 import os
 from collections import defaultdict, Counter
-from typing import Dict, List, Set, Tuple, Any
+from typing import Dict, List, Set, Tuple, Any, Optional
 import logging
+from datetime import datetime
 from tqdm import tqdm
 
 # 尝试导入SQL特征提取器
@@ -30,9 +31,13 @@ except ImportError:
 
 class ORM_SQLFingerprintAnalyzer:
     """
-    ORM代码SQL指纹分析器
-    用于分析同一ORM代码下不同caller生成的SQL语句多样性，
-    识别冗余SQL和可能的缺漏SQL
+    ORM代码SQL指纹分析器 - 重构版
+    
+    新逻辑：
+    1. 统计每个ORM代码下不同caller的SQL指纹集合
+    2. 选择最完整的caller作为参考指纹集合(Reference Set)
+    3. 检测其他caller的包含关系(冗余)和新增指纹(可能错误)
+    4. 生成待LLM验证的候选项
     """
     
     def __init__(self):
@@ -40,6 +45,10 @@ class ORM_SQLFingerprintAnalyzer:
         self.orm_data = defaultdict(lambda: defaultdict(list))  # {orm_code: {caller: [sql_records]}}
         self.fingerprint_cache = {}  # SQL指纹缓存
         self.logger = logging.getLogger(__name__)
+        
+        # 新增：分析结果缓存
+        self.reference_sets = {}  # {orm_code: {'caller': str, 'fingerprints': set}}
+        self.analysis_results = {}  # {orm_code: analysis_result}
         
     def add_record(self, record: Dict[str, Any]):
         """
@@ -75,7 +84,8 @@ class ORM_SQLFingerprintAnalyzer:
                         'function_name': function_name,
                         'sql_text': sql_text.strip(),
                         'fingerprint': fingerprint,
-                        'original_sql_item': sql_item
+                        'original_sql_item': sql_item,
+                        'original_record': record  # 保存完整的原始记录
                     }
                     
                     self.orm_data[orm_code][caller].append(sql_record)
@@ -125,370 +135,299 @@ class ORM_SQLFingerprintAnalyzer:
             self.fingerprint_cache[sql_text] = extractor.extract(sql_text)
         return self.fingerprint_cache[sql_text]
     
-    def _get_table_operation_combinations(self, sql_records: List[Dict]) -> Set[str]:
+    def _select_reference_set(self, orm_code: str, callers_data: Dict[str, List[Dict]]) -> Optional[Dict[str, Any]]:
         """
-        获取SQL记录的表-操作组合
+        选择参考指纹集合(Reference Set)
+        
+        策略：选择指纹数量最多且质量最好的caller作为参考
         
         Args:
-            sql_records: SQL记录列表
+            orm_code: ORM代码
+            callers_data: caller数据 {caller: [sql_records]}
             
         Returns:
-            Set[str]: 表-操作组合集合
+            Optional[Dict]: 参考集合信息，如果没有数据返回None
         """
-        combinations = set()
-        
-        for record in sql_records:
-            sql_text = record['sql_text']
-            extractor = SQLFeatureExtractor()
-            extractor.extract(sql_text)
-            
-            # 获取表名和操作类型
-            try:
-                tables = list(extractor.table_count_dict.keys()) if hasattr(extractor, 'table_count_dict') else []
-                stmt_type = extractor.stmt_type if hasattr(extractor, 'stmt_type') else None
-                operation = self._get_operation_type(stmt_type) if stmt_type else "UNKNOWN"
-            except:
-                print(f"SQL指纹提取失败: {sql_text}")
-                # 如果特征提取失败，使用简单的SQL解析
-                tables = self._simple_table_extraction(sql_text)
-                operation = self._simple_operation_extraction(sql_text)
-            
-            for table in tables:
-                if table and table != 'null':  # 过滤无效表名
-                    combinations.add(f"{table}:{operation}")
-                    
-        return combinations
-    
-    def _get_operation_type(self, stmt_type: int) -> str:
-        """
-        将语句类型转换为操作类型字符串
-        
-        Args:
-            stmt_type: 语句类型
-            
-        Returns:
-            str: 操作类型字符串
-        """
-        # 使用数字常量而不是导入
-        if stmt_type == 1:  # SELECT
-            return "SELECT"
-        elif stmt_type == 2:  # INSERT
-            return "INSERT"
-        elif stmt_type == 3:  # UPDATE
-            return "UPDATE"
-        elif stmt_type == 4:  # DELETE
-            return "DELETE"
-        else:
-            return "OTHER"
-    
-    def _simple_table_extraction(self, sql_text: str) -> List[str]:
-        """
-        简单的表名提取方法
-        
-        Args:
-            sql_text: SQL文本
-            
-        Returns:
-            List[str]: 提取的表名列表
-        """
-        import re
-        tables = []
-        sql_upper = sql_text.upper()
-        
-        # 提取FROM子句中的表名
-        from_matches = re.findall(r'FROM\s+(\w+)', sql_upper)
-        tables.extend(from_matches)
-        
-        # 提取INSERT INTO中的表名
-        insert_matches = re.findall(r'INSERT\s+INTO\s+(\w+)', sql_upper)
-        tables.extend(insert_matches)
-        
-        # 提取UPDATE中的表名
-        update_matches = re.findall(r'UPDATE\s+(\w+)', sql_upper)
-        tables.extend(update_matches)
-        
-        # 提取DELETE FROM中的表名
-        delete_matches = re.findall(r'DELETE\s+FROM\s+(\w+)', sql_upper)
-        tables.extend(delete_matches)
-        
-        # 提取JOIN中的表名
-        join_matches = re.findall(r'JOIN\s+(\w+)', sql_upper)
-        tables.extend(join_matches)
-        
-        return list(set(tables))  # 去重
-    
-    def _simple_operation_extraction(self, sql_text: str) -> str:
-        """
-        简单的操作类型提取方法
-        
-        Args:
-            sql_text: SQL文本
-            
-        Returns:
-            str: 操作类型
-        """
-        sql_upper = sql_text.upper().strip()
-        
-        if sql_upper.startswith('SELECT'):
-            return "SELECT"
-        elif sql_upper.startswith('INSERT'):
-            return "INSERT"
-        elif sql_upper.startswith('UPDATE'):
-            return "UPDATE"
-        elif sql_upper.startswith('DELETE'):
-            return "DELETE"
-        else:
-            return "OTHER"
-    
-    def analyze_orm_diversity(self) -> Dict[str, Any]:
-        """
-        分析ORM代码的SQL多样性
-        
-        Returns:
-            Dict: 分析结果
-        """
-        results = {}
-        
-        # 添加进度条
-        pbar = tqdm(self.orm_data.items(), desc="分析ORM SQL多样性")
-        for orm_code, callers_data in pbar:
-            pbar.set_postfix({'ORM': orm_code[:20]})  # 显示当前处理的ORM代码（限制长度）
-            # 统计每个ORM代码的基本信息
-            total_sql_count = sum(len(records) for records in callers_data.values())
-            unique_fingerprints = set()
-            all_table_operations = set()
-            
-            caller_stats = {}
-            
-            for caller, records in callers_data.items():
-                # 统计每个caller的信息
-                caller_fingerprints = set()
-                caller_sql_count = len(records)
-                
-                for record in records:
-                    fingerprint = record['fingerprint']
-                    unique_fingerprints.add(fingerprint)
-                    caller_fingerprints.add(fingerprint)
-                
-                # 获取表-操作组合
-                table_operations = self._get_table_operation_combinations(records)
-                all_table_operations.update(table_operations)
-                
-                caller_stats[caller] = {
-                    'sql_count': caller_sql_count,
-                    'unique_fingerprints': len(caller_fingerprints),
-                    'fingerprint_list': list(caller_fingerprints),
-                    'table_operations': list(table_operations),
-                    'table_operation_count': len(table_operations)
+        if len(callers_data) <= 1:
+            # 只有一个或没有caller，无法比较
+            if callers_data:
+                single_caller = list(callers_data.keys())[0]
+                single_fingerprints = set(r['fingerprint'] for r in callers_data[single_caller])
+                return {
+                    'caller': single_caller,
+                    'fingerprints': single_fingerprints,
+                    'fingerprint_count': len(single_fingerprints),
+                    'reason': 'only_caller'
                 }
-            
-            # 计算ORM级别统计
-            results[orm_code] = {
-                'total_callers': len(callers_data),
-                'total_sql_count': total_sql_count,
-                'unique_fingerprints': len(unique_fingerprints),
-                'unique_table_operations': len(all_table_operations),
-                'callers': caller_stats,
-                'all_fingerprints': list(unique_fingerprints),
-                'all_table_operations': list(all_table_operations)
+            return None
+        
+        # 计算每个caller的指纹统计
+        caller_stats = {}
+        for caller, records in callers_data.items():
+            fingerprints = set(record['fingerprint'] for record in records)
+            caller_stats[caller] = {
+                'fingerprints': fingerprints,
+                'fingerprint_count': len(fingerprints),
+                'sql_count': len(records),
+                'avg_sql_per_fingerprint': len(records) / len(fingerprints) if fingerprints else 0
             }
-            
-        return results
+        
+        # 选择策略：优先指纹数量最多，其次考虑SQL覆盖度
+        best_caller = max(caller_stats.keys(), key=lambda c: (
+            caller_stats[c]['fingerprint_count'],
+            caller_stats[c]['sql_count']
+        ))
+        
+        reference_info = {
+            'caller': best_caller,
+            'fingerprints': caller_stats[best_caller]['fingerprints'],
+            'fingerprint_count': caller_stats[best_caller]['fingerprint_count'],
+            'reason': 'most_comprehensive',
+            'all_caller_stats': caller_stats
+        }
+        
+        self.reference_sets[orm_code] = reference_info
+        return reference_info
     
-    def identify_redundant_sql(self) -> Dict[str, List[Dict]]:
+    def _analyze_fingerprint_differences(self, orm_code: str, callers_data: Dict[str, List[Dict]], 
+                                       reference_info: Dict[str, Any]) -> Dict[str, Any]:
         """
-        识别冗余SQL（同一caller中重复的指纹）
-        
-        Returns:
-            Dict: 冗余SQL信息
-        """
-        redundant_info = {}
-        
-        # 添加进度条
-        pbar = tqdm(self.orm_data.items(), desc="识别冗余SQL")
-        for orm_code, callers_data in pbar:
-            pbar.set_postfix({'ORM': orm_code[:20]})  # 显示当前处理的ORM代码
-            orm_redundant = []
-            
-            for caller, records in callers_data.items():
-                # 统计每个指纹出现的次数
-                fingerprint_counts = Counter(record['fingerprint'] for record in records)
-                
-                # 找出重复的指纹
-                for fingerprint, count in fingerprint_counts.items():
-                    if count > 1:
-                        # 找到所有使用此指纹的记录
-                        redundant_records = [r for r in records if r['fingerprint'] == fingerprint]
-                        
-                        orm_redundant.append({
-                            'caller': caller,
-                            'fingerprint': fingerprint,
-                            'count': count,
-                            'function_names': [r['function_name'] for r in redundant_records],
-                            'sql_examples': [r['sql_text'] for r in redundant_records[:2]]  # 只保存前2个例子
-                        })
-            
-            if orm_redundant:
-                redundant_info[orm_code] = orm_redundant
-                
-        return redundant_info
-    
-    def identify_missing_or_extra_sql(self) -> Dict[str, Dict]:
-        """
-        识别可能的缺漏或额外SQL
-        基于假设：如果某个caller的指纹集合是其他caller的真子集，
-        可能表示该caller缺少某些SQL或其他caller有额外SQL
-        
-        Returns:
-            Dict: 缺漏或额外SQL信息
-        """
-        missing_extra_info = {}
-        
-        # 添加进度条
-        pbar = tqdm(self.orm_data.items(), desc="分析SQL缺漏情况")
-        for orm_code, callers_data in pbar:
-            pbar.set_postfix({'ORM': orm_code[:20]})  # 显示当前处理的ORM代码
-            if len(callers_data) < 2:  # 至少需要2个caller才能比较
-                continue
-                
-            caller_fingerprints = {}
-            for caller, records in callers_data.items():
-                caller_fingerprints[caller] = set(record['fingerprint'] for record in records)
-            
-            orm_analysis = {
-                'caller_comparisons': [],
-                'potential_missing': [],
-                'potential_extra': []
-            }
-            
-            callers = list(caller_fingerprints.keys())
-            
-            # 两两比较caller
-            for i, caller1 in enumerate(callers):
-                for caller2 in callers[i+1:]:
-                    fp1 = caller_fingerprints[caller1]
-                    fp2 = caller_fingerprints[caller2]
-                    
-                    # 计算交集和差集
-                    intersection = fp1 & fp2
-                    only_in_1 = fp1 - fp2
-                    only_in_2 = fp2 - fp1
-                    
-                    comparison = {
-                        'caller1': caller1,
-                        'caller2': caller2,
-                        'caller1_fingerprints': len(fp1),
-                        'caller2_fingerprints': len(fp2),
-                        'common_fingerprints': len(intersection),
-                        'only_in_caller1': len(only_in_1),
-                        'only_in_caller2': len(only_in_2),
-                        'jaccard_similarity': len(intersection) / len(fp1 | fp2) if fp1 | fp2 else 0
-                    }
-                    
-                    orm_analysis['caller_comparisons'].append(comparison)
-                    
-                    # 检查子集关系
-                    if fp1.issubset(fp2) and fp1 != fp2:
-                        # caller1是caller2的真子集，caller1可能缺少SQL
-                        missing_fps = fp2 - fp1
-                        orm_analysis['potential_missing'].append({
-                            'caller': caller1,
-                            'compared_to': caller2,
-                            'missing_fingerprints': list(missing_fps),
-                            'missing_count': len(missing_fps),
-                            'reason': f'{caller1}的指纹集合是{caller2}的真子集'
-                        })
-                    elif fp2.issubset(fp1) and fp1 != fp2:
-                        # caller2是caller1的真子集，caller2可能缺少SQL
-                        missing_fps = fp1 - fp2
-                        orm_analysis['potential_missing'].append({
-                            'caller': caller2,
-                            'compared_to': caller1,
-                            'missing_fingerprints': list(missing_fps),
-                            'missing_count': len(missing_fps),
-                            'reason': f'{caller2}的指纹集合是{caller1}的真子集'
-                        })
-            
-            # 识别可能的额外SQL（指纹只在一个caller中出现且该caller指纹数量明显较多）
-            if len(callers) >= 2:
-                # 计算每个caller的独有指纹
-                for caller in callers:
-                    other_callers_fps = set()
-                    for other_caller in callers:
-                        if other_caller != caller:
-                            other_callers_fps.update(caller_fingerprints[other_caller])
-                    
-                    unique_to_caller = caller_fingerprints[caller] - other_callers_fps
-                    
-                    if unique_to_caller:
-                        # 如果独有指纹数量较多，可能是额外SQL
-                        total_fps = len(caller_fingerprints[caller])
-                        unique_ratio = len(unique_to_caller) / total_fps if total_fps > 0 else 0
-                        
-                        if unique_ratio > 0.3:  # 如果30%以上的指纹是独有的
-                            orm_analysis['potential_extra'].append({
-                                'caller': caller,
-                                'unique_fingerprints': list(unique_to_caller),
-                                'unique_count': len(unique_to_caller),
-                                'total_fingerprints': total_fps,
-                                'unique_ratio': unique_ratio,
-                                'reason': f'{caller}有{unique_ratio:.1%}的指纹是独有的，可能包含额外SQL'
-                            })
-            
-            if (orm_analysis['caller_comparisons'] or 
-                orm_analysis['potential_missing'] or 
-                orm_analysis['potential_extra']):
-                missing_extra_info[orm_code] = orm_analysis
-                
-        return missing_extra_info
-    
-    def _generate_simplified_report(self, missing_extra_info: Dict[str, Dict], limit: int = 100) -> Dict[str, Dict]:
-        """
-        生成精简版的缺漏或额外SQL报告
+        分析指纹差异，识别冗余、缺漏、新增指纹
         
         Args:
-            missing_extra_info: 完整的缺漏或额外SQL信息
-            limit: 限制记录数量
+            orm_code: ORM代码
+            callers_data: caller数据
+            reference_info: 参考集合信息
             
         Returns:
-            Dict: 精简版报告
+            Dict: 差异分析结果
         """
-        simplified_report = {}
-        record_count = 0
+        reference_caller = reference_info['caller']
+        reference_fingerprints = reference_info['fingerprints']
         
-        for orm_code, analysis in missing_extra_info.items():
-            if record_count >= limit:
-                break
-                
-            simplified_analysis = {
-                'caller_comparisons': [],
-                'potential_missing': [],
-                'potential_extra': []
+        analysis_result = {
+            'orm_code': orm_code,
+            'reference_caller': reference_caller,
+            'reference_fingerprints': list(reference_fingerprints),
+            'reference_count': len(reference_fingerprints),
+            'caller_analysis': {},
+            'redundant_candidates': [],  # 冗余候选（被包含）
+            'missing_candidates': [],   # 缺漏候选
+            'new_fingerprint_candidates': [],  # 新增指纹候选
+            'summary': {}
+        }
+        
+        # 遍历所有 caller 与参考集合比较
+        for caller, records in callers_data.items():
+            if caller == reference_caller:
+                continue  # 跳过参考 caller
+            
+            caller_fingerprints = set(record['fingerprint'] for record in records)
+            
+            # 计算集合关系
+            intersection = caller_fingerprints & reference_fingerprints
+            missing_in_caller = reference_fingerprints - caller_fingerprints  # 缺漏
+            extra_in_caller = caller_fingerprints - reference_fingerprints    # 新增
+            
+            caller_analysis = {
+                'caller': caller,
+                'fingerprints': list(caller_fingerprints),
+                'fingerprint_count': len(caller_fingerprints),
+                'common_with_reference': list(intersection),
+                'common_count': len(intersection),
+                'missing_from_reference': list(missing_in_caller),
+                'missing_count': len(missing_in_caller),
+                'extra_beyond_reference': list(extra_in_caller),
+                'extra_count': len(extra_in_caller),
+                'is_subset_of_reference': caller_fingerprints.issubset(reference_fingerprints),
+                'is_superset_of_reference': caller_fingerprints.issuperset(reference_fingerprints),
+                'jaccard_similarity': len(intersection) / len(caller_fingerprints | reference_fingerprints) if caller_fingerprints | reference_fingerprints else 0
             }
             
-            # 添加caller比较结果（最多添加limit/3条）
-            comparison_limit = min(len(analysis['caller_comparisons']), limit // 3)
-            simplified_analysis['caller_comparisons'] = analysis['caller_comparisons'][:comparison_limit]
-            record_count += comparison_limit
+            analysis_result['caller_analysis'][caller] = caller_analysis
             
-            # 添加潜在缺失SQL（最多添加limit/3条）
-            if record_count < limit:
-                missing_limit = min(len(analysis['potential_missing']), (limit - record_count) // 2)
-                simplified_analysis['potential_missing'] = analysis['potential_missing'][:missing_limit]
-                record_count += missing_limit
+            # 生成验证候选项
             
-            # 添加潜在额外SQL（最多添加剩余配额）
-            if record_count < limit:
-                extra_limit = min(len(analysis['potential_extra']), limit - record_count)
-                simplified_analysis['potential_extra'] = analysis['potential_extra'][:extra_limit]
-                record_count += extra_limit
+            # 1. 冗余候选：caller是参考集合的真子集
+            if caller_analysis['is_subset_of_reference'] and caller_fingerprints != reference_fingerprints:
+                redundant_candidate = {
+                    'type': 'redundant',
+                    'caller': caller,
+                    'orm_code': orm_code,
+                    'reason': f'caller指纹集合被参考集合完全包含',
+                    'redundant_fingerprints': list(caller_fingerprints),
+                    'redundant_sqls': [r for r in records if r['fingerprint'] in caller_fingerprints]
+                }
+                analysis_result['redundant_candidates'].append(redundant_candidate)
             
-            if (simplified_analysis['caller_comparisons'] or 
-                simplified_analysis['potential_missing'] or 
-                simplified_analysis['potential_extra']):
-                simplified_report[orm_code] = simplified_analysis
+            # 2. 缺漏候选：参考集合中有但caller中没有的指纹
+            if missing_in_caller:
+                # 获取缺漏指纹对应的SQL示例
+                missing_sql_examples = []
+                for missing_fp in missing_in_caller:
+                    # 从参考caller中找到对应的SQL
+                    ref_records = callers_data[reference_caller]
+                    examples = [r for r in ref_records if r['fingerprint'] == missing_fp]
+                    if examples:
+                        missing_sql_examples.append(examples[0])  # 取第一个作为示例
                 
-        return simplified_report
+                missing_candidate = {
+                    'type': 'missing',
+                            'caller': caller,
+                    'orm_code': orm_code,
+                    'reason': f'caller缺少{len(missing_in_caller)}个参考指纹',
+                    'missing_fingerprints': list(missing_in_caller),
+                    'missing_sql_examples': missing_sql_examples
+                }
+                analysis_result['missing_candidates'].append(missing_candidate)
+            
+            # 3. 新增指纹候选：caller有但参考集合中没有的指纹
+            if extra_in_caller:
+                extra_sqls = [r for r in records if r['fingerprint'] in extra_in_caller]
+                
+                new_fp_candidate = {
+                    'type': 'new_fingerprint',
+                    'caller': caller,
+                    'orm_code': orm_code,
+                    'reason': f'caller包含{len(extra_in_caller)}个新指纹',
+                    'new_fingerprints': list(extra_in_caller),
+                    'new_sqls': extra_sqls
+                }
+                analysis_result['new_fingerprint_candidates'].append(new_fp_candidate)
+        
+        # 生成摘要统计
+        analysis_result['summary'] = {
+            'total_callers': len(callers_data),
+            'analyzed_callers': len(analysis_result['caller_analysis']),
+            'redundant_callers': len(analysis_result['redundant_candidates']),
+            'callers_with_missing': len(analysis_result['missing_candidates']),
+            'callers_with_new_fps': len(analysis_result['new_fingerprint_candidates']),
+            'total_candidates_for_llm': (len(analysis_result['redundant_candidates']) + 
+                                       len(analysis_result['missing_candidates']) + 
+                                       len(analysis_result['new_fingerprint_candidates']))
+        }
+        
+        return analysis_result
+    
+    def analyze_orm_fingerprint_differences(self) -> Dict[str, Any]:
+        """
+        分析所有ORM代码的指纹差异
+        
+        Returns:
+            Dict: 完整的差异分析结果
+        """
+        all_results = {}
+        
+        self.logger.info(f"开始分析 {len(self.orm_data)} 个ORM代码的指纹差异...")
+        
+        pbar = tqdm(self.orm_data.items(), desc="分析ORM指纹差异")
+        for orm_code, callers_data in pbar:
+            pbar.set_postfix({'ORM': orm_code[:30]})
+            
+            # 选择参考指纹集合
+            reference_info = self._select_reference_set(orm_code, callers_data)
+            if not reference_info:
+                continue  # 跳过没有数据的ORM
+            
+            # 分析指纹差异
+            analysis_result = self._analyze_fingerprint_differences(orm_code, callers_data, reference_info)
+            all_results[orm_code] = analysis_result
+            
+            # 缓存结果
+            self.analysis_results[orm_code] = analysis_result
+        
+        return all_results
+    
+    def generate_llm_validation_candidates(self, limit_per_type: Optional[int] = None) -> List[Dict[str, Any]]:
+        """
+        生成需要LLM验证的候选项列表
+        
+        Args:
+            limit_per_type: 每种类型的候选项数量限制 (None表示无限制，处理全部)
+            
+        Returns:
+            List[Dict]: LLM验证候选项列表
+        """
+        if not self.analysis_results:
+            self.analyze_orm_fingerprint_differences()
+        
+        llm_candidates = []
+        
+        # 统计各类型候选项
+        type_counts = {'redundant': 0, 'missing': 0, 'new_fingerprint': 0}
+        
+        for orm_code, analysis in self.analysis_results.items():
+            # 获取ORM代码的完整内容
+            orm_records = self.orm_data[orm_code]
+            orm_code_content = ""
+            if orm_records:
+                first_caller_records = list(orm_records.values())[0]
+                if first_caller_records:
+                    orm_code_content = first_caller_records[0].get('original_record', {}).get('orm_code', '')
+            
+            # 添加冗余候选项 - 全量处理
+            for candidate in analysis['redundant_candidates']:
+                if limit_per_type is not None and type_counts['redundant'] >= limit_per_type:
+                    break
+                
+                llm_candidate = {
+                    'validation_type': 'redundant',
+                    'orm_code': orm_code,
+                    'orm_code_content': orm_code_content,
+                    'target_caller': candidate['caller'],
+                    'reference_caller': analysis['reference_caller'],
+                    'candidate_info': candidate,
+                    'priority': 'high',  # 冗余检测优先级高
+                    'validation_id': f"redundant_{orm_code}_{candidate['caller']}"
+                }
+                llm_candidates.append(llm_candidate)
+                type_counts['redundant'] += 1
+            
+            # 添加新增指纹候选项 - 全量处理
+            for candidate in analysis['new_fingerprint_candidates']:
+                if limit_per_type is not None and type_counts['new_fingerprint'] >= limit_per_type:
+                    break
+                
+                llm_candidate = {
+                    'validation_type': 'new_fingerprint',
+                    'orm_code': orm_code,
+                    'orm_code_content': orm_code_content,
+                    'target_caller': candidate['caller'],
+                    'reference_caller': analysis['reference_caller'],
+                    'candidate_info': candidate,
+                    'priority': 'high',  # 新增指纹检测优先级高
+                    'validation_id': f"new_fp_{orm_code}_{candidate['caller']}"
+                }
+                llm_candidates.append(llm_candidate)
+                type_counts['new_fingerprint'] += 1
+            
+            # 添加缺漏候选项 - 全量处理
+            for candidate in analysis['missing_candidates']:
+                if limit_per_type is not None and type_counts['missing'] >= limit_per_type:
+                    break
+                
+                llm_candidate = {
+                    'validation_type': 'missing',
+                    'orm_code': orm_code,
+                    'orm_code_content': orm_code_content,
+                    'target_caller': candidate['caller'],
+                    'reference_caller': analysis['reference_caller'],
+                    'candidate_info': candidate,
+                    'priority': 'medium',  # 缺漏检测优先级中等
+                    'validation_id': f"missing_{orm_code}_{candidate['caller']}"
+                }
+                llm_candidates.append(llm_candidate)
+                type_counts['missing'] += 1
+        
+        if limit_per_type is None:
+            self.logger.info(f"生成全量LLM验证候选项: 冗余={type_counts['redundant']}, "
+                            f"新增指纹={type_counts['new_fingerprint']}, 缺漏={type_counts['missing']}, "
+                            f"总计={len(llm_candidates)}")
+        else:
+            self.logger.info(f"生成LLM验证候选项: 冗余={type_counts['redundant']}, "
+                            f"新增指纹={type_counts['new_fingerprint']}, 缺漏={type_counts['missing']}")
+        
+        return llm_candidates
 
     def generate_reports(self, output_dir: str = "."):
         """
@@ -500,53 +439,120 @@ class ORM_SQLFingerprintAnalyzer:
         # 确保输出目录存在
         os.makedirs(output_dir, exist_ok=True)
         
-        # 1. 生成ORM SQL统计报告
-        self.logger.info("开始生成ORM SQL统计报告...")
-        orm_stats = self.analyze_orm_diversity()
-        stats_file = os.path.join(output_dir, "orm_sql_stats.json")
-        with open(stats_file, 'w', encoding='utf-8') as f:
-            json.dump(orm_stats, f, ensure_ascii=False, indent=2)
-        self.logger.info(f"ORM SQL统计报告已保存到: {stats_file}")
+        # 1. 执行完整分析
+        self.logger.info("开始执行指纹差异分析...")
+        analysis_results = self.analyze_orm_fingerprint_differences()
         
-        # 2. 生成冗余SQL标记报告
-        self.logger.info("开始生成冗余SQL标记报告...")
-        redundant_sql = self.identify_redundant_sql()
-        redundant_file = os.path.join(output_dir, "redundant_sql_marks.json")
-        with open(redundant_file, 'w', encoding='utf-8') as f:
-            json.dump(redundant_sql, f, ensure_ascii=False, indent=2)
-        self.logger.info(f"冗余SQL标记报告已保存到: {redundant_file}")
+        # 2. 生成指纹差异分析报告
+        analysis_file = os.path.join(output_dir, "orm_fingerprint_analysis.json")
+        with open(analysis_file, 'w', encoding='utf-8') as f:
+            json.dump(analysis_results, f, ensure_ascii=False, indent=2)
+        self.logger.info(f"指纹差异分析报告已保存到: {analysis_file}")
         
-        # 3. 生成缺漏或额外SQL报告
-        self.logger.info("开始生成SQL缺漏分析报告...")
-        missing_extra = self.identify_missing_or_extra_sql()
-        missing_file = os.path.join(output_dir, "missing_or_extra_sql_report.json")
-        with open(missing_file, 'w', encoding='utf-8') as f:
-            json.dump(missing_extra, f, ensure_ascii=False, indent=2)
-        self.logger.info(f"缺漏或额外SQL报告已保存到: {missing_file}")
+        # 3. 生成参考集合报告
+        reference_file = os.path.join(output_dir, "reference_sets.json")
+        with open(reference_file, 'w', encoding='utf-8') as f:
+            # 转换set为list以便JSON序列化
+            serializable_refs = {}
+            for orm_code, ref_info in self.reference_sets.items():
+                serializable_ref = ref_info.copy()
+                # 转换顶层指纹集合
+                serializable_ref['fingerprints'] = list(ref_info.get('fingerprints', []))
+                # 深度转换 all_caller_stats 内部的 set
+                caller_stats = serializable_ref.get('all_caller_stats', {})
+                for caller, stats in caller_stats.items():
+                    if isinstance(stats.get('fingerprints'), set):
+                        stats['fingerprints'] = list(stats['fingerprints'])
+                serializable_refs[orm_code] = serializable_ref
+            json.dump(serializable_refs, f, ensure_ascii=False, indent=2)
+        self.logger.info(f"参考集合报告已保存到: {reference_file}")
         
-        # 4. 生成精简版缺漏或额外SQL报告（限制100条记录）
-        self.logger.info("开始生成精简版SQL缺漏分析报告...")
-        simplified_missing_extra = self._generate_simplified_report(missing_extra, limit=100)
-        simplified_missing_file = os.path.join(output_dir, "missing_or_extra_sql_report_simplified.json")
-        with open(simplified_missing_file, 'w', encoding='utf-8') as f:
-            json.dump(simplified_missing_extra, f, ensure_ascii=False, indent=2)
-        self.logger.info(f"精简版缺漏或额外SQL报告已保存到: {simplified_missing_file}")
+        # 4. 生成LLM验证候选项 - 全量处理模式
+        self.logger.info("生成全量LLM验证候选项...")
+        llm_candidates = self.generate_llm_validation_candidates(limit_per_type=None)  # 无限制全量处理
+        candidates_file = os.path.join(output_dir, "llm_validation_candidates.json")
+        with open(candidates_file, 'w', encoding='utf-8') as f:
+            json.dump(llm_candidates, f, ensure_ascii=False, indent=2)
+        self.logger.info(f"全量LLM验证候选项已保存到: {candidates_file}")
+        
+        # 5. 生成摘要统计
+        summary = self._generate_analysis_summary(analysis_results, llm_candidates)
+        summary_file = os.path.join(output_dir, "analysis_summary.json")
+        with open(summary_file, 'w', encoding='utf-8') as f:
+            json.dump(summary, f, ensure_ascii=False, indent=2)
+        self.logger.info(f"分析摘要已保存到: {summary_file}")
         
         return {
-            'orm_stats_file': stats_file,
-            'redundant_sql_file': redundant_file,
-            'missing_extra_file': missing_file,
-            'simplified_missing_extra_file': simplified_missing_file,
-            'summary': {
-                'total_orm_codes': len(orm_stats),
-                'orm_with_redundant_sql': len(redundant_sql),
-                'orm_with_missing_extra': len(missing_extra)
+            'analysis_file': analysis_file,
+            'reference_file': reference_file,
+            'candidates_file': candidates_file,
+            'summary_file': summary_file,
+            'summary': summary
+        }
+    
+    def _generate_analysis_summary(self, analysis_results: Dict[str, Any], 
+                                 llm_candidates: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        生成分析摘要
+        
+        Args:
+            analysis_results: 分析结果
+            llm_candidates: LLM候选项
+            
+        Returns:
+            Dict: 摘要统计
+        """
+        total_orm_codes = len(analysis_results)
+        total_redundant_candidates = sum(len(r['redundant_candidates']) for r in analysis_results.values())
+        total_missing_candidates = sum(len(r['missing_candidates']) for r in analysis_results.values())
+        total_new_fp_candidates = sum(len(r['new_fingerprint_candidates']) for r in analysis_results.values())
+        
+        # 按验证类型统计LLM候选项
+        llm_type_counts = Counter(c['validation_type'] for c in llm_candidates)
+        
+        summary = {
+            'analysis_timestamp': datetime.now().isoformat(),
+            'total_orm_codes_analyzed': total_orm_codes,
+            'total_candidates': {
+                'redundant': total_redundant_candidates,
+                'missing': total_missing_candidates,
+                'new_fingerprint': total_new_fp_candidates,
+                'total': total_redundant_candidates + total_missing_candidates + total_new_fp_candidates
+            },
+            'llm_validation_queue': {
+                'redundant': llm_type_counts.get('redundant', 0),
+                'missing': llm_type_counts.get('missing', 0),
+                'new_fingerprint': llm_type_counts.get('new_fingerprint', 0),
+                'total': len(llm_candidates)
+            },
+            'orm_distribution': {
+                'with_redundant_candidates': len([r for r in analysis_results.values() if r['redundant_candidates']]),
+                'with_missing_candidates': len([r for r in analysis_results.values() if r['missing_candidates']]),
+                'with_new_fp_candidates': len([r for r in analysis_results.values() if r['new_fingerprint_candidates']]),
             }
         }
+        
+        return summary
+    
+    # 保留原有方法以确保向后兼容
+    def identify_redundant_sql(self) -> Dict[str, List[Dict]]:
+        """
+        保留原有接口，但使用新逻辑
+        """
+        if not self.analysis_results:
+            self.analyze_orm_fingerprint_differences()
+        
+        # 转换为原有格式
+        redundant_info = {}
+        for orm_code, analysis in self.analysis_results.items():
+            if analysis['redundant_candidates']:
+                redundant_info[orm_code] = analysis['redundant_candidates']
+        
+        return redundant_info
     
     def mark_redundant_sql_in_dataset(self, dataset: List[Dict]) -> List[Dict]:
         """
-        在数据集中标记冗余SQL
+        在数据集中标记冗余SQL - 使用新的冗余检测逻辑
         
         Args:
             dataset: 原始数据集
@@ -554,14 +560,17 @@ class ORM_SQLFingerprintAnalyzer:
         Returns:
             List[Dict]: 标记后的数据集
         """
-        # 获取冗余SQL信息
-        redundant_info = self.identify_redundant_sql()
+        # 执行新的冗余分析
+        if not self.analysis_results:
+            self.analyze_orm_fingerprint_differences()
         
         # 创建指纹到冗余标记的映射
         redundant_fingerprints = {}
-        for orm_code, redundant_list in redundant_info.items():
-            for item in redundant_list:
-                key = f"{orm_code}:{item['caller']}:{item['fingerprint']}"
+        for orm_code, analysis in self.analysis_results.items():
+            for candidate in analysis['redundant_candidates']:
+                caller = candidate['caller']
+                for fingerprint in candidate['redundant_fingerprints']:
+                    key = f"{orm_code}:{caller}:{fingerprint}"
                 redundant_fingerprints[key] = True
         
         # 标记数据集
@@ -573,7 +582,7 @@ class ORM_SQLFingerprintAnalyzer:
             caller = record.get('caller', 'unknown_caller')
             sql_statements = record.get('sql_statement_list', [])
 
-            # 新增：保持"<NO SQL GENERATE>"为字符串类型
+            # 保持"<NO SQL GENERATE>"为字符串类型
             if isinstance(sql_statements, str) and sql_statements == '<NO SQL GENERATE>':
                 marked_record['sql_statement_list'] = '<NO SQL GENERATE>'
                 marked_dataset.append(marked_record)
@@ -588,7 +597,6 @@ class ORM_SQLFingerprintAnalyzer:
                 marked_sql_item = self._mark_sql_item(sql_item, orm_code, caller, redundant_fingerprints)
                 marked_sql_statements.append(marked_sql_item)
             
-            # 如果原始sql_statements是空且返回空，仍保持列表类型
             marked_record['sql_statement_list'] = marked_sql_statements if marked_sql_statements else sql_statements
             marked_dataset.append(marked_record)
         
@@ -655,6 +663,9 @@ class ORM_SQLFingerprintAnalyzer:
         Returns:
             Dict: 分析摘要
         """
+        if not self.analysis_results:
+            self.analyze_orm_fingerprint_differences()
+        
         total_orm_codes = len(self.orm_data)
         total_callers = sum(len(callers) for callers in self.orm_data.values())
         total_sql_records = sum(
@@ -663,21 +674,56 @@ class ORM_SQLFingerprintAnalyzer:
             for records in callers.values()
         )
         
-        # 分析多样性
-        diversity_stats = self.analyze_orm_diversity()
-        redundant_stats = self.identify_redundant_sql()
-        missing_extra_stats = self.identify_missing_or_extra_sql()
+        # 计算详细分析统计
+        orm_with_redundant_candidates = len([
+            orm_code for orm_code, analysis in self.analysis_results.items()
+            if analysis.get('redundant_candidates', [])
+        ])
+        
+        orm_with_missing_candidates = len([
+            orm_code for orm_code, analysis in self.analysis_results.items()
+            if analysis.get('missing_candidates', [])
+        ])
+        
+        orm_with_new_fp_candidates = len([
+            orm_code for orm_code, analysis in self.analysis_results.items()
+            if analysis.get('new_fingerprint_candidates', [])
+        ])
+        
+        total_redundant_candidates = sum(
+            len(analysis.get('redundant_candidates', []))
+            for analysis in self.analysis_results.values()
+        )
+        
+        total_missing_candidates = sum(
+            len(analysis.get('missing_candidates', []))
+            for analysis in self.analysis_results.values()
+        )
+        
+        total_new_fp_candidates = sum(
+            len(analysis.get('new_fingerprint_candidates', []))
+            for analysis in self.analysis_results.values()
+        )
         
         return {
+            # 基本统计信息
             'total_orm_codes': total_orm_codes,
             'total_callers': total_callers,
             'total_sql_records': total_sql_records,
-            'orm_with_multiple_callers': len([
-                orm for orm, callers in self.orm_data.items() 
-                if len(callers) > 1
-            ]),
-            'orm_with_redundant_sql': len(redundant_stats),
-            'orm_with_potential_missing_extra': len(missing_extra_stats),
+            'orm_codes_analyzed': len(self.analysis_results),
+            'reference_sets_created': len(self.reference_sets),
+            'analysis_completed': bool(self.analysis_results),
             'average_callers_per_orm': total_callers / total_orm_codes if total_orm_codes > 0 else 0,
-            'average_sql_per_orm': total_sql_records / total_orm_codes if total_orm_codes > 0 else 0
+            'average_sql_per_orm': total_sql_records / total_orm_codes if total_orm_codes > 0 else 0,
+            
+            # 详细分析统计
+            'detailed_analysis': {
+                'orm_with_redundant_candidates': orm_with_redundant_candidates,
+                'orm_with_missing_candidates': orm_with_missing_candidates,
+                'orm_with_new_fp_candidates': orm_with_new_fp_candidates,
+                'total_redundant_candidates': total_redundant_candidates,
+                'total_missing_candidates': total_missing_candidates,
+                'total_new_fp_candidates': total_new_fp_candidates,
+                'total_candidates': total_redundant_candidates + total_missing_candidates + total_new_fp_candidates
+            }
         } 
