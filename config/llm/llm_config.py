@@ -38,7 +38,13 @@ class LLMConfig:
         Args:
             config_file: 配置文件路径
         """
-        self.config_file = Path(config_file)
+        # 如果是相对路径，则相对于项目根目录
+        if not os.path.isabs(config_file):
+            # 获取项目根目录（从当前文件位置向上查找）
+            current_dir = Path(__file__).parent.parent.parent
+            self.config_file = current_dir / config_file
+        else:
+            self.config_file = Path(config_file)
         self._config_data = None
         self._servers = None
         self.load_config()

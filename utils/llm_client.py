@@ -67,8 +67,25 @@ class LLMClient:
             print(f"❌ {self.server_name.upper()} 同步API调用失败: {e}")
             return ""
     
+    def _format_error_details(self, e: Exception) -> str:
+        """格式化错误详情"""
+        error_type = e.__class__.__name__
+        error_msg = str(e)
+        if isinstance(e, aiohttp.ClientError):
+            if isinstance(e, aiohttp.ClientTimeout):
+                return f"请求超时 ({error_type}): {error_msg}"
+            elif isinstance(e, aiohttp.ClientConnectionError):
+                return f"连接错误 ({error_type}): {error_msg}"
+            else:
+                return f"HTTP请求错误 ({error_type}): {error_msg}"
+        elif isinstance(e, asyncio.TimeoutError):
+            return f"异步操作超时: {error_msg}"
+        else:
+            return f"未知错误 ({error_type}): {error_msg}"
+    
     async def call_async(self, session: aiohttp.ClientSession, prompt: str, 
-                        max_tokens: int = 2048, temperature: float = 0.0) -> str:
+                        max_tokens: int = 2048, temperature: float = 0.0,
+                        max_retries: int = 3, retry_delay: float = 1.0) -> str:
         """异步调用LLM API
         
         Args:
@@ -76,6 +93,8 @@ class LLMClient:
             prompt: 输入提示
             max_tokens: 最大token数
             temperature: 温度参数
+            max_retries: 最大重试次数
+            retry_delay: 重试间隔（秒）
             
         Returns:
             LLM的响应内容
@@ -89,19 +108,39 @@ class LLMClient:
             "max_tokens": max_tokens,
         }
         
-        try:
-            async with session.post(
-                self.config.chat_completions_url,
-                headers=headers,
-                json=data,
-                timeout=aiohttp.ClientTimeout(total=self.config.timeout)
-            ) as response:
-                response.raise_for_status()
-                result = await response.json()
-                return result['choices'][0]['message']['content']
-        except Exception as e:
-            print(f"❌ {self.server_name.upper()} 异步API调用失败: {e}")
-            return ""
+        for attempt in range(max_retries):
+            try:
+                async with session.post(
+                    self.config.chat_completions_url,
+                    headers=headers,
+                    json=data,
+                    timeout=aiohttp.ClientTimeout(total=self.config.timeout)
+                ) as response:
+                    response.raise_for_status()
+                    result = await response.json()
+                    return result['choices'][0]['message']['content']
+            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                if attempt < max_retries - 1:  # 如果不是最后一次尝试
+                    error_details = self._format_error_details(e)
+                    print(f"❌ {self.server_name.upper()} 异步API调用失败 (尝试 {attempt + 1}/{max_retries})")
+                    print(f"   错误详情: {error_details}")
+                    print(f"   请求URL: {self.config.chat_completions_url}")
+                    print(f"   即将重试，等待 {retry_delay * (attempt + 1):.1f} 秒...")
+                    await asyncio.sleep(retry_delay * (attempt + 1))  # 指数退避
+                    continue
+                else:  # 最后一次尝试也失败
+                    error_details = self._format_error_details(e)
+                    print(f"❌ {self.server_name.upper()} 异步API调用失败，已达到最大重试次数")
+                    print(f"   错误详情: {error_details}")
+                    print(f"   请求URL: {self.config.chat_completions_url}")
+                    return ""
+            except Exception as e:  # 其他非网络错误，直接返回
+                error_details = self._format_error_details(e)
+                print(f"❌ {self.server_name.upper()} 异步API调用遇到非网络错误")
+                print(f"   错误详情: {error_details}")
+                print(f"   请求URL: {self.config.chat_completions_url}")
+                return ""
+        return ""  # 所有重试都失败
     
     def call_openai(self, prompt: str, max_tokens: int = 2048, temperature: float = 0.0) -> str:
         """使用OpenAI库调用LLM API

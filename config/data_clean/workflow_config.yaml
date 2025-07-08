@@ -1,0 +1,28 @@
+# 数据清洗工作流配置
+workflow_settings:
+  # 并发处理设置
+  concurrency:
+    # SQL完整性检查并发数
+    sql_completeness_check: 50
+    # SQL正确性检查并发数  
+    sql_correctness_check: 50
+    # 冗余SQL验证并发数
+    redundant_sql_validation: 50
+    # 默认并发数（备用）
+    default: 50
+  
+  # 超时设置（秒）
+  timeout:
+    llm_request: 45
+    session_timeout: 300
+  
+  # 重试设置
+  retry:
+    max_retries: 3
+    retry_delay: 1.0
+  
+  # LLM设置
+  llm:
+    max_tokens: 300
+    temperature: 0.0
+    default_server: "v3" 

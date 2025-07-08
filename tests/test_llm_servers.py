@@ -1,9 +1,18 @@
+#!/usr/bin/env python3
 """LLM服务器测试"""
 import pytest
 import asyncio
 import aiohttp
+import os
+import sys
+from pathlib import Path
+
+# 添加项目根目录到Python路径
+project_root = str(Path(__file__).parent.parent)
+sys.path.insert(0, project_root)
+
 from openai import OpenAI
-from config.llm_config import get_llm_config, ServerConfig
+from config.llm.llm_config import get_llm_config, ServerConfig
 from utils.llm_client import LLMClient, LLMClientManager
 
 

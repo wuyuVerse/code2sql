@@ -89,13 +89,13 @@ class RedundantSQLValidator:
         logger.info(f"冗余SQL验证器（重构版）初始化完成，输出目录: {self.output_dir}")
     
     async def validate_llm_candidates(self, llm_candidates: List[Dict[str, Any]], 
-                                    max_concurrent: int = 200) -> Dict[str, Any]:
+                                    max_concurrent: int = 100) -> Dict[str, Any]:
         """
         验证LLM候选项
         
         Args:
             llm_candidates: 从ORM分析器获取的候选项列表
-            max_concurrent: 最大并发数
+            max_concurrent: 最大并发数，默认100以避免服务器压力过大
             
         Returns:
             Dict: 验证结果摘要
@@ -238,7 +238,11 @@ class RedundantSQLValidator:
                 target_sql=sql_text
             )
             
-            response = await self.llm_client.call_async(self.session, prompt, max_tokens=300, temperature=0.0)
+            # 使用重试机制调用LLM
+            response = await self.llm_client.call_async(
+                self.session, prompt, max_tokens=300, temperature=0.0,
+                max_retries=3, retry_delay=2.0  # 添加重试参数
+            )
             
             step_result = {
                 'step': 'business_validation',

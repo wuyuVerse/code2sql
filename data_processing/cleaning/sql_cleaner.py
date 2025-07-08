@@ -299,49 +299,11 @@ class SQLCleaner:
         step_output_dir = self.output_dir / f"{step_name}_{timestamp}"
         step_output_dir.mkdir(exist_ok=True)
         
-        # 在for循环后集成ORM SQL指纹分析器
+        # ⚠️ 由上层 WorkflowManager 统一调用 run_redundant_sql_validation 处理指纹分析与修复。
+        # 这里不再执行 ORM_SQLFingerprintAnalyzer 相关逻辑，保持其他清洗流程不变。
         analysis_reports = None
         analysis_summary = None
-        
-        if ORM_ANALYSIS_AVAILABLE:
-            logger.info("开始进行ORM SQL指纹分析...")
-            try:
-                # 创建分析器实例
-                analyzer = ORM_SQLFingerprintAnalyzer()
-                
-                # 添加所有记录到分析器
-                for record in cleaned_data:
-                    analyzer.add_record(record)
-                
-                # 生成分析报告
-                analysis_reports = analyzer.generate_reports(output_dir=str(step_output_dir))
-                
-                # 标记冗余SQL
-                marked_data = analyzer.mark_redundant_sql_in_dataset(cleaned_data)
-                
-                # 保存标记后的数据
-                marked_data_file = step_output_dir / "cleaned_records_with_redundant_marks.json"
-                with open(marked_data_file, 'w', encoding='utf-8') as f:
-                    json.dump(marked_data, f, ensure_ascii=False, indent=2)
-                
-                # 获取分析摘要
-                analysis_summary = analyzer.get_analysis_summary()
-                
-                logger.info(f"ORM SQL指纹分析完成:")
-                logger.info(f"  - 分析了 {analysis_summary['total_orm_codes']} 个ORM代码")
-                
-                # 使用新版字段结构
-                detailed_analysis = analysis_summary.get('detailed_analysis', {})
-                logger.info(f"  - 发现 {detailed_analysis.get('orm_with_redundant_candidates', 0)} 个ORM代码有冗余候选项")
-                logger.info(f"  - 发现 {detailed_analysis.get('orm_with_missing_candidates', 0)} 个ORM代码有缺漏候选项")
-                logger.info(f"  - 发现 {detailed_analysis.get('orm_with_new_fp_candidates', 0)} 个ORM代码有新增指纹候选项")
-                
-            except Exception as e:
-                logger.warning(f"ORM SQL指纹分析失败: {str(e)}")
-                analysis_reports = None
-                analysis_summary = None
-        else:
-            logger.info("ORM SQL指纹分析器不可用，跳过此步骤")
+        logger.info("已跳过 ORM SQL 指纹分析（交由后续工作流步骤处理）")
         
         # 保存清洗后的数据
         cleaned_data_file = step_output_dir / "cleaned_records.json"

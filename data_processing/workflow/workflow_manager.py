@@ -340,8 +340,11 @@ class WorkflowManager:
                 }
                 return error_record
         
-        # 使用200并发处理所有记录
-        semaphore = asyncio.Semaphore(200)
+        # 动态获取并发数
+        from config.data_clean.workflow_config import get_workflow_config
+        workflow_config = get_workflow_config()
+        concurrency = workflow_config.get_concurrency('sql_completeness_check')
+        semaphore = asyncio.Semaphore(concurrency)
         
         async def process_with_semaphore(session: aiohttp.ClientSession, record: Dict[str, Any]) -> Dict[str, Any]:
             async with semaphore:
@@ -412,7 +415,7 @@ class WorkflowManager:
             'complete_records': len(records_to_process) - lack_info_count - error_count,
             'error_records': error_count,
             'lack_info_rate': lack_info_count / len(records_to_process) * 100 if records_to_process else 0.0,
-            'concurrent_requests': 200,
+            'concurrent_requests': concurrency,
             'output_file': str(tagged_data_file)
         }
         
@@ -546,7 +549,11 @@ class WorkflowManager:
                 }
                 return error_record
 
-        semaphore = asyncio.Semaphore(200)
+        # 动态获取并发数
+        from config.data_clean.workflow_config import get_workflow_config  # type: ignore
+        workflow_config = get_workflow_config()
+        concurrency = workflow_config.get_concurrency('sql_correctness_check')
+        semaphore = asyncio.Semaphore(concurrency)
         async def process_with_semaphore(session: aiohttp.ClientSession, record: Dict[str, Any]) -> Dict[str, Any]:
             async with semaphore:
                 return await check_single_record(session, record)
@@ -640,6 +647,8 @@ class WorkflowManager:
         
         logger.info(f"开始冗余SQL验证(新版接口): {step_name}")
         
+        analysis_reports: Optional[Dict[str, Any]] = None  # 若需临时生成指纹分析报告
+
         # 1️⃣ 寻找最近的 sql_cleaning 步骤并获取 candidates_file
         candidates_file: Optional[str] = None
         for step in reversed(self.workflow_steps):
@@ -648,6 +657,32 @@ class WorkflowManager:
                 candidates_file = reports.get('candidates_file') if isinstance(reports, dict) else None
                 if not candidates_file:
                     logger.warning("未找到 llm_validation_candidates.json，跳过冗余SQL验证")
+                    # ⏩ 若没有候选项文件，则在此步骤执行 ORM SQL 指纹分析以生成候选项
+                    logger.info("未找到候选项文件，将执行 ORM SQL 指纹分析生成候选项")
+                    try:
+                        from data_processing.cleaning.orm_sql_fingerprint_analyzer import ORM_SQLFingerprintAnalyzer
+
+                        analyzer = ORM_SQLFingerprintAnalyzer()
+                        for record in self.current_data:
+                            analyzer.add_record(record)
+
+                        analysis_output_dir = self.workflow_dir / "redundant_sql_validation" / "fingerprint_analysis"
+                        analysis_reports = analyzer.generate_reports(output_dir=str(analysis_output_dir))
+                        candidates_file = analysis_reports.get('candidates_file') if isinstance(analysis_reports, dict) else None
+                    except Exception as e:
+                        logger.error(f"ORM SQL指纹分析失败，无法生成候选项文件: {e}")
+                        return {
+                            'step_skipped': True,
+                            'reason': 'fingerprint_analysis_failed',
+                            'error': str(e)
+                        }
+                    # 若仍未生成候选项文件，则跳过
+                    if not candidates_file or not Path(candidates_file).exists():
+                        logger.error("指纹分析未能生成候选项文件，跳过冗余SQL验证")
+                        return {
+                            'step_skipped': True,
+                            'reason': 'no_candidates_file'
+                        }
                 break
         
         if not candidates_file or not Path(candidates_file).exists():
@@ -668,7 +703,11 @@ class WorkflowManager:
         from data_processing.cleaning.redundant_sql_validator import RedundantSQLValidator
         validation_output_dir = self.workflow_dir / "redundant_sql_validation"
         validator = RedundantSQLValidator(output_dir=str(validation_output_dir), llm_server="v3")
-        validation_result = await validator.validate_llm_candidates(llm_candidates, max_concurrent=200)
+        # 动态获取并发数
+        from config.data_clean.workflow_config import get_workflow_config  # type: ignore
+        workflow_config = get_workflow_config()
+        concurrency = workflow_config.get_concurrency('redundant_sql_validation')
+        validation_result = await validator.validate_llm_candidates(llm_candidates, max_concurrent=concurrency)
         
         # 3️⃣ 可选：应用修复
         if apply_fix:
@@ -685,7 +724,8 @@ class WorkflowManager:
             'validation_stats': validation_result['validation_stats'],
             'output_files': validation_result['report_files'],
             'fix_recommendations_summary': fr.get('summary', {}),
-            'apply_fix': apply_fix
+            'apply_fix': apply_fix,
+            'orm_analysis_reports': analysis_reports
         }
         self.workflow_steps.append(step_info)
         
@@ -1388,7 +1428,7 @@ class WorkflowManager:
         try:
             # 延迟导入避免循环依赖
             from utils.llm_client import LLMClient
-            from config.data_clean.fix_review_prompts import REMOVAL_REVIEW_PROMPT, ADDITION_REVIEW_PROMPT
+            from config.data_clean.fix_review_prompts import REMOVAL_REVIEW_PROMPT, ADDITION_REVIEW_PROMPT  # type: ignore
             prompt_tpl = REMOVAL_REVIEW_PROMPT if action == 'remove' else ADDITION_REVIEW_PROMPT
             prompt = prompt_tpl.format(orm_code=orm_code[:2000], caller=caller, target_sql=target_sql)
             client = LLMClient("v3")
@@ -1525,6 +1565,17 @@ def run_keyword_first_workflow_from_raw_data(data_dir: str, keywords: Optional[L
         # 步骤 3: 对剩余数据进行 SQL 清洗
         cleaning_result = workflow.run_sql_cleaning("sql_cleaning_after_extraction")
 
+        # 步骤 4: 运行冗余 SQL 验证并应用修复（异步）
+        import asyncio
+
+        async def _run_fix():
+            return await workflow.run_redundant_sql_validation(
+                apply_fix=True,
+                step_name="redundant_sql_validation_with_fix",
+            )
+
+        fix_result = asyncio.run(_run_fix())
+
         # 导出最终数据
         final_data_path = workflow.export_final_data("final_processed_dataset_keyword_first.json")
 
@@ -1543,6 +1594,7 @@ def run_keyword_first_workflow_from_raw_data(data_dir: str, keywords: Optional[L
             "extraction_result": extraction_result,
             "removal_result": removal_step,
             "cleaning_result": cleaning_result,
+            "fix_result": fix_result
         }
 
         logger.info("关键词优先的数据处理工作流执行成功")
