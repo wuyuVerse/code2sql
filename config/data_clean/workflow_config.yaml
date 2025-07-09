@@ -3,11 +3,11 @@ workflow_settings:
   # 并发处理设置
   concurrency:
     # SQL完整性检查并发数
-    sql_completeness_check: 50
+    sql_completeness_check: 100
     # SQL正确性检查并发数  
-    sql_correctness_check: 50
+    sql_correctness_check: 100
     # 冗余SQL验证并发数
-    redundant_sql_validation: 50
+    redundant_sql_validation: 100
     # 默认并发数（备用）
     default: 50
   
@@ -23,6 +23,6 @@ workflow_settings:
   
   # LLM设置
   llm:
-    max_tokens: 300
+    max_tokens: 2048
     temperature: 0.0
     default_server: "v3" 

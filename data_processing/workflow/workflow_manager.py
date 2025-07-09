@@ -749,6 +749,10 @@ class WorkflowManager:
         - SQL列表
         - param_dependent对象
         - 嵌套结构
+        
+        修复逻辑：
+        - 冗余SQL直接删除，不置为<NO SQL GENERATE>
+        - 如果删除后SQL列表为空，删除整条记录
         """
         if not fix_recommendations or not self.current_data:
             logger.info("没有修复建议或当前数据为空，跳过修复应用")
@@ -854,7 +858,12 @@ class WorkflowManager:
             all_remove_map[key] = remove_redundant_map.get(key, set()) | remove_wrong_new_map.get(key, set())
         
         def _process_sql_list(sql_list, key):
-            """处理SQL列表：删除指定SQL，添加缺失SQL"""
+            """处理SQL列表：删除指定SQL，添加缺失SQL
+            
+            Returns:
+                - None: 表示SQL列表为空，应该删除整条记录
+                - 其他值: 处理后的SQL列表
+            """
             try:
                 remove_set = all_remove_map.get(key, set())
                 add_list = add_missing_map.get(key, [])
@@ -873,11 +882,12 @@ class WorkflowManager:
                 logger.error(f"处理SQL列表时出错: {e}, 保留原值")
                 return sql_list
         
-        # 应用修复
+        # 应用修复 - 需要在迭代时安全地删除记录
+        original_count = len(self.current_data)
+        filtered_records = []
         modifications_count = 0
+        deleted_records_count = 0
         error_count = 0
-        accepted_fix_count = 0  # LLM 审核通过
-        rejected_fix_count = 0  # LLM 审核拒绝
         
         for record in self.current_data:
             try:
@@ -888,17 +898,30 @@ class WorkflowManager:
                     original_sql_list = record.get('sql_statement_list')
                     processed_sql_list = _process_sql_list(original_sql_list, key)
                     
+                    # 如果处理结果为None，表示应该删除整条记录
+                    if processed_sql_list is None:
+                        deleted_records_count += 1
+                        logger.debug(f"删除记录: orm_code={record.get('orm_code', 'unknown')[:50]}..., caller={record.get('caller', 'unknown')}")
+                        continue  # 不添加到filtered_records中
+                    
+                    # 如果有变化，更新记录
                     if processed_sql_list != original_sql_list:
                         record['sql_statement_list'] = processed_sql_list
                         modifications_count += 1
-                        if processed_sql_list != '<NO SQL GENERATE>':
-                            accepted_fix_count += 1
-                    else:
-                        if original_sql_list != '<NO SQL GENERATE>':
-                            rejected_fix_count += 1
+                    
+                    # 保留这条记录
+                    filtered_records.append(record)
+                else:
+                    # 不需要处理的记录，直接保留
+                    filtered_records.append(record)
             except Exception as e:
                 logger.error(f"处理记录时出错 (orm_code={record.get('orm_code', 'unknown')}, caller={record.get('caller', 'unknown')}): {e}")
                 error_count += 1
+                # 出错时仍然保留原记录
+                filtered_records.append(record)
+        
+        # 更新当前数据为过滤后的记录
+        self.current_data = filtered_records
         
         # 记录修复统计
         logger.info(f"修复应用完成:")
@@ -906,31 +929,49 @@ class WorkflowManager:
         logger.info(f"  - 删除错误新增SQL: {sum(len(sqls) for sqls in remove_wrong_new_map.values())} 个")
         logger.info(f"  - 添加缺失SQL: {sum(len(items) for items in add_missing_map.values())} 个")
         logger.info(f"  - 修改记录数: {modifications_count}")
+        logger.info(f"  - 删除记录数: {deleted_records_count}")
+        logger.info(f"  - 记录总数变化: {original_count} -> {len(filtered_records)}")
         if error_count > 0:
             logger.warning(f"  - 处理错误数: {error_count}")
     
     def _process_string_sql(self, sql_string: str, remove_set: set, add_list: List) -> Any:
-        """处理单个SQL字符串"""
+        """处理单个SQL字符串
+        
+        Returns:
+            - None: 表示SQL为空，应该删除整条记录
+            - 其他值: 处理后的SQL内容
+        """
         if sql_string == '<NO SQL GENERATE>':
             # 如果原本就是空，只添加缺失的SQL
-            return add_list if add_list else '<NO SQL GENERATE>'
+            if add_list:
+                return add_list if len(add_list) > 1 else add_list[0]
+            else:
+                return None  # 返回None表示应该删除记录
         
         # 检查是否需要删除
         clean_sql = sql_string.replace(' <REDUNDANT SQL>', '').strip()
         if clean_sql in remove_set:
-            # 删除后，如果有缺失SQL需要添加，则添加；否则设为空
-            return add_list if add_list else '<NO SQL GENERATE>'
+            # 删除后，如果有缺失SQL需要添加，则添加；否则返回None表示删除记录
+            if add_list:
+                return add_list if len(add_list) > 1 else add_list[0]
+            else:
+                return None  # 返回None表示应该删除记录
         else:
             # 保留原SQL，并添加缺失SQL
             if add_list:
                 result = [clean_sql] if clean_sql else []
                 result.extend(add_list)
-                return result if len(result) > 1 else (result[0] if result else '<NO SQL GENERATE>')
+                return result if len(result) > 1 else (result[0] if result else None)
             else:
-                return clean_sql if clean_sql else '<NO SQL GENERATE>'
+                return clean_sql if clean_sql else None
     
     def _process_list_sql(self, sql_list: List, remove_set: set, add_list: List) -> Any:
-        """处理SQL列表"""
+        """处理SQL列表
+        
+        Returns:
+            - None: 表示SQL列表为空，应该删除整条记录
+            - 其他值: 处理后的SQL列表
+        """
         cleaned = []
         
         for item in sql_list:
@@ -945,7 +986,7 @@ class WorkflowManager:
             elif isinstance(item, list):
                 # 处理嵌套列表
                 processed_nested = self._process_list_sql(item, remove_set, [])
-                if processed_nested != '<NO SQL GENERATE>' and processed_nested:
+                if processed_nested is not None:
                     cleaned.append(processed_nested)
             else:
                 # 其他类型，保留
@@ -954,7 +995,11 @@ class WorkflowManager:
         # 添加缺失的SQL
         cleaned.extend(add_list)
         
-        return cleaned if cleaned else '<NO SQL GENERATE>'
+        # 如果清洗后没有内容，返回None表示删除记录
+        if not cleaned:
+            return None
+        else:
+            return cleaned
     
     def _process_dict_sql(self, sql_dict: Dict, remove_set: set, add_list: List) -> Optional[Dict]:
         """处理字典类型的SQL（如param_dependent）"""
@@ -973,7 +1018,7 @@ class WorkflowManager:
                         return processed_dict
                 elif isinstance(sql_content, list):
                     processed_sql_list = self._process_list_sql(sql_content, remove_set, [])
-                    if processed_sql_list != '<NO SQL GENERATE>' and processed_sql_list:
+                    if processed_sql_list is not None:
                         processed_dict['sql'] = processed_sql_list
                         return processed_dict
             
@@ -1445,6 +1490,71 @@ class WorkflowManager:
             pass  # 出错时默认接受
         return {"accepted": True, "replacement": ""}
 
+    def remove_no_sql_records(self, step_name: str = "remove_no_sql_records_step") -> Dict[str, Any]:
+        """
+        删除所有包含 <NO SQL GENERATE> 的记录
+        
+        Args:
+            step_name: 步骤名称
+            
+        Returns:
+            删除结果信息
+        """
+        if self.current_data is None:
+            raise ValueError("请先加载并处理数据")
+        
+        logger.info(f"开始删除所有包含 <NO SQL GENERATE> 的记录: {step_name}")
+        
+        original_count = len(self.current_data)
+        
+        # 筛选出不包含 <NO SQL GENERATE> 的记录
+        filtered_records = []
+        removed_records = []
+        
+        for record in self.current_data:
+            sql_list = record.get('sql_statement_list', [])
+            # 检查是否为 <NO SQL GENERATE>（可能是字符串或包含该字符串的列表）
+            is_no_sql = False
+            if isinstance(sql_list, str):
+                is_no_sql = sql_list == '<NO SQL GENERATE>'
+            elif isinstance(sql_list, list):
+                is_no_sql = len(sql_list) == 1 and sql_list[0] == '<NO SQL GENERATE>'
+            
+            if is_no_sql:
+                removed_records.append(record)
+            else:
+                filtered_records.append(record)
+        
+        # 更新当前数据为过滤后的记录
+        self.current_data = filtered_records
+        
+        logger.info(f"从 {original_count:,} 条记录中删除了 {len(removed_records):,} 条 '<NO SQL GENERATE>' 记录，保留了 {len(filtered_records):,} 条记录。")
+
+        # 保存删除后的数据
+        remove_output_dir = self.workflow_dir / "remove_no_sql_records"
+        remove_output_dir.mkdir(exist_ok=True)
+        
+        remove_output_file = remove_output_dir / f"{step_name}.json"
+        with open(remove_output_file, 'w', encoding='utf-8') as f:
+            json.dump(self.current_data, f, ensure_ascii=False, indent=2)
+        
+        # 记录工作流步骤
+        step_info = {
+            'step_name': step_name,
+            'step_type': 'remove_no_sql_records',
+            'timestamp': datetime.now().isoformat(),
+            'input_records': original_count,
+            'removed_records': len(removed_records),
+            'remaining_records': len(filtered_records),
+            'removal_rate': len(removed_records) / original_count * 100 if original_count > 0 else 0.0,
+            'output_file': str(remove_output_file)
+        }
+        
+        self.workflow_steps.append(step_info)
+        
+        logger.info(f"删除完成 - 删除了 {len(removed_records):,} 条记录，保留了 {len(filtered_records):,} 条记录")
+        return step_info
+
 
 def run_complete_workflow_from_raw_data(data_dir: str, keywords: Optional[List[str]] = None, base_output_dir: str = "workflow_output") -> Dict[str, Any]:
     """
@@ -1522,7 +1632,7 @@ def run_keyword_first_workflow_from_raw_data(data_dir: str, keywords: Optional[L
     """
     以"关键词提取优先"方式运行完整的数据处理工作流。
 
-    流程：加载 → 关键词提取 → 将提取到的记录从数据集中剔除 → SQL 清洗 → 导出与摘要。
+    流程：加载 → 关键词提取 → 将提取到的记录从数据集中剔除 → SQL 清洗 → 删除NO SQL记录 → 冗余SQL验证 → 导出与摘要。
 
     Args:
         data_dir: 原始数据目录。
@@ -1565,6 +1675,9 @@ def run_keyword_first_workflow_from_raw_data(data_dir: str, keywords: Optional[L
         # 步骤 3: 对剩余数据进行 SQL 清洗
         cleaning_result = workflow.run_sql_cleaning("sql_cleaning_after_extraction")
 
+        # 步骤 3.1: 删除所有包含 <NO SQL GENERATE> 的记录
+        no_sql_removal_result = workflow.remove_no_sql_records("remove_no_sql_records_step")
+
         # 步骤 4: 运行冗余 SQL 验证并应用修复（异步）
         import asyncio
 
@@ -1577,7 +1690,7 @@ def run_keyword_first_workflow_from_raw_data(data_dir: str, keywords: Optional[L
         fix_result = asyncio.run(_run_fix())
 
         # 导出最终数据
-        final_data_path = workflow.export_final_data("final_processed_dataset_keyword_first.json")
+        final_data_path = workflow.export_final_data("final_processed_dataset.json")
 
         # 保存工作流摘要
         summary_path = workflow.save_workflow_summary()
@@ -1594,6 +1707,7 @@ def run_keyword_first_workflow_from_raw_data(data_dir: str, keywords: Optional[L
             "extraction_result": extraction_result,
             "removal_result": removal_step,
             "cleaning_result": cleaning_result,
+            "no_sql_removal_result": no_sql_removal_result,
             "fix_result": fix_result
         }
 

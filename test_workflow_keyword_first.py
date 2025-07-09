@@ -25,6 +25,7 @@ def main():
 
     # 配置参数
     data_dir = "datasets/claude_output"  # 原始数据目录
+    # data_dir = "datasets/test_data" 
     keywords = None  # 使用默认 GORM 关键词
     output_dir = "workflow_output"
 

@@ -178,8 +178,9 @@ def main():
     # 生成唯一的运行名称和输出目录（包含时间戳）
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     unique_run_name = f"qwen3-14b-ft-{timestamp}"
-    # 使用配置文件中的输出目录作为基础，添加时间戳
-    base_output_dir = config.get("output_dir", "saves/qwen3-14b-ft")
+    
+    # 使用项目根目录下的saves目录作为基础目录
+    base_output_dir = str(PROJECT_ROOT / "saves" / "qwen3-14b-ft")
     unique_output_dir = f"{base_output_dir}-{timestamp}"
     
     # 创建输出目录

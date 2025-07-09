@@ -11,8 +11,7 @@ import yaml
 from tqdm import tqdm
 
 from utils.llm_client import LLMClientManager
-from config.prompts import REANALYSIS_PROMPT
-from config.validation_prompts import (
+from config.validation.validation_prompts import (
     ANALYSIS_PROMPT_TEMPLATE,
     VERIFICATION_PROMPT_TEMPLATE,
     FORMATTING_PROMPT_TEMPLATE,
@@ -65,12 +64,12 @@ class RerunValidator:
         code_meta_data_str = json.dumps(record.get('code_meta_data', []), ensure_ascii=False, indent=2)
         callee = "N/A"
         
-        return REANALYSIS_PROMPT.format(
+        return ANALYSIS_PROMPT_TEMPLATE.format(
             function_name=function_name,
             code_value=code_value,
             caller=caller,
             code_meta_data_str=code_meta_data_str,
-            callee=callee
+            sql_pattern_cnt=record.get('sql_pattern_cnt', 0)
         )
 
     async def _run_single_analysis(self, semaphore: asyncio.Semaphore, record: dict, pbar: tqdm, output_file, file_lock) -> dict:
@@ -122,7 +121,9 @@ class RerunValidator:
         return {
             "function_name": record.get('function_name', 'N/A'),
             "code_value": code_value,
-            "code_meta_data_str": json.dumps(record.get('code_meta_data', []), ensure_ascii=False, indent=2)
+            "code_meta_data_str": json.dumps(record.get('code_meta_data', []), ensure_ascii=False, indent=2),
+            "caller": record.get('caller', 'N/A'),
+            "sql_pattern_cnt": record.get('sql_pattern_cnt', 0)
         }
 
     def generate_precheck_prompts(self, record: dict, analysis_result: str = "") -> dict:
@@ -142,6 +143,9 @@ class RerunValidator:
         
         prompt2 = VERIFICATION_PROMPT_TEMPLATE.format(
             analysis_result=analysis_result,
+            function_definition=record.get('orm_code', ''),
+            code_chain='',  # 如需可填充调用链上下文
+            sql_statement=analysis_result,
             **common_fields
         )
 
@@ -154,6 +158,113 @@ class RerunValidator:
             "verification_prompt": prompt2,
             "formatting_prompt_template": prompt3_template
         }
+
+    def run_three_stage_analysis(self, record: dict) -> dict:
+        """
+        执行三段式分析流程并解析JSON结果
+        
+        Args:
+            record: 需要分析的数据记录
+            
+        Returns:
+            包含各阶段结果和解析后JSON的字典
+        """
+        try:
+            # 获取LLM客户端
+            client = self.client_manager.get_client(self.config['server'])
+            
+            # 第一阶段：分析
+            logger.info("🚀 执行第一阶段：ORM代码分析")
+            stage_prompts = self.generate_precheck_prompts(record)
+            analysis_result = client.call_openai(
+                stage_prompts['analysis_prompt'], 
+                max_tokens=4096, 
+                temperature=0.0
+            )
+            
+            if not analysis_result:
+                return {
+                    "analysis_result": "",
+                    "verification_result": "",
+                    "final_result": "",
+                    "parsed_json": None,
+                    "success": False,
+                    "error": "第一阶段LLM调用失败"
+                }
+            
+            # 第二阶段：验证
+            logger.info("🚀 执行第二阶段：SQL语句验证")
+            verification_prompts = self.generate_precheck_prompts(record, analysis_result)
+            verification_result = client.call_openai(
+                verification_prompts['verification_prompt'],
+                max_tokens=4096,
+                temperature=0.0
+            )
+            
+            if not verification_result:
+                return {
+                    "analysis_result": analysis_result,
+                    "verification_result": "",
+                    "final_result": "",
+                    "parsed_json": None,
+                    "success": False,
+                    "error": "第二阶段LLM调用失败"
+                }
+            
+            # 第三阶段：格式化
+            logger.info("🚀 执行第三阶段：结果格式化")
+            format_prompt = FORMATTING_PROMPT_TEMPLATE.format(sql_statement=verification_result)
+            final_result = client.call_openai(
+                format_prompt,
+                max_tokens=4096,
+                temperature=0.0
+            )
+            
+            if not final_result:
+                return {
+                    "analysis_result": analysis_result,
+                    "verification_result": verification_result,
+                    "final_result": "",
+                    "parsed_json": None,
+                    "success": False,
+                    "error": "第三阶段LLM调用失败"
+                }
+            
+            # 尝试解析JSON
+            parsed_json = None
+            try:
+                parsed_json = json.loads(final_result)
+                logger.info("✅ JSON解析成功")
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.warning(f"⚠️ JSON解析失败: {e}")
+                # 尝试提取JSON部分（可能包含在代码块中）
+                import re
+                json_match = re.search(r'```json\s*(\[.*?\]|\{.*?\})\s*```', final_result, re.DOTALL)
+                if json_match:
+                    try:
+                        parsed_json = json.loads(json_match.group(1))
+                        logger.info("✅ 从代码块中提取JSON成功")
+                    except (json.JSONDecodeError, TypeError):
+                        logger.warning("⚠️ 从代码块提取JSON也失败")
+            
+            return {
+                "analysis_result": analysis_result,
+                "verification_result": verification_result,
+                "final_result": final_result,
+                "parsed_json": parsed_json,
+                "success": True
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ 三段式分析流程异常: {e}")
+            return {
+                "analysis_result": "",
+                "verification_result": "",
+                "final_result": "",
+                "parsed_json": None,
+                "success": False,
+                "error": f"流程异常: {str(e)}"
+            }
 
     async def run_rerun_analysis(self):
         """执行重新分析的完整流程"""
