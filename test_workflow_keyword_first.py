@@ -24,8 +24,8 @@ def main():
     print("🚀 开始测试关键词优先的数据处理工作流")
 
     # 配置参数
-    data_dir = "datasets/claude_output"  # 原始数据目录
-    # data_dir = "datasets/test_data" 
+    #data_dir = "datasets/claude_output"  # 原始数据目录
+    data_dir = "datasets/test_data" 
     keywords = None  # 使用默认 GORM 关键词
     output_dir = "workflow_output"
 

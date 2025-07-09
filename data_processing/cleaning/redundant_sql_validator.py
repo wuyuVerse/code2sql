@@ -241,7 +241,7 @@ class RedundantSQLValidator:
             # 使用重试机制调用LLM
             response = await self.llm_client.call_async(
                 self.session, prompt, max_tokens=300, temperature=0.0,
-                max_retries=3, retry_delay=2.0  # 添加重试参数
+                max_retries=5, retry_delay=2.0  # 添加重试参数
             )
             
             step_result = {

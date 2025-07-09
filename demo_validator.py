@@ -82,24 +82,44 @@ def main():
         "sql_pattern_cnt": 7
     }
     
-    print("🔧 测试验证器功能")
+    print("🔧 测试验证器功能 (新版本 - 单文件输出)")
     print(f"测试数据：{test_record['function_name']}")
     print("="*50)
     
     try:
-        # 初始化验证器
-        validator = RerunValidator(config_path="config/validation/rerun_config.yaml")
+        # 初始化验证器，使用自定义输出目录
+        custom_output_dir = "demo_validator_output"
+        validator = RerunValidator(config_path="config/validation/rerun_config.yaml", custom_output_dir=custom_output_dir)
         
         # 执行三段式分析流程
         print("🔄 执行三段式 LLM 分析流程...")
-        result = validator.run_three_stage_analysis(test_record)
+        result = asyncio.run(validator.run_three_stage_analysis(test_record))
         
         if result['success']:
             print("✅ 三段式分析流程成功完成！")
-            print("\n📋 详细结果：")
+            print("\n📋 基本结果摘要：")
             print(f"第一阶段分析结果（前200字）：\n{result['analysis_result'][:200]}...\n")
             print(f"第二阶段验证结果（前200字）：\n{result['verification_result'][:200]}...\n")
             print(f"第三阶段格式化结果（前200字）：\n{result['final_result'][:200]}...\n")
+            
+            # 新增：显示详细的阶段信息
+            if 'stage_details' in result:
+                print("🔍 阶段详细信息：")
+                for stage_name, stage_info in result['stage_details'].items():
+                    print(f"  {stage_name} ({stage_info['stage_type']}):")
+                    print(f"    - 提示词长度: {stage_info['prompt_length']} 字符")
+                    print(f"    - 回复长度: {stage_info['response_length']} 字符")
+                print()
+            
+            # 新增：显示处理元数据
+            if 'processing_metadata' in result:
+                metadata = result['processing_metadata']
+                print("⚙️ 处理元数据：")
+                print(f"  - 服务器: {metadata['server']}")
+                print(f"  - 最大Token数: {metadata['max_tokens']}")
+                print(f"  - 重试配置: {metadata['retry_config']['max_retries']}次重试，{metadata['retry_config']['retry_delay']}秒延迟")
+                print(f"  - JSON解析: {'成功' if metadata['json_parsing']['final_parse_success'] else '失败'}")
+                print()
             
             if result['parsed_json']:
                 print("🎯 JSON解析成功！")
@@ -113,6 +133,20 @@ def main():
                     print(f"主要键：{list(result['parsed_json'].keys())}")
             else:
                 print("⚠️ JSON解析失败，返回原始文本结果")
+            
+            # 测试保存所有详细结果到单个文件
+            print("\n💾 测试保存详细结果到单个文件...")
+            detailed_path = asyncio.run(validator.save_all_detailed_results())
+            if detailed_path:
+                print(f"✅ 详细结果已保存到: {detailed_path}")
+            else:
+                print("⚠️ 保存详细结果失败或无结果需要保存")
+            
+            # 新增：保存完整结果到文件
+            output_file = "demo_three_stage_result.json"
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(result, f, ensure_ascii=False, indent=2)
+            print(f"\n💾 完整的详细结果已保存到: {output_file}")
         else:
             print(f"❌ 三段式分析流程失败：{result.get('error', '未知错误')}")
             print("📋 部分结果：")

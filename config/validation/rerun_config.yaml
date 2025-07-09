@@ -1,5 +1,5 @@
 input_file: /home/wuyu/code2sql/workflow_output/workflow_20250703_155430/final_processed_dataset.json
 output_dir: rerun_outputs
 output_filename: rerun_analysis_results_v1_r1.jsonl
-server: r1
+server: v3
 concurrency: 200 

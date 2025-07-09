@@ -25,7 +25,7 @@ class TimeoutConfig(BaseModel):
 
 class RetryConfig(BaseModel):
     """重试配置"""
-    max_retries: int = 3
+    max_retries: int = 5
     retry_delay: float = 1.0
 
 

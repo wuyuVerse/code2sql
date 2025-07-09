@@ -15,7 +15,7 @@ class ServerConfig(BaseModel):
     port: int
     model_name: str
     timeout: int = 45
-    max_retries: int = 3
+    max_retries: int = 5
     api_key: Optional[str] = None
     
     @property
@@ -87,7 +87,7 @@ class LLMConfig:
                 port=config['port'],
                 model_name=config['model_name'],
                 timeout=config.get('timeout', defaults.get('timeout', 45)),
-                max_retries=config.get('max_retries', defaults.get('max_retries', 3)),
+                max_retries=config.get('max_retries', defaults.get('max_retries', 5)),
                 api_key=api_key
             )
     

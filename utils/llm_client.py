@@ -3,9 +3,12 @@ import asyncio
 import aiohttp
 import requests
 import re
+import logging
 from typing import Optional, Dict, Any
 from openai import OpenAI
 from config.llm.llm_config import get_llm_config, ServerConfig
+
+logger = logging.getLogger(__name__)
 
 
 class LLMClient:
@@ -64,7 +67,7 @@ class LLMClient:
             result = response.json()
             return result['choices'][0]['message']['content']
         except Exception as e:
-            print(f"❌ {self.server_name.upper()} 同步API调用失败: {e}")
+            logger.debug(f"❌ {self.server_name.upper()} 同步API调用失败: {e}")
             return ""
     
     def _format_error_details(self, e: Exception) -> str:
@@ -85,7 +88,7 @@ class LLMClient:
     
     async def call_async(self, session: aiohttp.ClientSession, prompt: str, 
                         max_tokens: int = 2048, temperature: float = 0.0,
-                        max_retries: int = 3, retry_delay: float = 1.0) -> str:
+                        max_retries: int = 5, retry_delay: float = 1.0) -> str:
         """异步调用LLM API
         
         Args:
@@ -122,23 +125,23 @@ class LLMClient:
             except (aiohttp.ClientError, asyncio.TimeoutError) as e:
                 if attempt < max_retries - 1:  # 如果不是最后一次尝试
                     error_details = self._format_error_details(e)
-                    print(f"❌ {self.server_name.upper()} 异步API调用失败 (尝试 {attempt + 1}/{max_retries})")
-                    print(f"   错误详情: {error_details}")
-                    print(f"   请求URL: {self.config.chat_completions_url}")
-                    print(f"   即将重试，等待 {retry_delay * (attempt + 1):.1f} 秒...")
+                    logger.warning(f"❌ {self.server_name.upper()} 异步API调用失败 (尝试 {attempt + 1}/{max_retries})")
+                    logger.warning(f"   错误详情: {error_details}")
+                    logger.warning(f"   请求URL: {self.config.chat_completions_url}")
+                    logger.warning(f"   即将重试，等待 {retry_delay * (attempt + 1):.1f} 秒...")
                     await asyncio.sleep(retry_delay * (attempt + 1))  # 指数退避
                     continue
                 else:  # 最后一次尝试也失败
                     error_details = self._format_error_details(e)
-                    print(f"❌ {self.server_name.upper()} 异步API调用失败，已达到最大重试次数")
-                    print(f"   错误详情: {error_details}")
-                    print(f"   请求URL: {self.config.chat_completions_url}")
+                    logger.error(f"❌ {self.server_name.upper()} 异步API调用失败，已达到最大重试次数")
+                    logger.error(f"   错误详情: {error_details}")
+                    logger.error(f"   请求URL: {self.config.chat_completions_url}")
                     return ""
             except Exception as e:  # 其他非网络错误，直接返回
                 error_details = self._format_error_details(e)
-                print(f"❌ {self.server_name.upper()} 异步API调用遇到非网络错误")
-                print(f"   错误详情: {error_details}")
-                print(f"   请求URL: {self.config.chat_completions_url}")
+                logger.error(f"❌ {self.server_name.upper()} 异步API调用遇到非网络错误")
+                logger.error(f"   错误详情: {error_details}")
+                logger.error(f"   请求URL: {self.config.chat_completions_url}")
                 return ""
         return ""  # 所有重试都失败
     
@@ -174,10 +177,10 @@ class LLMClient:
                 
                 return content
             else:
-                print(f"❌ {self.server_name.upper()} OpenAI调用失败: 响应格式不正确")
+                logger.debug(f"❌ {self.server_name.upper()} OpenAI调用失败: 响应格式不正确")
                 return ""
         except Exception as e:
-            print(f"❌ {self.server_name.upper()} OpenAI调用失败: {str(e)}")
+            logger.debug(f"❌ {self.server_name.upper()} OpenAI调用失败: {str(e)}")
             return ""
 
 
