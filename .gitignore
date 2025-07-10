@@ -141,7 +141,6 @@ dmypy.json
 
 # 数据集文件夹 - 包含敏感数据，不应提交到仓库
 datasets/
-model/data/
 extracted_data/
 workflow_output/
 rerun_outputs/
@@ -165,4 +164,12 @@ nohup.out
 Thumbs.db
 
 # Training data files
-model/data/*
+model/data/
+
+# -----------------------------------------------------------------------------
+# Project-specific ignores for evaluation artifacts
+# -----------------------------------------------------------------------------
+
+# Ignore all data and result files from any evaluation type
+model/evaluation/*/data/
+model/evaluation/*/results/

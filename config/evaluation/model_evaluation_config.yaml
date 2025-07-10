@@ -5,7 +5,7 @@ data_config:
   max_samples: null
 debug_config:
   save_intermediate_results: false
-  test_mode: false
+  test_mode: true
   test_samples: 10
   validate_config: true
   verbose_logging: true
@@ -44,11 +44,11 @@ metrics_config:
     - OTHER
 model_config:
   finetuning_type: full
-  model_path: /home/wuyu/code2sql/saves/qwen3-14b-ft-20250709_171410
+  model_path: saves/qwen3-14b-ft-20250709_171410
   template: qwen
 output_config:
   keep_temp_files: false
-  output_dir: model/evaluation/fingerprint_eval/results
+  output_dir: model/evaluation/fingerprint_eval/results/20250710_163915_evaluation
   result_prefix: qwen3_evaluation
   save_detailed_results: true
 validation_config:
