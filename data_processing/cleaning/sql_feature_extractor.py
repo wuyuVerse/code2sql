@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 import sqlglot
 import json
 from sqlglot.expressions import (
@@ -35,6 +35,7 @@ import re
 from multiprocessing import Pool, cpu_count
 import pandas as pd
 import time
+from pathlib import Path
 # 固定路径
 CSV_PATH = "/data/local_disk0/shawn/dirty_work/before_409/dmc_unique.csv"
 JSON_PATH = "/data/local_disk0/shawn/api_benchmark/base_test/qwen3_14b_dmc_results_w_caller1.json"
@@ -405,7 +406,7 @@ class SQLFeatureExtractor:
                 else:
                     set_key = self.minus_all_op
             if set_key is not None:
-                set_value = self.set_count_dict.get(set_key)
+                set_value = self.set_count_dict.get(set_key, 0)
                 self.set_count_dict[set_key] = set_value+1
         elif isinstance(this, Subquery):
             self.extract_from_sub_query(this)
@@ -424,7 +425,7 @@ class SQLFeatureExtractor:
         if isinstance(expression, str):
             return expression
         if isinstance(expression, Identifier):
-            return expression.this
+            return expression.this.replace('`', '').lower()
         elif isinstance(expression, Table):
             # 处理Table对象
             if hasattr(expression, 'name'):
@@ -433,7 +434,7 @@ class SQLFeatureExtractor:
                 return expression.this.this
             else:
                 return self.get_final_identifier(expression.this)
-        else:
+        elif hasattr(expression, 'this'):
             if expression.this is None:
                 return self.null_identifier
             result = self.get_final_identifier(expression.this)
@@ -445,6 +446,7 @@ class SQLFeatureExtractor:
                 # 移除反引号并转为小写
                 return result.replace('`', '').lower()
             return result
+        return self.null_identifier # 增加一个默认返回值
 
     def extract_from_join_clause(
             self,
@@ -634,8 +636,8 @@ class SQLFeatureExtractor:
 
     def extract_from_limit_clause(
             self,
-            limit: Limit = None,
-            offset: Offset = None
+            limit: Optional[Limit] = None,
+            offset: Optional[Offset] = None
     ):
         # 只关注是否有LIMIT/OFFSET，不关注具体值
         if limit is not None:
@@ -714,8 +716,12 @@ class SQLFeatureExtractor:
         # 检查是否是系统函数查询
         if self.is_system_function_query(sql_text):
             # 提取函数名作为指纹的一部分
-            func_name = re.search(r"select\s+(\w+)\s*\(\s*\)", sql_text.lower()).group(1)
-            return f"system_function_{func_name}"
+            match = re.search(r"select\s+(\w+)\s*\(\s*\)", sql_text.lower())
+            if match:
+                func_name = match.group(1)
+                return f"system_function_{func_name}"
+            else:
+                return "system_function_unknown" # 或者其他默认值
             
         # 首先进行ORM特定的规范化
         normalized_sql = self.normalize_orm_sql(sql_text)
@@ -877,7 +883,7 @@ def process_csv_and_save_fingerprints(csv_filepath, output_filepath, sql_column_
     # 文件太大，使用分块读取
         print("使用分块读取大型CSV文件...")
         sql_list = []
-        for chunk in pd.read_csv(csv_filepath, usecols=[sql_column_name], chunksize=100000):
+        for chunk in pd.read_csv(str(csv_filepath), usecols=[sql_column_name], chunksize=100000):
             sql_list.extend(chunk[sql_column_name].tolist())
     
     print(f"从CSV加载了 {len(sql_list)} 条SQL语句")
@@ -950,6 +956,7 @@ def load_fingerprints(cache_path):
 def process_json_and_compare(
     json_filepath,
     csv_fingerprints,
+    output_dir: str,
     fingerprint_to_sql=None,
     sql_key="sql_statement_list",
     human_review=False
@@ -1002,7 +1009,7 @@ def process_json_and_compare(
     with open("/data/local_disk0/shawn/dirty_work/416/invalid_csv_fingerprints.json", 'w', encoding='utf-8') as f:
         json.dump(list(invalid_csv_fingerprints), f, ensure_ascii=False, indent=2)
     print(f"被排除的CSV指纹已保存到: /data/local_disk0/shawn/dirty_work/416/invalid_csv_fingerprints.json")
-    log_file = "/data/local_disk0/shawn/dirty_work/416/temp.log"
+    log_file = os.path.join(output_dir, "temp.log")
     with open(log_file, 'w', encoding='utf-8') as log:
         log.write("===== SQL解析日志 =====\n\n")
 
@@ -1276,7 +1283,7 @@ def process_json_and_compare(
                 matching_lines += 1
 
     # 处理完成后，保存匹配/未匹配/被排除SQL到文件
-    output_dir = "/data/local_disk0/shawn/dirty_work/416/"
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
     matching_sql_file = os.path.join(output_dir, "matching_sql_pairs.json") if not human_review else os.path.join(output_dir, "matching_sql_pairs_w_human.json")
     unmatched_sql_file = os.path.join(output_dir, "unmatched_sql_pairs.json") if not human_review else os.path.join(output_dir, "unmatched_sql_pairs_w_human.json")
     excluded_sql_file = os.path.join(output_dir, "excluded_sql_pairs.json") if not human_review else os.path.join(output_dir, "excluded_sql_pairs_w_human.json")
@@ -1596,7 +1603,7 @@ def extract_unmatched_csv_fingerprints(csv_fingerprints, matched_fingerprints, f
     
     print(f"未匹配的CSV指纹及示例SQL已保存到: {output_path}")
     return valid_unmatched_fingerprints
-def get_fingerprint_coverage(human_review=False):
+def get_fingerprint_coverage(human_review=False, output_dir="model/evaluation/fingerprint_eval/results"):
     target_fingerprint_cache = FINGERPRINT_CACHE_HUMAN if human_review else FINGERPRINT_CACHE
     csv_path=CSV_PATH
     # csv_path=['/data/local_disk0/shawn/dirty_work/redis.csv','/data/local_disk0/shawn/dirty_work/redis01.csv']
@@ -1616,16 +1623,25 @@ def get_fingerprint_coverage(human_review=False):
         csv_fingerprints, fingerprint_to_sql = process_csv_and_save_fingerprints(csv_path, target_fingerprint_cache)
     
     # 提取所有表名并保存
-    tables_output_path = "/data/local_disk0/shawn/dirty_work/416/fingerprint_tables_w_human.json" if human_review else "/data/local_disk0/shawn/dirty_work/416/fingerprint_tables.json"
+    tables_output_path = os.path.join(output_dir, "fingerprint_tables_w_human.json" if human_review else "fingerprint_tables.json")
     fingerprint_to_tables = extract_tables_from_fingerprints(fingerprint_to_sql, tables_output_path)
     
     # 处理JSON文件并比较
-    matching_lines, matching_pairs, matched_fingerprints, total_lines, valid_sql_count, matching_count, unmatched_pairs,excluded_sql_count,csv_fingerprints,full_sql_cnt_official = process_json_and_compare(
-        JSON_PATH, csv_fingerprints, fingerprint_to_sql, sql_key="sql_statement_list",human_review=human_review)
+    process_result = process_json_and_compare(
+        JSON_PATH, 
+        csv_fingerprints, 
+        output_dir=output_dir,
+        fingerprint_to_sql=fingerprint_to_sql, 
+        sql_key="sql_statement_list",
+        human_review=human_review
+    )
+    if process_result is None:
+        return None
+    
+    matching_lines, matching_pairs, matched_fingerprints, total_lines, valid_sql_count, matching_count, unmatched_pairs,excluded_sql_count,csv_fingerprints,full_sql_cnt_official = process_result
     
     try:
         # 使用当前生成的unmatched_pairs，而不是从文件加载
-        # 这样可以确保分析的是最新的未匹配SQL
         print(f"\n开始分析 {len(unmatched_pairs)} 条未匹配的SQL语句")
         
         # 对未匹配SQL进行表名匹配分析
@@ -1633,7 +1649,7 @@ def get_fingerprint_coverage(human_review=False):
         
         # 明确保存表名+查询类型匹配的结果到单独的文件
         table_type_matches = [match for match in table_matches if match.get("match_type") == "table_and_type"]
-        detailed_output_path = "/data/local_disk0/shawn/dirty_work/416/table_type_matches_detailed_w_human.json" if human_review else "/data/local_disk0/shawn/dirty_work/416/table_type_matches_detailed.json"
+        detailed_output_path = os.path.join(output_dir, "table_type_matches_detailed_w_human.json" if human_review else "table_type_matches_detailed.json")
         with open(detailed_output_path, "w", encoding="utf-8") as f:
             json.dump({
                 "matches": table_type_matches,
@@ -1666,7 +1682,7 @@ def get_fingerprint_coverage(human_review=False):
             print(f"  - {comprehensive_ratio:.2%} ({comprehensive_match_count}/{valid_sql_count})")
         
         # 添加: 提取未匹配的CSV指纹并保存
-        unmatched_csv_output_path = "/data/local_disk0/shawn/dirty_work/416/unmatched_csv_fingerprints_w_human.json" if human_review else "/data/local_disk0/shawn/dirty_work/416/unmatched_csv_fingerprints.json"
+        unmatched_csv_output_path = os.path.join(output_dir, "unmatched_csv_fingerprints_w_human.json" if human_review else "unmatched_csv_fingerprints.json")
         extract_unmatched_csv_fingerprints(csv_fingerprints, matched_fingerprints, fingerprint_to_sql, unmatched_csv_output_path)
         
         # 添加: 计算指纹覆盖率
@@ -1678,7 +1694,7 @@ def get_fingerprint_coverage(human_review=False):
         print(f"  - 指纹覆盖率: {coverage:.2%} ({matched_fingerprint_count}/{valid_fingerprint_count})")
         
         # 保存指纹覆盖率信息到JSON文件
-        coverage_output_path = "/data/local_disk0/shawn/dirty_work/416/fingerprint_coverage_w_human.json" if human_review else "/data/local_disk0/shawn/dirty_work/416/fingerprint_coverage.json"
+        coverage_output_path = os.path.join(output_dir, "fingerprint_coverage_w_human.json" if human_review else "fingerprint_coverage.json")
         with open(coverage_output_path, "w", encoding="utf-8") as f:
             json.dump({
                 "valid_fingerprint_count": valid_fingerprint_count,
@@ -1697,20 +1713,34 @@ def get_fingerprint_coverage(human_review=False):
             print(f"  - {sql_type}: {stats['coverage']:.2%} ({stats['matched']}/{stats['total']})")
         all_sql_count = valid_sql_count + excluded_sql_count
         # 保存按SQL类型划分的指纹覆盖率信息
-        type_coverage_output_path = "/data/local_disk0/shawn/dirty_work/416/fingerprint_coverage_by_type_w_human.json" if human_review else "/data/local_disk0/shawn/dirty_work/416/fingerprint_coverage_by_type.json"
+        type_coverage_output_path = os.path.join(output_dir, "fingerprint_coverage_by_type_w_human.json" if human_review else "fingerprint_coverage_by_type.json")
         with open(type_coverage_output_path, "w", encoding="utf-8") as f:
             json.dump(sql_type_coverage, f, ensure_ascii=False, indent=2)
         print(f"按SQL语句类型的指纹覆盖率信息已保存到: {type_coverage_output_path}")
         return total_lines,matching_lines,all_sql_count,valid_sql_count,matching_count,table_match_count,matched_fingerprint_count,valid_fingerprint_count,len(csv_fingerprints),full_sql_cnt_official
     except Exception as e:
         print(f"处理未匹配SQL时出错: {e}")
+        return None
 
 def main():
-    total_lines,matching_lines,all_sql_count,valid_sql_count,matching_count,table_match_count,matched_fingerprint_count,valid_fingerprint_count ,csv_fingerprints_count,full_sql_cnt_official= get_fingerprint_coverage()
+    coverage_result = get_fingerprint_coverage()
+    if coverage_result is None:
+        print("获取覆盖率失败，退出程序。")
+        return
+        
+    total_lines,matching_lines,all_sql_count,valid_sql_count,matching_count,table_match_count,matched_fingerprint_count,valid_fingerprint_count ,csv_fingerprints_count,full_sql_cnt_official = coverage_result
+
     print("=================================")
     print("========= 人工review结果 ==========")
     print("==================================")
-    human_review_total_lines,human_review_matching_lines,human_review_all_sql_count,human_review_valid_sql_count,human_review_matching_count,human_review_table_match_count,human_review_matched_fingerprint_count,human_review_valid_fingerprint_count,human_review_csv_fingerprints_count,human_review_full_sql_cnt_official = get_fingerprint_coverage(human_review=True)
+    
+    human_review_result = get_fingerprint_coverage(human_review=True)
+    if human_review_result is None:
+        print("获取人工review覆盖率失败，退出程序。")
+        return
+        
+    human_review_total_lines,human_review_matching_lines,human_review_all_sql_count,human_review_valid_sql_count,human_review_matching_count,human_review_table_match_count,human_review_matched_fingerprint_count,human_review_valid_fingerprint_count,human_review_csv_fingerprints_count,human_review_full_sql_cnt_official = human_review_result
+    
     print(f"\n========== 最终完整结果 ==========")
     print(f"代码chunk数: {total_lines}")
     print(f"有匹配的行数: {matching_lines}")

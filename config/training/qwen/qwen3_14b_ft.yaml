@@ -28,7 +28,7 @@ dataloader_num_workers: 4
 
 # 训练参数
 learning_rate: 2.0e-5  # 针对代码生成任务稍微提高学习率
-num_train_epochs: 2.0  # 训练轮次，总步数 = (max_samples / 实际batch_size) * num_train_epochs
+num_train_epochs: 5.0  # 训练轮次，总步数 = (max_samples / 实际batch_size) * num_train_epochs
 # max_steps: 100  # 可选：直接指定最大训练步数，会覆盖num_train_epochs
 max_grad_norm: 1.0
 per_device_train_batch_size: 2  # 每GPU的batch size，考虑到内存限制调整为2

@@ -1,0 +1,66 @@
+data_config:
+  dataset_dir: model/evaluation/fingerprint_eval/temp
+  eval_data_path: model/evaluation/fingerprint_eval/data/eval_data.json
+  fingerprint_cache_path: model/evaluation/fingerprint_eval/data/cbs_528_final.pkl
+  max_samples: null
+debug_config:
+  save_intermediate_results: false
+  test_mode: false
+  test_samples: 10
+  validate_config: true
+  verbose_logging: true
+environment_config:
+  bf16: true
+  cuda_visible_devices: '0'
+  llamafactory_path: model/training/LLaMA-Factory
+  trust_remote_code: true
+inference_config:
+  batch_size: 1
+  cutoff_len: 2048
+  generate_config:
+    do_sample: false
+    max_new_tokens: 512
+    temperature: 0.1
+    top_p: 0.9
+  per_device_eval_batch_size: 1
+  timeout: 3600
+metrics_config:
+  detailed_metrics:
+  - sql_validity_rate
+  - sql_match_rate
+  - parse_error_rate
+  - inference_error_rate
+  primary_metrics:
+  - inference_success_rate
+  - valid_sql_rate
+  - fingerprint_match_rate
+  sql_type_analysis:
+    enabled: true
+    types:
+    - SELECT
+    - INSERT
+    - UPDATE
+    - DELETE
+    - OTHER
+model_config:
+  finetuning_type: full
+  model_path: /home/wuyu/code2sql/saves/qwen3-14b-ft-20250709_171410
+  template: qwen
+output_config:
+  keep_temp_files: false
+  output_dir: model/evaluation/fingerprint_eval/results
+  result_prefix: qwen3_evaluation
+  save_detailed_results: true
+validation_config:
+  enable_fingerprint_validation: true
+  enable_syntax_validation: true
+  excluded_sql_types:
+  - transaction_begin
+  - transaction_end
+  - session_setting
+  - show_command
+  - ddl_command
+  - empty_sql
+  - not_sql
+  - invalid_sql
+  fingerprint_threshold: 0.8

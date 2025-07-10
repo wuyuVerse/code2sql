@@ -52,17 +52,17 @@ echo "-----------------------------------------------------"
 
 # --- 任务2: 使用GPU 4,5,6,7 ---
 # (注意: 这里假设您有8个GPU, 索引从0到7)
-LOG_FILE_2="${LOG_DIR}/train_gpus4567_${TIMESTAMP}.log"
-echo "Starting training task 2 on GPUs 4,5,6,7..."
-echo "Config: ${CONFIG_2}"
-echo "Log file: ${LOG_FILE_2}"
+# LOG_FILE_2="${LOG_DIR}/train_gpus4567_${TIMESTAMP}.log"
+# echo "Starting training task 2 on GPUs 4,5,6,7..."
+# echo "Config: ${CONFIG_2}"
+# echo "Log file: ${LOG_FILE_2}"
 
-CUDA_VISIBLE_DEVICES=4,5,6,7 nohup python -u "$TRAIN_SCRIPT" --config "$CONFIG_2" > "$LOG_FILE_2" 2>&1 &
-PID_2=$!
-echo "Task 2 started with PID: $PID_2"
-echo "-----------------------------------------------------"
+# CUDA_VISIBLE_DEVICES=4,5,6,7 nohup python -u "$TRAIN_SCRIPT" --config "$CONFIG_2" > "$LOG_FILE_2" 2>&1 &
+# PID_2=$!
+# echo "Task 2 started with PID: $PID_2"
+# echo "-----------------------------------------------------"
 
-echo "Both training tasks have been launched in the background."
-echo "You can monitor the training progress using the log files in ${LOG_DIR}"
-echo "To check the status of the processes, use: ps -p $PID_1,$PID_2"
-echo "To stop a task, use: kill $PID_1 or kill $PID_2" 
+# echo "Both training tasks have been launched in the background."
+# echo "You can monitor the training progress using the log files in ${LOG_DIR}"
+# echo "To check the status of the processes, use: ps -p $PID_1,$PID_2"
+# echo "To stop a task, use: kill $PID_1 or kill $PID_2" 

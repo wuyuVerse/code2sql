@@ -1,0 +1,967 @@
+[
+  {
+    "function_name": "findUserList",
+    "orm_code": "func findUserList() ([]UserInfo, error) {\n\tvar userInfo []UserInfo\n\terr := base.GetInstance().BillingDriver().Clauses(comment(ACT_SELECT, \"findUserList\")).Table(UserInfoTable).\n\t\tSelect(\"app_id,status\").Group(\"app_id,status\").Find(&userInfo).Error\n\tif err != nil {\n\t\treturn userInfo, err\n\t}\n\tfilterUsers := make([]UserInfo, 0)\n\tfor _, user := range userInfo {\n\t\tif user.Status == NormalServiceStatus || user.Status == StopServiceStatus {\n\t\t\tfilterUsers = append(filterUsers, user)\n\t\t}\n\t}\n\treturn filterUsers, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      "SELECT app_id, status FROM ivc_user_info GROUP BY app_id, status;"
+    ],
+    "sql_types": [
+      "SELECT"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/user.go",
+        "code_start_line": 8,
+        "code_end_line": 8,
+        "code_key": "base",
+        "code_value": "dss/internal/base",
+        "code_label": null,
+        "code_type": 4,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 16,
+        "code_end_line": 18,
+        "code_key": "comment",
+        "code_value": "func comment(act, flow string) hints.Hints {\n\treturn hints.CommentBefore(act, fmt.Sprintf(Comment, flow))\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 10,
+        "code_end_line": 10,
+        "code_key": "ACT_SELECT",
+        "code_value": "const ACT_SELECT = \"SELECT\"",
+        "code_label": 21,
+        "code_type": 1,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/user.go",
+        "code_start_line": 17,
+        "code_end_line": 17,
+        "code_key": "UserInfoTable",
+        "code_value": "const UserInfoTable       = \"ivc_user_info\"",
+        "code_label": 21,
+        "code_type": 1,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/user.go",
+        "code_start_line": 66,
+        "code_end_line": 66,
+        "code_key": "userInfo",
+        "code_value": "[]UserInfo",
+        "code_label": null,
+        "code_type": 31,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/user.go",
+        "code_start_line": 23,
+        "code_end_line": 26,
+        "code_key": "UserInfo",
+        "code_value": "type UserInfo struct {\n\tAppId  int `json:\"AppId\" gorm:\"column:app_id\"`\n\tStatus int `json:\"Status\" gorm:\"column:status\"`\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-dss.json"
+  },
+  {
+    "function_name": "findUserList",
+    "orm_code": "func findUserList() ([]UserInfo, error) {\n\tvar userInfo []UserInfo\n\terr := base.GetInstance().BillingDriver().Clauses(comment(ACT_SELECT, \"findUserList\")).Table(UserInfoTable).\n\t\tSelect(\"app_id,status\").Group(\"app_id,status\").Find(&userInfo).Error\n\tif err != nil {\n\t\treturn userInfo, err\n\t}\n\tfilterUsers := make([]UserInfo, 0)\n\tfor _, user := range userInfo {\n\t\tif user.Status == NormalServiceStatus || user.Status == StopServiceStatus {\n\t\t\tfilterUsers = append(filterUsers, user)\n\t\t}\n\t}\n\treturn filterUsers, nil\n}",
+    "caller": "func GetUserInfoList(log *logger.IvcLog) ([]UserInfo, error) {\n\tvar resp []UserInfo\n\tv, err := base.GetInstance().Redis().Get(context.TODO(), fmt.Sprintf(UserInfoStrKey)).Result()\n\tswitch err {\n\tcase nil:\n\t\terr = json.Unmarshal([]byte(v), &resp)\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t\treturn resp, nil\n\n\tcase redis.Nil:\n\t\tresp, err := findUserList()\n\t\tif err != nil {\n\t\t\tlog.ErrorV(fmt.Sprintf(\"[GetUserInfoList] findUserList read db err:%v\", err))\n\t\t\tif err == db.ErrRecordNotFound {\n\t\t\t\treturn nil, utils.RecordNotFoundError\n\t\t\t}\n\t\t\treturn nil, err\n\t\t}\n\t\tv, err := json.Marshal(resp)\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t\terr = base.GetInstance().Redis().Set(context.TODO(), fmt.Sprintf(UserInfoStrKey), string(v), clusterExpiredTimeout).Err()\n\t\tif err != nil {\n\t\t\tlog.ErrorV(fmt.Sprintf(\"[GetUserInfoList] write cache err:%v\", err))\n\t\t\treturn nil, err\n\t\t}\n\t\treturn resp, nil\n\tdefault:\n\t\tlog.ErrorV(fmt.Sprintf(\"[GetUserInfoList] read cache err:%v\", err))\n\t\treturn nil, err\n\t}\n}",
+    "sql_statement_list": [
+      {
+        "type": "LACK_INFORMATION",
+        "variants": [
+          {
+            "scenario": "缺少UserInfoTable变量定义，根据UserInfo结构体推测表名为user_info",
+            "sql": "SELECT app_id, status FROM user_info GROUP BY app_id, status;"
+          }
+        ]
+      }
+    ],
+    "sql_statement": "根据代码分析，这是一个基于GORM的查询操作，会生成一条SELECT语句。\n\n**边界条件判断**：\n代码包含实际的数据库执行操作（Find方法），会生成SQL语句。\n\n**表名和字段分析**：\n- 表名：通过`UserInfoTable`变量指定，由于元数据中未提供该变量的定义，根据`UserInfo`结构体推测表名为`user_info`\n- 字段：代码中显式指定了`app_id,status`字段\n- 操作：SELECT查询，包含GROUP BY分组\n\n**调用者上下文约束**：\n调用者`GetUserInfoList`在Redis缓存未命中时会调用`findUserList()`，无参数传递，执行路径固定。\n\n**SQL分析结果**：\n\n由于缺少`UserInfoTable`变量的具体定义，需要基于结构体名称推测表名：\n\n```json\n{\n  \"type\": \"LACK_INFORMATION\", \n  \"variants\": [{\n    \"scenario\": \"缺少UserInfoTable变量定义，根据UserInfo结构体推测表名为user_info\",\n    \"sql\": \"SELECT app_id, status FROM user_info GROUP BY app_id, status;\"\n  }]\n}\n```\n\n**执行路径分析**：\n1. 代码执行路径固定，不依赖入参变化\n2. 生成一条带有GROUP BY的SELECT语句\n3. 查询结果会在应用层进行状态过滤（NormalServiceStatus或StopServiceStatus）\n4. 该函数被调用者用于在Redis缓存未命中时从数据库获取用户信息列表\n\n**SQL语句说明**：\n- 操作类型：SELECT查询\n- 查询字段：app_id, status\n- 分组条件：按app_id和status分组\n- 无WHERE条件\n- 结果过滤在应用层完成，不在SQL层面",
+    "verified_sql": "根据分析，我需要验证这个SQL分析结果。\n\n**第一步：边界条件检查**\n\n分析结果包含`LACK_INFORMATION`标记，表示缺少`UserInfoTable`变量定义。让我验证：\n\n1. **信息缺失验证**：确实在元数据中没有提供`UserInfoTable`变量的定义\n2. **推测SQL验证**：基于`UserInfo`结构体推测表名为`user_info`是合理的\n3. **推测SQL完整性**：提供的推测SQL是完整的，包含了所有必要的字段和操作\n\n**第二步：SQL语句验证**\n\n验证推测的SQL语句：\n- 表名推测：`UserInfo` -> `user_info`（符合驼峰转下划线规则，没有错误添加复数后缀）\n- 字段名：代码中显式指定的`\"app_id,status\"`应该按原样使用\n- 操作类型：SELECT查询正确\n- GROUP BY子句：正确包含了`app_id,status`分组\n\n**验证结果**\n\n原始分析基本正确，但格式需要调整为标准JSON数组格式。推测的SQL语句完整且合理。\n\n```json\n[{\n  \"type\": \"LACK_INFORMATION\",\n  \"variants\": [{\n    \"scenario\": \"缺少UserInfoTable变量定义，根据UserInfo结构体推测表名为user_info\",\n    \"sql\": \"SELECT app_id, status FROM user_info GROUP BY app_id, status;\"\n  }]\n}]\n```",
+    "sql_types": [
+      "LACK_INFORMATION"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/user.go",
+        "code_start_line": 8,
+        "code_end_line": 8,
+        "code_key": "base",
+        "code_value": "dss/internal/base",
+        "code_label": null,
+        "code_type": 4,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 16,
+        "code_end_line": 18,
+        "code_key": "comment",
+        "code_value": "func comment(act, flow string) hints.Hints {\n\treturn hints.CommentBefore(act, fmt.Sprintf(Comment, flow))\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 10,
+        "code_end_line": 10,
+        "code_key": "ACT_SELECT",
+        "code_value": "const ACT_SELECT = \"SELECT\"",
+        "code_label": 21,
+        "code_type": 1,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/user.go",
+        "code_start_line": 17,
+        "code_end_line": 17,
+        "code_key": "UserInfoTable",
+        "code_value": "const UserInfoTable       = \"ivc_user_info\"",
+        "code_label": 21,
+        "code_type": 1,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/user.go",
+        "code_start_line": 66,
+        "code_end_line": 66,
+        "code_key": "userInfo",
+        "code_value": "[]UserInfo",
+        "code_label": null,
+        "code_type": 31,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/user.go",
+        "code_start_line": 23,
+        "code_end_line": 26,
+        "code_key": "UserInfo",
+        "code_value": "type UserInfo struct {\n\tAppId  int `json:\"AppId\" gorm:\"column:app_id\"`\n\tStatus int `json:\"Status\" gorm:\"column:status\"`\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-dss.json"
+  },
+  {
+    "function_name": "findUserList",
+    "orm_code": "func findUserList() ([]UserInfo, error) {\n\tvar userInfo []UserInfo\n\terr := base.GetInstance().BillingDriver().Clauses(comment(ACT_SELECT, \"findUserList\")).Table(UserInfoTable).\n\t\tSelect(\"app_id,status\").Group(\"app_id,status\").Find(&userInfo).Error\n\tif err != nil {\n\t\treturn userInfo, err\n\t}\n\tfilterUsers := make([]UserInfo, 0)\n\tfor _, user := range userInfo {\n\t\tif user.Status == NormalServiceStatus || user.Status == StopServiceStatus {\n\t\t\tfilterUsers = append(filterUsers, user)\n\t\t}\n\t}\n\treturn filterUsers, nil\n}",
+    "caller": "func SyncUserInfoDataToCache(log *logger.IvcLog) error {\n\tresp, err := findUserList()\n\tif err != nil {\n\t\tlog.ErrorV(fmt.Sprintf(\"[SyncUserInfoDataToCache] findUserList read db err:%v\", err))\n\t\tif err == db.ErrRecordNotFound {\n\t\t\treturn utils.RecordNotFoundError\n\t\t}\n\t\treturn err\n\t}\n\tv, err := json.Marshal(resp)\n\tif err != nil {\n\t\tlog.ErrorV(fmt.Sprintf(\"[SyncUserInfoDataToCache] findUserList Marshal err:%v\", err))\n\t\treturn err\n\t}\n\terr = base.GetInstance().Redis().Set(context.TODO(), fmt.Sprintf(UserInfoStrKey), string(v), clusterExpiredTimeout).Err()\n\tif err != nil {\n\t\tlog.ErrorV(fmt.Sprintf(\"[SyncUserInfoDataToCache] write cache err:%v\", err))\n\t\treturn err\n\t}\n\treturn nil\n}",
+    "sql_statement_list": [
+      {
+        "type": "LACK_INFORMATION",
+        "variants": [
+          {
+            "scenario": "缺少UserInfoTable常量定义，根据UserInfo结构体推测表名为user_info",
+            "sql": "SELECT app_id, status FROM user_info GROUP BY app_id, status;"
+          }
+        ]
+      }
+    ],
+    "sql_statement": "基于对代码的分析，我首先进行边界条件判断：\n\n**边界条件判断**：\n1. **SQL生成能力检查**：代码包含实际的数据库执行操作（Find方法），会生成SQL\n2. **信息完整性检查**：缺少UserInfoTable常量定义和UserInfo结构体定义，但可以根据命名规范推测\n\n由于存在信息缺失但可以推测的情况，返回：\n\n```json\n[\n  {\n    \"type\": \"LACK_INFORMATION\", \n    \"variants\": [\n      {\n        \"scenario\": \"缺少UserInfoTable常量定义，根据UserInfo结构体推测表名为user_info\",\n        \"sql\": \"SELECT app_id, status FROM user_info GROUP BY app_id, status;\"\n      }\n    ]\n  }\n]\n```\n\n**详细分析**：\n\n**表名推测**：\n- 代码中使用了`Table(UserInfoTable)`，但元数据中没有提供UserInfoTable常量的定义\n- 根据UserInfo结构体名称，按驼峰转下划线规则推测表名为：user_info\n\n**SQL语句分析**：\n该函数只会生成一条SQL语句，执行路径单一：\n\n1. **操作类型**：SELECT查询操作\n2. **表名**：user_info（推测）\n3. **选择字段**：app_id, status\n4. **分组条件**：GROUP BY app_id, status\n5. **最终SQL**：`SELECT app_id, status FROM user_info GROUP BY app_id, status;`\n\n**调用者上下文约束**：\n调用者`SyncUserInfoDataToCache`函数直接调用`findUserList()`且不传递任何参数，因此：\n- 执行路径固定，没有条件分支\n- 总是执行相同的SQL查询\n- 不存在多种SQL变体的情况\n\n**代码执行逻辑**：\n1. 执行SQL查询获取所有app_id和status的组合\n2. 在应用层过滤结果，只保留status为NormalServiceStatus或StopServiceStatus的记录\n3. 返回过滤后的结果\n\n**注意**：过滤逻辑在应用层执行，不影响SQL生成。数据库层面仍然查询所有记录，然后在Go代码中进行过滤。",
+    "verified_sql": "我来检查这个SQL语句分析的准确性。\n\n**第一步：边界条件检查**\n\n原始分析标记为`LACK_INFORMATION`，让我验证这个判断：\n\n1. **信息缺失验证**：\n   - 确实缺少`UserInfoTable`常量定义\n   - 确实缺少`UserInfo`结构体的字段映射信息\n   - 但代码中有明确的字段名：`Select(\"app_id,status\").Group(\"app_id,status\")`\n\n2. **推测SQL验证**：\n   - 表名推测：UserInfo -> user_info（符合驼峰转下划线规则）\n   - 字段名：代码中直接显式指定了\"app_id\"和\"status\"，应按原样使用\n   - SQL结构正确：SELECT + GROUP BY\n\n3. **边界条件判断**：\n   - 代码确实会生成SQL（有Find执行方法）\n   - 信息确实缺失（表名常量未定义）\n   - 推测是合理的\n\n**第二步：SQL语句验证**\n\n原始分析的SQL语句正确，但我需要确认：\n\n1. **表名**：user_info（推测合理）\n2. **字段名**：app_id, status（直接显式指定，按原样使用）\n3. **SQL结构**：SELECT + GROUP BY（正确）\n4. **完整性**：SQL语句完整，以分号结尾\n\n**验证结论**：原始分析准确，边界条件判断正确，推测的SQL语句合理且完整。\n\n```json\n[\n  {\n    \"type\": \"LACK_INFORMATION\",\n    \"variants\": [\n      {\n        \"scenario\": \"缺少UserInfoTable常量定义，根据UserInfo结构体推测表名为user_info\",\n        \"sql\": \"SELECT app_id, status FROM user_info GROUP BY app_id, status;\"\n      }\n    ]\n  }\n]\n```",
+    "sql_types": [
+      "LACK_INFORMATION"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/user.go",
+        "code_start_line": 8,
+        "code_end_line": 8,
+        "code_key": "base",
+        "code_value": "dss/internal/base",
+        "code_label": null,
+        "code_type": 4,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 16,
+        "code_end_line": 18,
+        "code_key": "comment",
+        "code_value": "func comment(act, flow string) hints.Hints {\n\treturn hints.CommentBefore(act, fmt.Sprintf(Comment, flow))\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 10,
+        "code_end_line": 10,
+        "code_key": "ACT_SELECT",
+        "code_value": "const ACT_SELECT = \"SELECT\"",
+        "code_label": 21,
+        "code_type": 1,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/user.go",
+        "code_start_line": 17,
+        "code_end_line": 17,
+        "code_key": "UserInfoTable",
+        "code_value": "const UserInfoTable       = \"ivc_user_info\"",
+        "code_label": 21,
+        "code_type": 1,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/user.go",
+        "code_start_line": 66,
+        "code_end_line": 66,
+        "code_key": "userInfo",
+        "code_value": "[]UserInfo",
+        "code_label": null,
+        "code_type": 31,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/user.go",
+        "code_start_line": 23,
+        "code_end_line": 26,
+        "code_key": "UserInfo",
+        "code_value": "type UserInfo struct {\n\tAppId  int `json:\"AppId\" gorm:\"column:app_id\"`\n\tStatus int `json:\"Status\" gorm:\"column:status\"`\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-dss.json"
+  },
+  {
+    "function_name": "FindDeviceByAppId",
+    "orm_code": "func (d *Device) FindDeviceByAppId(filter map[string]interface{}) ([]DeviceAmount, error) {\n\ttypeDevs := make([]DeviceAmount, 0)\n\tval := make([]interface{}, 0)\n\tsql := \"select access_protocol, count(*) as total, sum(status=0) as unregistered, sum(status=1) as online, sum(status=2) as offline, \" +\n\t\t\"sum(status=3) as disable from ivc_device where deleted_at is null \"\n\tif appId, ok := filter[\"app_id\"]; ok {\n\t\tsql += \"and app_id=? \"\n\t\tval = append(val, appId)\n\t}\n\tsql += \"group by access_protocol\"\n\terr := base.GetInstance().IvcDriver().Raw(rowComment(\"FindDeviceByAppId\", sql), val...).Scan(&typeDevs).Error\n\t/*\n\t   err := base.GetInstance().IvcDriver().Table(IvcDeviceTable).Select(\"access_protocol, count(1) as total, count(IF(status=0,1,null)) as unregistered, \" +\n\t       \"count(IF(status=1,1,null)) as online, count(IF(status=2,1,null)) as offline, count(IF(status=3,1,null)) as disable\").\n\t       Where(\"deleted_at is null\").Where(map[string]interface{}{\"app_id\": d.AppId}).Group(\"access_protocol\").Scan(&typeDevs).Error\n\t*/\n\tif err != nil {\n\t\tif err == db.ErrRecordNotFound {\n\t\t\treturn nil, utils.RecordNotFoundError\n\t\t}\n\t\treturn typeDevs, err\n\t}\n\n\treturn typeDevs, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "filter中不包含app_id参数",
+            "sql": "/* FindDeviceByAppId */ select access_protocol, count(*) as total, sum(status=0) as unregistered, sum(status=1) as online, sum(status=2) as offline, sum(status=3) as disable from ivc_device where deleted_at is null group by access_protocol;"
+          },
+          {
+            "scenario": "filter中包含app_id参数",
+            "sql": "/* FindDeviceByAppId */ select access_protocol, count(*) as total, sum(status=0) as unregistered, sum(status=1) as online, sum(status=2) as offline, sum(status=3) as disable from ivc_device where deleted_at is null and app_id=? group by access_protocol;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/device.go",
+        "code_start_line": 8,
+        "code_end_line": 8,
+        "code_key": "base",
+        "code_value": "dss/internal/base",
+        "code_label": null,
+        "code_type": 4,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 20,
+        "code_end_line": 23,
+        "code_key": "rowComment",
+        "code_value": "func rowComment(flow, sql string) string {\n\tCS := fmt.Sprintf(Comment, flow)\n\treturn fmt.Sprintf(\"/* %s */ %s\", CS, sql)\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/device.go",
+        "code_start_line": 150,
+        "code_end_line": 150,
+        "code_key": "sql",
+        "code_value": "\"select access_protocol, count(*) as total, sum(status=0) as unregistered, sum(status=1) as online, sum(status=2) as offline, \" +\n\t\t\"sum(status=3) as disable from ivc_device where deleted_at is null \"",
+        "code_label": null,
+        "code_type": 35,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/device.go",
+        "code_start_line": 149,
+        "code_end_line": 149,
+        "code_key": "val",
+        "code_value": "make([]interface{}, 0)",
+        "code_label": null,
+        "code_type": 35,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/device.go",
+        "code_start_line": 148,
+        "code_end_line": 148,
+        "code_key": "typeDevs",
+        "code_value": "make([]DeviceAmount, 0)",
+        "code_label": null,
+        "code_type": 35,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/device.go",
+        "code_start_line": 52,
+        "code_end_line": 59,
+        "code_key": "DeviceAmount",
+        "code_value": "type DeviceAmount struct {\n\tAccessProtocol int `json:\"AccessProtocol\" gorm:\"column:access_protocol\"`\n\tTotal          int `json:\"Total\"`\n\tUnregistered   int `json:\"Unregistered\"` //0:未注册\n\tOnline         int `json:\"Online\"`       // 1:在线\n\tOffline        int `json:\"Offline\"`      // 2:离线\n\tDisable        int `json:\"Disabled\"`     // 3:禁用\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-dss.json"
+  },
+  {
+    "function_name": "FindChannelByAppId",
+    "orm_code": "func (d *Device) FindChannelByAppId(filter map[string]interface{}) ([]ChannelAmount, error) {\n\t/*\n\t   \"select count(1) as total, count(IF(c.state=0,1,null)) as offline, count(IF(c.state=1,1,null)) as online \" +\n\t          \"from ivc_channel as c left join ivc_device as d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null \" +\n\t          \"and d.app_id = %v and d.access_protocol = %v;\"\n\t*/\n\ttypeChs := make([]ChannelAmount, 0)\n\tval := make([]interface{}, 0)\n\tsql := \"select d.access_protocol, count(*) as total, sum(c.state=0) as offline, sum(c.state=1) as online \" +\n\t\t\"from ivc_channel as c inner join ivc_device as d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null \"\n\tif appId, ok := filter[\"app_id\"]; ok {\n\t\tsql += \"and d.app_id=? \"\n\t\tval = append(val, appId)\n\t}\n\tsql += \"group by d.access_protocol\"\n\terr := base.GetInstance().IvcDriver().Raw(rowComment(\"FindChannelByAppId\", sql), val...).Scan(&typeChs).Error\n\tif err != nil {\n\t\tif err == db.ErrRecordNotFound {\n\t\t\treturn nil, utils.RecordNotFoundError\n\t\t}\n\t\treturn typeChs, err\n\t}\n\n\treturn typeChs, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "filter包含app_id条件",
+            "sql": "/* FindChannelByAppId */ select d.access_protocol, count(*) as total, sum(c.state=0) as offline, sum(c.state=1) as online from ivc_channel as c inner join ivc_device as d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null and d.app_id=? group by d.access_protocol;"
+          },
+          {
+            "scenario": "filter不包含app_id条件",
+            "sql": "/* FindChannelByAppId */ select d.access_protocol, count(*) as total, sum(c.state=0) as offline, sum(c.state=1) as online from ivc_channel as c inner join ivc_device as d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null group by d.access_protocol;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/device.go",
+        "code_start_line": 8,
+        "code_end_line": 8,
+        "code_key": "base",
+        "code_value": "dss/internal/base",
+        "code_label": null,
+        "code_type": 4,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 20,
+        "code_end_line": 23,
+        "code_key": "rowComment",
+        "code_value": "func rowComment(flow, sql string) string {\n\tCS := fmt.Sprintf(Comment, flow)\n\treturn fmt.Sprintf(\"/* %s */ %s\", CS, sql)\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/device.go",
+        "code_start_line": 182,
+        "code_end_line": 182,
+        "code_key": "sql",
+        "code_value": "\"select d.access_protocol, count(*) as total, sum(c.state=0) as offline, sum(c.state=1) as online \" +\n\t\t\"from ivc_channel as c inner join ivc_device as d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null \"",
+        "code_label": null,
+        "code_type": 35,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/device.go",
+        "code_start_line": 181,
+        "code_end_line": 181,
+        "code_key": "val",
+        "code_value": "make([]interface{}, 0)",
+        "code_label": null,
+        "code_type": 35,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/device.go",
+        "code_start_line": 180,
+        "code_end_line": 180,
+        "code_key": "typeChs",
+        "code_value": "make([]ChannelAmount, 0)",
+        "code_label": null,
+        "code_type": 35,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/device.go",
+        "code_start_line": 61,
+        "code_end_line": 66,
+        "code_key": "ChannelAmount",
+        "code_value": "type ChannelAmount struct {\n\tAccessProtocol int `json:\"AccessProtocol\" gorm:\"column:access_protocol\"`\n\tTotal          int `json:\"Total\"`\n\tOnline         int `json:\"Online\"`  // 1:在线\n\tOffline        int `json:\"Offline\"` // 2:离线\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-dss.json"
+  },
+  {
+    "function_name": "GetRecordChannelByUser",
+    "orm_code": "func GetRecordChannelByUser(Id string, fields string, log *logger.IvcLog) (types.RecordPlanChannel, error) {\n\tvar recordCh types.RecordPlanChannel\n\tkey := fmt.Sprintf(IvcClusterRecordChannelHashKey, Id)\n\terr := base.GetInstance().Redis().HGet(context.TODO(), key, fields).Scan(&recordCh)\n\tif err != nil {\n\t\tlog.ErrorV(fmt.Sprintf(\"[GetRecordChannelByUser] RecordChannel key:%v feild:%v err:%v\", key, fields, err))\n\t\treturn recordCh, err\n\t}\n\tlog.InfoV(fmt.Sprintf(\"[GetRecordChannelByUser] RecordChannel key:%v feild:%v val:%+v err:%v\", key, fields, recordCh, err))\n\treturn recordCh, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "NO_SQL_GENERATE",
+        "variants": [
+          {
+            "scenario": "该代码只包含Redis缓存操作，没有任何数据库ORM操作。代码使用的是Redis的HGet方法进行缓存读取，而不是GORM的数据库操作方法（如Find、Create、Update、Delete等）",
+            "sql": ""
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "NO_SQL_GENERATE"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/record.go",
+        "code_start_line": 7,
+        "code_end_line": 7,
+        "code_key": "base",
+        "code_value": "dss/internal/base",
+        "code_label": null,
+        "code_type": 4,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/record.go",
+        "code_start_line": 20,
+        "code_end_line": 20,
+        "code_key": "recordCh",
+        "code_value": "types.RecordPlanChannel",
+        "code_label": null,
+        "code_type": 31,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/types/types.go",
+        "code_start_line": 20,
+        "code_end_line": 25,
+        "code_key": "RecordPlanChannel",
+        "code_value": "type RecordPlanChannel struct {\n\tTotal int `json:\"Total\"`\n\tReal  int `json:\"Real\"`\n\tIdle  int `json:\"Idle\"`\n\tStop  int `json:\"Stop\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-dss.json"
+  },
+  {
+    "function_name": "GetRealtimeChannelByUser",
+    "orm_code": "func GetRealtimeChannelByUser(Id string, fields string, log *logger.IvcLog) (types.RecordPlanChannel, error) {\n\tvar realtimeCh types.RecordPlanChannel\n\tkey := fmt.Sprintf(IvcClusterRealtimeChannelHashKey, Id)\n\terr := base.GetInstance().Redis().HGet(context.TODO(), key, fields).Scan(&realtimeCh)\n\tif err != nil {\n\t\tlog.ErrorV(fmt.Sprintf(\"[GetRealtimeChannelByUser] RealtimeChannel key:%v feild:%v err:%v\", key, fields, err))\n\t\treturn realtimeCh, nil\n\t}\n\tlog.InfoV(fmt.Sprintf(\"[GetRealtimeChannelByUser] RealtimeChannel key:%v feild:%v val:%+v err:%v\", key, fields, realtimeCh, err))\n\treturn realtimeCh, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "NO_SQL_GENERATE",
+        "variants": [
+          {
+            "scenario": "该代码使用Redis进行数据操作，不是基于GORM的ORM数据库操作，没有涉及任何SQL数据库操作或GORM方法调用",
+            "sql": ""
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "NO_SQL_GENERATE"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/record.go",
+        "code_start_line": 7,
+        "code_end_line": 7,
+        "code_key": "base",
+        "code_value": "dss/internal/base",
+        "code_label": null,
+        "code_type": 4,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/record.go",
+        "code_start_line": 33,
+        "code_end_line": 33,
+        "code_key": "realtimeCh",
+        "code_value": "types.RecordPlanChannel",
+        "code_label": null,
+        "code_type": 31,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/types/types.go",
+        "code_start_line": 20,
+        "code_end_line": 25,
+        "code_key": "RecordPlanChannel",
+        "code_value": "type RecordPlanChannel struct {\n\tTotal int `json:\"Total\"`\n\tReal  int `json:\"Real\"`\n\tIdle  int `json:\"Idle\"`\n\tStop  int `json:\"Stop\"`\n}",
+        "code_label": null,
+        "code_type": 3,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-dss.json"
+  },
+  {
+    "function_name": "findClusterList",
+    "orm_code": "func findClusterList() ([]ClusterConf, error) {\n\tvar clusterInfo []ClusterConf\n\terr := base.GetInstance().IvcDriver().Clauses(comment(ACT_SELECT, \"findClusterList\")).Table(ClusterConfTable).Where(\"deleted_at is null\").Find(&clusterInfo).Error\n\tif err != nil {\n\t\treturn clusterInfo, err\n\t}\n\treturn clusterInfo, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      "SELECT id, cluster_id, name, conf_type, conf_value, deleted_at, created_at, updated_at FROM ivc_cluster_conf WHERE deleted_at is null;"
+    ],
+    "sql_types": [
+      "SELECT"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/cluster.go",
+        "code_start_line": 9,
+        "code_end_line": 9,
+        "code_key": "base",
+        "code_value": "dss/internal/base",
+        "code_label": null,
+        "code_type": 4,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 16,
+        "code_end_line": 18,
+        "code_key": "comment",
+        "code_value": "func comment(act, flow string) hints.Hints {\n\treturn hints.CommentBefore(act, fmt.Sprintf(Comment, flow))\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 10,
+        "code_end_line": 10,
+        "code_key": "ACT_SELECT",
+        "code_value": "const ACT_SELECT = \"SELECT\"",
+        "code_label": 21,
+        "code_type": 1,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/cluster.go",
+        "code_start_line": 18,
+        "code_end_line": 18,
+        "code_key": "ClusterConfTable",
+        "code_value": "const ClusterConfTable      = \"ivc_cluster_conf\"",
+        "code_label": 21,
+        "code_type": 1,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/cluster.go",
+        "code_start_line": 68,
+        "code_end_line": 68,
+        "code_key": "clusterInfo",
+        "code_value": "[]ClusterConf",
+        "code_label": null,
+        "code_type": 31,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/cluster.go",
+        "code_start_line": 23,
+        "code_end_line": 27,
+        "code_key": "ClusterConf",
+        "code_value": "type ClusterConf struct {\n\tID        string `json:\"ID\" gorm:\"column:id\"`\n\tClusterId string `json:\"ClusterId\" gorm:\"column:cluster_id\"`\n\t//Name      string `json:\"Name\" gorm:\"column:name\"`\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-dss.json"
+  },
+  {
+    "function_name": "findClusterList",
+    "orm_code": "func findClusterList() ([]ClusterConf, error) {\n\tvar clusterInfo []ClusterConf\n\terr := base.GetInstance().IvcDriver().Clauses(comment(ACT_SELECT, \"findClusterList\")).Table(ClusterConfTable).Where(\"deleted_at is null\").Find(&clusterInfo).Error\n\tif err != nil {\n\t\treturn clusterInfo, err\n\t}\n\treturn clusterInfo, nil\n}",
+    "caller": "func GetClusterIdList(log *logger.IvcLog) ([]ClusterConf, error) {\n\tvar resp []ClusterConf\n\tv, err := base.GetInstance().Redis().Get(context.TODO(), fmt.Sprintf(ClusterConfStrKey)).Result()\n\tswitch err {\n\tcase nil:\n\t\terr = json.Unmarshal([]byte(v), &resp)\n\t\tif err != nil {\n\t\t\tlog.ErrorV(fmt.Sprintf(\"[GetClusterIdList] read cache Unmarshal err:%v\", err))\n\t\t\treturn nil, err\n\t\t}\n\t\treturn resp, nil\n\n\tcase redis.Nil:\n\t\tresp, err := findClusterList()\n\t\tif err != nil {\n\t\t\tlog.ErrorV(fmt.Sprintf(\"[GetClusterIdList] findClusterList read db err:%v\", err))\n\t\t\tif err == db.ErrRecordNotFound {\n\t\t\t\treturn nil, utils.RecordNotFoundError\n\t\t\t}\n\t\t\treturn nil, err\n\t\t}\n\t\tv, err := json.Marshal(resp)\n\t\tif err != nil {\n\t\t\tlog.ErrorV(fmt.Sprintf(\"[GetClusterIdList] findClusterList Marshal err:%v\", err))\n\t\t\treturn nil, err\n\t\t}\n\t\terr = base.GetInstance().Redis().Set(context.TODO(), fmt.Sprintf(ClusterConfStrKey), string(v), clusterExpiredTimeout).Err()\n\t\tif err != nil {\n\t\t\tlog.ErrorV(fmt.Sprintf(\"[GetClusterIdList] write cache err:%v\", err))\n\t\t\treturn nil, err\n\t\t}\n\t\treturn resp, nil\n\tdefault:\n\t\tlog.ErrorV(fmt.Sprintf(\"[GetClusterIdList] read cache err:%v\", err))\n\t\treturn nil, err\n\t}\n}",
+    "sql_statement_list": [
+      {
+        "type": "LACK_INFORMATION",
+        "variants": [
+          {
+            "scenario": "缺少ClusterConfTable常量值和ClusterConf结构体字段定义，根据结构体名称推测表名为cluster_conf，字段按常见配置表结构推测",
+            "sql": "SELECT id, cluster_id, cluster_name, config, created_at, updated_at FROM cluster_conf WHERE deleted_at IS NULL;"
+          }
+        ]
+      }
+    ],
+    "sql_statement": "基于对代码的分析，我来详细说明SQL生成情况：\n\n## 边界条件判断\n\n代码包含实际的数据库执行操作（Find方法），会生成SQL语句。\n\n## 表名和字段分析\n\n1. **表名确定**：代码中通过`Table(ClusterConfTable)`显式指定了表名，ClusterConfTable应该是一个常量，对应实际的表名\n2. **结构体分析**：查询结果映射到`ClusterConf`结构体\n3. **字段推测**：由于是`Find(&clusterInfo)`操作且没有Select限制，会查询表的所有字段\n\n## 调用者上下文约束\n\n根据调用者`GetClusterIdList`的逻辑，`findClusterList()`只在以下情况被调用：\n- Redis缓存中没有对应的key（redis.Nil错误）\n- 此时会调用`findClusterList()`从数据库查询数据\n\n调用者没有传递任何参数给`findClusterList()`，所以该函数的执行路径是固定的。\n\n## SQL分析结果\n\n由于缺少`ClusterConfTable`常量的具体值和`ClusterConf`结构体的字段定义，需要进行推测：\n\n```json\n{\n  \"type\": \"LACK_INFORMATION\", \n  \"variants\": [{\n    \"scenario\": \"缺少ClusterConfTable常量值和ClusterConf结构体字段定义，根据结构体名称推测表名为cluster_conf，字段按常见配置表结构推测\",\n    \"sql\": \"SELECT id, cluster_id, cluster_name, config, created_at, updated_at FROM cluster_conf WHERE deleted_at IS NULL;\"\n  }]\n}\n```\n\n**分析说明**：\n\n1. **执行路径**：该函数只有一条固定的执行路径，不会因入参不同而生成不同结构的SQL\n2. **SQL操作**：执行一条SELECT查询语句\n3. **WHERE条件**：固定条件`deleted_at is null`用于过滤软删除的记录\n4. **表名推测**：根据`ClusterConf`结构体名称推测表名为`cluster_conf`\n5. **字段推测**：按照常见的集群配置表结构推测包含id、cluster_id、cluster_name、config等字段\n6. **调用上下文**：只在Redis缓存未命中时被调用，用于从数据库加载集群配置数据\n\n该函数生成的SQL结构是固定的，不存在多种变体情况。",
+    "verified_sql": "检查分析结果后，发现这是一个边界条件情况（LACK_INFORMATION），但原始分析的推测SQL是合理的。让我验证并按照标准格式返回：\n\n**边界条件验证**：\n- 确实缺少`ClusterConfTable`常量的具体值\n- 确实缺少`ClusterConf`结构体的字段定义\n- 推测的表名`cluster_conf`基于结构体名称`ClusterConf`是合理的\n- 推测的字段列表符合常见配置表结构\n- SQL语句结构正确，包含了代码中的WHERE条件\n\n**调用者上下文验证**：\n- 该函数确实只在Redis缓存未命中时被调用\n- 生成的SQL符合调用上下文\n\n```json\n[{\n  \"type\": \"LACK_INFORMATION\",\n  \"variants\": [{\n    \"scenario\": \"缺少ClusterConfTable常量值和ClusterConf结构体字段定义，根据结构体名称推测表名为cluster_conf，字段按常见配置表结构推测\",\n    \"sql\": \"SELECT id, cluster_id, cluster_name, config, created_at, updated_at FROM cluster_conf WHERE deleted_at IS NULL;\"\n  }]\n}]\n```",
+    "sql_types": [
+      "LACK_INFORMATION"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/cluster.go",
+        "code_start_line": 9,
+        "code_end_line": 9,
+        "code_key": "base",
+        "code_value": "dss/internal/base",
+        "code_label": null,
+        "code_type": 4,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 16,
+        "code_end_line": 18,
+        "code_key": "comment",
+        "code_value": "func comment(act, flow string) hints.Hints {\n\treturn hints.CommentBefore(act, fmt.Sprintf(Comment, flow))\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 10,
+        "code_end_line": 10,
+        "code_key": "ACT_SELECT",
+        "code_value": "const ACT_SELECT = \"SELECT\"",
+        "code_label": 21,
+        "code_type": 1,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/cluster.go",
+        "code_start_line": 18,
+        "code_end_line": 18,
+        "code_key": "ClusterConfTable",
+        "code_value": "const ClusterConfTable      = \"ivc_cluster_conf\"",
+        "code_label": 21,
+        "code_type": 1,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/cluster.go",
+        "code_start_line": 68,
+        "code_end_line": 68,
+        "code_key": "clusterInfo",
+        "code_value": "[]ClusterConf",
+        "code_label": null,
+        "code_type": 31,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/cluster.go",
+        "code_start_line": 23,
+        "code_end_line": 27,
+        "code_key": "ClusterConf",
+        "code_value": "type ClusterConf struct {\n\tID        string `json:\"ID\" gorm:\"column:id\"`\n\tClusterId string `json:\"ClusterId\" gorm:\"column:cluster_id\"`\n\t//Name      string `json:\"Name\" gorm:\"column:name\"`\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-dss.json"
+  },
+  {
+    "function_name": "findClusterList",
+    "orm_code": "func findClusterList() ([]ClusterConf, error) {\n\tvar clusterInfo []ClusterConf\n\terr := base.GetInstance().IvcDriver().Clauses(comment(ACT_SELECT, \"findClusterList\")).Table(ClusterConfTable).Where(\"deleted_at is null\").Find(&clusterInfo).Error\n\tif err != nil {\n\t\treturn clusterInfo, err\n\t}\n\treturn clusterInfo, nil\n}",
+    "caller": "func SyncClusterDataToCache(log *logger.IvcLog) error {\n\tresp, err := findClusterList()\n\tif err != nil {\n\t\tlog.ErrorV(fmt.Sprintf(\"[SyncClusterDataToCache] findClusterList read db err:%v\", err))\n\t\tif err == db.ErrRecordNotFound {\n\t\t\treturn utils.RecordNotFoundError\n\t\t}\n\t\treturn err\n\t}\n\tv, err := json.Marshal(resp)\n\tif err != nil {\n\t\tlog.ErrorV(fmt.Sprintf(\"[SyncClusterDataToCache] findClusterList Marshal err:%v\", err))\n\t\treturn err\n\t}\n\terr = base.GetInstance().Redis().Set(context.TODO(), fmt.Sprintf(ClusterConfStrKey), string(v), clusterExpiredTimeout).Err()\n\tif err != nil {\n\t\tlog.ErrorV(fmt.Sprintf(\"[SyncClusterDataToCache] write cache err:%v\", err))\n\t\treturn err\n\t}\n\treturn nil\n}",
+    "sql_statement_list": [
+      {
+        "type": "LACK_INFORMATION",
+        "variants": [
+          {
+            "scenario": "缺少ClusterConfTable常量定义，根据ClusterConf结构体推测表名为cluster_conf",
+            "sql": "SELECT * FROM cluster_conf WHERE deleted_at is null;"
+          }
+        ]
+      }
+    ],
+    "sql_statement": "基于对代码的分析，我来判断边界条件并进行SQL分析：\n\n**第一步：边界条件判断**\n- ✅ SQL生成能力检查：代码包含实际的数据库执行操作（Find方法）\n- ✅ 信息完整性检查：缺少表名映射信息，但可以根据常见规范推测\n\n**第二步：SQL分析**\n\n**表名确定**：\n- 代码中使用了 `Table(ClusterConfTable)`，其中 `ClusterConfTable` 是一个常量\n- 由于元数据中没有提供该常量的具体值，根据 `ClusterConf` 结构体名称推测表名为 `cluster_conf`\n\n**调用者上下文约束分析**：\n调用者 `SyncClusterDataToCache` 直接调用 `findClusterList()` 且无参数传递，执行路径单一且确定。\n\n**执行路径分析**：\n该函数执行路径固定，不依赖任何入参，总是执行相同的查询逻辑：\n1. 使用固定的WHERE条件查询未删除的集群配置记录\n2. 返回所有符合条件的记录\n\n**生成的SQL语句**：\n\n```json\n[\n  {\n    \"type\": \"LACK_INFORMATION\", \n    \"variants\": [\n      {\n        \"scenario\": \"缺少ClusterConfTable常量定义，根据ClusterConf结构体推测表名为cluster_conf\",\n        \"sql\": \"SELECT * FROM cluster_conf WHERE deleted_at is null;\"\n      }\n    ]\n  }\n]\n```\n\n**SQL语句详细说明**：\n1. **操作类型**：SELECT查询操作\n2. **目标表**：cluster_conf（根据ClusterConf结构体推测）\n3. **查询条件**：WHERE deleted_at is null（软删除过滤）\n4. **查询范围**：SELECT *（查询所有字段）\n5. **返回结果**：多行记录（[]ClusterConf切片）\n\n**关键特征**：\n- 这是一个无参数的查询函数，SQL结构固定不变\n- 使用软删除机制，只查询未删除的记录\n- 查询所有符合条件的集群配置记录\n- 包含GORM的注释功能用于SQL追踪",
+    "verified_sql": "检查完成。原始分析准确，SQL语句正确。以下是标准JSON格式的输出：\n\n```json\n[\n  {\n    \"type\": \"LACK_INFORMATION\",\n    \"variants\": [\n      {\n        \"scenario\": \"缺少ClusterConfTable常量定义，根据ClusterConf结构体推测表名为cluster_conf\",\n        \"sql\": \"SELECT * FROM cluster_conf WHERE deleted_at is null;\"\n      }\n    ]\n  }\n]\n```",
+    "sql_types": [
+      "LACK_INFORMATION"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/cluster.go",
+        "code_start_line": 9,
+        "code_end_line": 9,
+        "code_key": "base",
+        "code_value": "dss/internal/base",
+        "code_label": null,
+        "code_type": 4,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 16,
+        "code_end_line": 18,
+        "code_key": "comment",
+        "code_value": "func comment(act, flow string) hints.Hints {\n\treturn hints.CommentBefore(act, fmt.Sprintf(Comment, flow))\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 10,
+        "code_end_line": 10,
+        "code_key": "ACT_SELECT",
+        "code_value": "const ACT_SELECT = \"SELECT\"",
+        "code_label": 21,
+        "code_type": 1,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/cluster.go",
+        "code_start_line": 18,
+        "code_end_line": 18,
+        "code_key": "ClusterConfTable",
+        "code_value": "const ClusterConfTable      = \"ivc_cluster_conf\"",
+        "code_label": 21,
+        "code_type": 1,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/cluster.go",
+        "code_start_line": 68,
+        "code_end_line": 68,
+        "code_key": "clusterInfo",
+        "code_value": "[]ClusterConf",
+        "code_label": null,
+        "code_type": 31,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/cluster.go",
+        "code_start_line": 23,
+        "code_end_line": 27,
+        "code_key": "ClusterConf",
+        "code_value": "type ClusterConf struct {\n\tID        string `json:\"ID\" gorm:\"column:id\"`\n\tClusterId string `json:\"ClusterId\" gorm:\"column:cluster_id\"`\n\t//Name      string `json:\"Name\" gorm:\"column:name\"`\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-dss.json"
+  },
+  {
+    "function_name": "FindDeviceAmount",
+    "orm_code": "func FindDeviceAmount() ([]DailyDevice, error) {\n\t/*\n\t   select count(1) as total, count(IF(status=0,1,null)) as unregistered, count(IF(status=1,1,null)) as online,\n\t   count(IF(status=2,1,null)) as offline, count(IF(status=3,1,null)) as disable from ivc_device\n\t   where deleted_at is null and app_id = ?\n\t*/\n\tdevs := make([]DailyDevice, 0)\n\tsql := \"select app_id,count(*) as total from ivc_device where deleted_at is null group by app_id\"\n\terr := base.GetInstance().IvcDriver().Raw(rowComment(\"FindDeviceAmount\", sql)).Scan(&devs).Error\n\tif err != nil {\n\t\tif err == db.ErrRecordNotFound {\n\t\t\treturn devs, utils.RecordNotFoundError\n\t\t}\n\t\treturn devs, err\n\t}\n\n\treturn devs, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      "/* FindDeviceAmount */ select app_id,count(*) as total from ivc_device where deleted_at is null group by app_id;"
+    ],
+    "sql_types": [
+      "OTHER"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/dailyreport.go",
+        "code_start_line": 8,
+        "code_end_line": 8,
+        "code_key": "base",
+        "code_value": "dss/internal/base",
+        "code_label": null,
+        "code_type": 4,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 20,
+        "code_end_line": 23,
+        "code_key": "rowComment",
+        "code_value": "func rowComment(flow, sql string) string {\n\tCS := fmt.Sprintf(Comment, flow)\n\treturn fmt.Sprintf(\"/* %s */ %s\", CS, sql)\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/dailyreport.go",
+        "code_start_line": 80,
+        "code_end_line": 80,
+        "code_key": "sql",
+        "code_value": "\"select app_id,count(*) as total from ivc_device where deleted_at is null group by app_id\"",
+        "code_label": null,
+        "code_type": 35,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/dailyreport.go",
+        "code_start_line": 79,
+        "code_end_line": 79,
+        "code_key": "devs",
+        "code_value": "make([]DailyDevice, 0)",
+        "code_label": null,
+        "code_type": 35,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/dailyreport.go",
+        "code_start_line": 51,
+        "code_end_line": 54,
+        "code_key": "DailyDevice",
+        "code_value": "type DailyDevice struct {\n\tAppId int `json:\"app_id\" gorm:\"column:app_id\"`\n\tTotal int `json:\"total\" gorm:\"column:total\"`\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-dss.json"
+  },
+  {
+    "function_name": "FindChannelAmount",
+    "orm_code": "func FindChannelAmount() ([]DailyDevice, error) {\n\t/*\n\t      select count(1) as total, count(IF(c.state=0,1,null)) as offline, count(IF(c.state=1,1,null)) as online\n\t   from ivc_channel as c left join ivc_device as d on c.device_id=d.id\n\t   where d.deleted_at is null and c.deleted_at is null and d.app_id=?\n\t*/\n\tchs := make([]DailyDevice, 0)\n\tsql := \"select app_id,count(*) as total from ivc_channel as c inner join ivc_device as d on c.device_id=d.id \" +\n\t\t\"where d.deleted_at is null and c.deleted_at is null group by d.app_id\"\n\terr := base.GetInstance().IvcDriver().Raw(rowComment(\"FindChannelAmount\", sql)).Scan(&chs).Error\n\tif err != nil {\n\t\tif err == db.ErrRecordNotFound {\n\t\t\treturn chs, utils.RecordNotFoundError\n\t\t}\n\t\treturn chs, err\n\t}\n\n\treturn chs, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      "/* FindChannelAmount */ SELECT app_id, COUNT(*) AS total FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL GROUP BY d.app_id;"
+    ],
+    "sql_types": [
+      "OTHER"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/dailyreport.go",
+        "code_start_line": 8,
+        "code_end_line": 8,
+        "code_key": "base",
+        "code_value": "dss/internal/base",
+        "code_label": null,
+        "code_type": 4,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 20,
+        "code_end_line": 23,
+        "code_key": "rowComment",
+        "code_value": "func rowComment(flow, sql string) string {\n\tCS := fmt.Sprintf(Comment, flow)\n\treturn fmt.Sprintf(\"/* %s */ %s\", CS, sql)\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/dailyreport.go",
+        "code_start_line": 100,
+        "code_end_line": 100,
+        "code_key": "sql",
+        "code_value": "\"select app_id,count(*) as total from ivc_channel as c inner join ivc_device as d on c.device_id=d.id \" +\n\t\t\"where d.deleted_at is null and c.deleted_at is null group by d.app_id\"",
+        "code_label": null,
+        "code_type": 35,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/dailyreport.go",
+        "code_start_line": 99,
+        "code_end_line": 99,
+        "code_key": "chs",
+        "code_value": "make([]DailyDevice, 0)",
+        "code_label": null,
+        "code_type": 35,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/dailyreport.go",
+        "code_start_line": 51,
+        "code_end_line": 54,
+        "code_key": "DailyDevice",
+        "code_value": "type DailyDevice struct {\n\tAppId int `json:\"app_id\" gorm:\"column:app_id\"`\n\tTotal int `json:\"total\" gorm:\"column:total\"`\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-dss.json"
+  },
+  {
+    "function_name": "FindBillingDevice",
+    "orm_code": "func FindBillingDevice(date string) ([]PostpayBillInfo, error) {\n\t/*\n\t   SELECT date, app_id, field, amount FROM iss_postpay_bill\n\t   WHERE push_status = 'NeedPush' AND cycle = 'Day' AND date = '2023-11-19' and field = 'iss_gbdevice_activenumber'\n\t*/\n\tpbs := make([]PostpayBillInfo, 0)\n\tsql := \"SELECT date, app_id, field, amount FROM iss_postpay_bill \" +\n\t\t\"WHERE push_status = 'NeedPush' AND cycle = 'Day' AND date = ? and field in ('iss_gbdevice_activenumber','ivc_comprehensive_gbdevice_activenumber')\"\n\terr := base.GetInstance().BillingDriver().Raw(rowComment(\"FindBillingDevice\", sql), date).Scan(&pbs).Error\n\tif err != nil {\n\t\tif err == db.ErrRecordNotFound {\n\t\t\treturn pbs, utils.RecordNotFoundError\n\t\t}\n\t\treturn pbs, err\n\t}\n\n\treturn pbs, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      "SELECT date, app_id, field, amount FROM iss_postpay_bill WHERE push_status = 'NeedPush' AND cycle = 'Day' AND date = ? and field in ('iss_gbdevice_activenumber','ivc_comprehensive_gbdevice_activenumber');"
+    ],
+    "sql_types": [
+      "SELECT"
+    ],
+    "code_meta_data": [
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/dailyreport.go",
+        "code_start_line": 8,
+        "code_end_line": 8,
+        "code_key": "base",
+        "code_value": "dss/internal/base",
+        "code_label": null,
+        "code_type": 4,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/common.go",
+        "code_start_line": 20,
+        "code_end_line": 23,
+        "code_key": "rowComment",
+        "code_value": "func rowComment(flow, sql string) string {\n\tCS := fmt.Sprintf(Comment, flow)\n\treturn fmt.Sprintf(\"/* %s */ %s\", CS, sql)\n}",
+        "code_label": null,
+        "code_type": 2,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/dailyreport.go",
+        "code_start_line": 126,
+        "code_end_line": 126,
+        "code_key": "sql",
+        "code_value": "\"SELECT date, app_id, field, amount FROM iss_postpay_bill \" +\n\t\t\"WHERE push_status = 'NeedPush' AND cycle = 'Day' AND date = ? and field in ('iss_gbdevice_activenumber','ivc_comprehensive_gbdevice_activenumber')\"",
+        "code_label": null,
+        "code_type": 35,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/dailyreport.go",
+        "code_start_line": 125,
+        "code_end_line": 125,
+        "code_key": "pbs",
+        "code_value": "make([]PostpayBillInfo, 0)",
+        "code_label": null,
+        "code_type": 35,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      },
+      {
+        "code_file": "/Users/ymhuan/code/aid-db/temp/aid-main/aid/risk_sql/code/scripts/IVC__ivc-dss/internal/model/dailyreport.go",
+        "code_start_line": 113,
+        "code_end_line": 118,
+        "code_key": "PostpayBillInfo",
+        "code_value": "type PostpayBillInfo struct {\n\tAppId  int     `json:\"app_id\" gorm:\"column:app_id\"`\n\tDate   string  `json:\"date\" gorm:\"type:date;column:date\"`\n\tField  string  `json:\"field\" gorm:\"column:field\"`\n\tAmount float64 `json:\"amount\" gorm:\"column:amount\"`\n}",
+        "code_label": 3,
+        "code_type": 3,
+        "code_version": "23b6b613d72474ad9dcbd535d2ba6e827dfe7aba"
+      }
+    ],
+    "sql_pattern_cnt": 1,
+    "source_file": "/data/shawn/venus_api/orm2sql/ivc_temp/IVC__ivc-dss.json"
+  }
+]

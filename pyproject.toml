@@ -18,6 +18,16 @@ dependencies = [
     "pandas>=2.0.0",
     "pyarrow>=20.0.0",
     "fastparquet>=2024.11.0",
+    # Web Server Dependencies
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+    "jinja2",
+    # ML / Transformers Dependencies
+    "torch",
+    "transformers",
+    "accelerate",
+    "bitsandbytes",
 ]
 
 [build-system]

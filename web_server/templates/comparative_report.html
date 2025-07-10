@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>对比评估报告 - {{ timestamp }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.css" rel="stylesheet" />
+    <style>
+        body { background-color: #f8f9fa; }
+        .container-fluid { padding-top: 2rem; }
+        .summary-card { background-color: #e9ecef; border: none; }
+        .accordion-button:not(.collapsed) { background-color: #cfe2ff; }
+        .sql-code {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 0.875em;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            padding: 10px;
+        }
+        .fingerprint-badge { margin-bottom: 5px; }
+        .comparison-section { margin-top: 1.5rem; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <header class="text-center mb-4">
+            <h1 class="display-5">对比评估报告</h1>
+            <p class="lead text-muted">运行时间: {{ timestamp }}</p>
+            <a href="/" class="btn btn-secondary">返回仪表盘</a>
+        </header>
+
+        <!-- 摘要信息 -->
+        <div class="card summary-card mb-4">
+            <div class="card-body">
+                <h2 class="card-title text-center">评估摘要</h2>
+                <div class="row text-center mt-3">
+                    {% set totals = namespace(consistent=0, missing=0, superfluous=0) %}
+                    {% for result in report_data.results %}
+                        {% set totals.consistent = totals.consistent + result.comparison.consistent_count %}
+                        {% set totals.missing = totals.missing + result.comparison.missing_count %}
+                        {% set totals.superfluous = totals.superfluous + result.comparison.superfluous_count %}
+                    {% endfor %}
+                    <div class="col-md-3"><h5>总样本数</h5><p class="fs-4">{{ report_data.results|length }}</p></div>
+                    <div class="col-md-3"><h5>一致指纹</h5><p class="fs-4 text-success">{{ totals.consistent }}</p></div>
+                    <div class="col-md-3"><h5>缺失指纹</h5><p class="fs-4 text-warning">{{ totals.missing }}</p></div>
+                    <div class="col-md-3"><h5>多余指纹</h5><p class="fs-4 text-danger">{{ totals.superfluous }}</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 详细结果 -->
+        <div class="accordion" id="resultsAccordion">
+            {% for result in report_data.results %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading-{{ loop.index }}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ loop.index }}" aria-expanded="false" aria-controls="collapse-{{ loop.index }}">
+                            <strong>样本: {{ result.sample_id }}</strong>&nbsp;-&nbsp;
+                            <span class="badge bg-success me-2">一致: {{ result.comparison.consistent_count }}</span>
+                            <span class="badge bg-warning me-2">缺失: {{ result.comparison.missing_count }}</span>
+                            <span class="badge bg-danger">多余: {{ result.comparison.superfluous_count }}</span>
+                        </button>
+                    </h2>
+                    <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ loop.index }}" data-bs-parent="#resultsAccordion">
+                        <div class="accordion-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5>基准 SQL</h5>
+                                    <pre class="sql-code"><code class="language-json">{{ result.baseline_sql|tojson(indent=2) }}</code></pre>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5>模型生成 SQL</h5>
+                                    <pre class="sql-code"><code class="language-json">{{ result.model_sql|tojson(indent=2) }}</code></pre>
+                                </div>
+                            </div>
+                            <div class="comparison-section">
+                                <h5>指纹对比</h5>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <h6><span class="badge bg-success">一致</span></h6>
+                                        {% for fp in result.comparison.consistent_fingerprints %}
+                                            <span class="badge text-dark bg-light fingerprint-badge">{{ fp }}</span>
+                                        {% else %}
+                                            <p class="text-muted small">无</p>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6><span class="badge bg-warning">缺失</span></h6>
+                                        {% for fp in result.comparison.missing_fingerprints %}
+                                            <span class="badge text-dark bg-light fingerprint-badge">{{ fp }}</span>
+                                        {% else %}
+                                            <p class="text-muted small">无</p>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6><span class="badge bg-danger">多余</span></h6>
+                                        {% for fp in result.comparison.superfluous_fingerprints %}
+                                            <span class="badge text-dark bg-light fingerprint-badge">{{ fp }}</span>
+                                        {% else %}
+                                            <p class="text-muted small">无</p>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+</body>
+</html> 

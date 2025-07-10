@@ -1,0 +1,320 @@
+
+        <!DOCTYPE html>
+        <html lang="zh-CN">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>模型评估报告</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+                .container { max-width: 1200px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                .header { text-align: center; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 20px; margin-bottom: 30px; }
+                .section { margin-bottom: 30px; }
+                .section-title { color: #007bff; font-size: 1.5em; margin-bottom: 15px; border-left: 4px solid #007bff; padding-left: 10px; }
+                .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+                .metric-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745; }
+                .metric-value { font-size: 2em; font-weight: bold; color: #28a745; }
+                .metric-label { color: #666; font-size: 0.9em; }
+                .chart-container { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #007bff; color: white; }
+                .example-box { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #17a2b8; }
+                .code { background: #f4f4f4; padding: 10px; border-radius: 4px; font-family: monospace; margin: 10px 0; overflow-x: auto; }
+                .excellent { border-left-color: #28a745; }
+                .good { border-left-color: #ffc107; }
+                .poor { border-left-color: #fd7e14; }
+                .failed { border-left-color: #dc3545; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🤖 模型评估报告</h1>
+                    <p>生成时间: 2025-07-10 15:24:19</p>
+                    <p>模型路径: /home/wuyu/code2sql/saves/qwen3-14b-ft-20250709_171410</p>
+                </div>
+                
+                <div class="section">
+                    <h2 class="section-title">📊 总体统计</h2>
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-value">114</div>
+                            <div class="metric-label">总样本数</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">100.0%</div>
+                            <div class="metric-label">推理成功率</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">86.8%</div>
+                            <div class="metric-label">有效SQL生成率</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">10.5%</div>
+                            <div class="metric-label">指纹匹配率</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">195</div>
+                            <div class="metric-label">总生成SQL数</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">85.6%</div>
+                            <div class="metric-label">SQL有效性比率</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h2 class="section-title">🎯 SQL模式分析</h2>
+                    <div class="chart-container">
+                        <h3>SQL类型分布</h3>
+                        <table>
+                            <tr><th>SQL类型</th><th>数量</th><th>占比</th></tr>
+                            <tr><td>SELECT</td><td>116</td><td>59.5%</td></tr><tr><td>DELETE</td><td>18</td><td>9.2%</td></tr><tr><td>OTHER</td><td>13</td><td>6.7%</td></tr><tr><td>DDL</td><td>7</td><td>3.6%</td></tr><tr><td>INSERT</td><td>15</td><td>7.7%</td></tr><tr><td>UPDATE</td><td>26</td><td>13.3%</td></tr>
+                        </table>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>SQL复杂度分布</h3>
+                        <table>
+                            <tr><th>复杂度</th><th>数量</th><th>占比</th></tr>
+                            <tr><td>SIMPLE</td><td>117</td><td>60.0%</td></tr><tr><td>MEDIUM</td><td>74</td><td>37.9%</td></tr><tr><td>COMPLEX</td><td>4</td><td>2.1%</td></tr>
+                        </table>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>常见SQL模式 (Top 10)</h3>
+                        <table>
+                            <tr><th>模式</th><th>出现次数</th></tr>
+                            <tr><td>HAS_PARAMETERS</td><td>171</td></tr><tr><td>HAS_WHERE</td><td>159</td></tr><tr><td>HAS_LIMIT</td><td>39</td></tr><tr><td>HAS_ORDER_BY</td><td>7</td></tr><tr><td>HAS_JOIN</td><td>1</td></tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h2 class="section-title">🔍 指纹覆盖分析</h2>
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-value">195</div>
+                            <div class="metric-label">总指纹数</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">26</div>
+                            <div class="metric-label">匹配指纹数</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">13.3%</div>
+                            <div class="metric-label">覆盖率</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h2 class="section-title">⭐ 质量分析</h2>
+                    <div class="metric-grid">
+                        <div class="metric-card excellent">
+                            <div class="metric-value">12</div>
+                            <div class="metric-label">高质量样本</div>
+                        </div>
+                        <div class="metric-card good">
+                            <div class="metric-value">101</div>
+                            <div class="metric-label">中等质量样本</div>
+                        </div>
+                        <div class="metric-card poor">
+                            <div class="metric-value">1</div>
+                            <div class="metric-label">低质量样本</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">3.1</div>
+                            <div class="metric-label">平均质量分数</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h2 class="section-title">📝 代表性示例</h2>
+                    <h3>🌟 优秀示例</h3>
+                <div class="example-box excellent">
+                    <h4>示例 1: /Users/freedom/llms/singularity/internal/cbs_packing_srv/db/metadb/repo/impl/phy.go:20:28:ListRecordByState</h4>
+                    <p><strong>提示词片段:</strong> 请基于以下分析要求，直接输出GORM代码对应的SQL语句JSON格式结果：
+
+**首要判断：SQL生成有效性**
+在开始分析前，请判断给定的ORM代码是否真的会生成SQL语句：
+- 代码必须包含实际的数据库操作方法（Find、Create、Update、Delete、Count、First等）
+- 仅有查询构建方法（Where、Select、Join等）而没有执行方法的代码不会生成SQL
+- 如果...</p>
+                    <p><strong>模型响应:</strong></p>
+                    <div class="code">["SELECT * FROM dm_phydisk WHERE status = ?;"]</div>
+                    <p><strong>解析SQL数量:</strong> 1</p>
+                    <p><strong>有效SQL:</strong> 1 | <strong>匹配SQL:</strong> 1</p>
+                </div>
+                
+                <div class="example-box excellent">
+                    <h4>示例 2: /Users/freedom/llms/singularity/internal/rdisk_master/adapters/repositories/logical_disk.go:22:47:FindByAppIDAndUUID</h4>
+                    <p><strong>提示词片段:</strong> 请基于以下分析要求，直接输出GORM代码对应的SQL语句JSON格式结果：
+
+**首要判断：SQL生成有效性**
+在开始分析前，请判断给定的ORM代码是否真的会生成SQL语句：
+- 代码必须包含实际的数据库操作方法（Find、Create、Update、Delete、Count、First等）
+- 仅有查询构建方法（Where、Select、Join等）而没有执行方法的代码不会生成SQL
+- 如果...</p>
+                    <p><strong>模型响应:</strong></p>
+                    <div class="code">[{"type": "param_dependent", "variants": [{"scenario": "Main query with preloads", "sql": "SELECT * FROM dm_rdisk WHERE uuid = ? AND app_id = ? LIMIT 1;"}, {"scenario": "Preload query for Attachments", "sql": "SELECT * FROM dm_rdisk_attachment WHERE uuid = ?;"}, {"scenario": "Preload query for DmPhy...</div>
+                    <p><strong>解析SQL数量:</strong> 3</p>
+                    <p><strong>有效SQL:</strong> 3 | <strong>匹配SQL:</strong> 2</p>
+                </div>
+                
+                <div class="example-box excellent">
+                    <h4>示例 3: /Users/freedom/llms/singularity/internal/rdisk_master/adapters/repositories/logical_disk.go:49:74:FindByID</h4>
+                    <p><strong>提示词片段:</strong> 请基于以下分析要求，直接输出GORM代码对应的SQL语句JSON格式结果：
+
+**首要判断：SQL生成有效性**
+在开始分析前，请判断给定的ORM代码是否真的会生成SQL语句：
+- 代码必须包含实际的数据库操作方法（Find、Create、Update、Delete、Count、First等）
+- 仅有查询构建方法（Where、Select、Join等）而没有执行方法的代码不会生成SQL
+- 如果...</p>
+                    <p><strong>模型响应:</strong></p>
+                    <div class="code">[{"type": "param_dependent", "variants": [{"scenario": "Main query with preloads", "sql": "SELECT * FROM dm_rdisk WHERE uuid = ? LIMIT 1;"}]}, {"type": "param_dependent", "variants": [{"scenario": "Preload query for Attachments", "sql": "SELECT * FROM dm_rdisk_attachment WHERE uuid = ?;"}]}, {"type"...</div>
+                    <p><strong>解析SQL数量:</strong> 3</p>
+                    <p><strong>有效SQL:</strong> 3 | <strong>匹配SQL:</strong> 2</p>
+                </div>
+                <h3>👍 良好示例</h3>
+                <div class="example-box good">
+                    <h4>示例 1: /Users/freedom/llms/singularity/internal/cbs_packing_srv/infra/event_bus/bus.go:47:59:RollbackEvents</h4>
+                    <p><strong>提示词片段:</strong> 请基于以下分析要求，直接输出GORM代码对应的SQL语句JSON格式结果：
+
+**首要判断：SQL生成有效性**
+在开始分析前，请判断给定的ORM代码是否真的会生成SQL语句：
+- 代码必须包含实际的数据库操作方法（Find、Create、Update、Delete、Count、First等）
+- 仅有查询构建方法（Where、Select、Join等）而没有执行方法的代码不会生成SQL
+- 如果...</p>
+                    <p><strong>模型响应:</strong></p>
+                    <div class="code">[{"type": "param_dependent", "variants": [{"scenario": "event.GetState(ctx) == Executed时执行回滚操作", "sql": "SELECT * FROM events WHERE state = ?;"}]}]</div>
+                    <p><strong>解析SQL数量:</strong> 1</p>
+                    <p><strong>有效SQL:</strong> 1 | <strong>匹配SQL:</strong> 0</p>
+                </div>
+                
+                <div class="example-box good">
+                    <h4>示例 2: /Users/freedom/llms/singularity/internal/cbs_packing_srv/db/desdb/repos/impl/shm.go:17:28:ListRecordByStatus</h4>
+                    <p><strong>提示词片段:</strong> 请基于以下分析要求，直接输出GORM代码对应的SQL语句JSON格式结果：
+
+**首要判断：SQL生成有效性**
+在开始分析前，请判断给定的ORM代码是否真的会生成SQL语句：
+- 代码必须包含实际的数据库操作方法（Find、Create、Update、Delete、Count、First等）
+- 仅有查询构建方法（Where、Select、Join等）而没有执行方法的代码不会生成SQL
+- 如果...</p>
+                    <p><strong>模型响应:</strong></p>
+                    <div class="code">["SELECT * FROM shm WHERE status = ?;"]</div>
+                    <p><strong>解析SQL数量:</strong> 1</p>
+                    <p><strong>有效SQL:</strong> 1 | <strong>匹配SQL:</strong> 0</p>
+                </div>
+                
+                <div class="example-box good">
+                    <h4>示例 3: /Users/freedom/llms/singularity/internal/cbs_packing_srv/db/metadb/repo/impl/dmg.go:29:37:ListRecordByStatus</h4>
+                    <p><strong>提示词片段:</strong> 请基于以下分析要求，直接输出GORM代码对应的SQL语句JSON格式结果：
+
+**首要判断：SQL生成有效性**
+在开始分析前，请判断给定的ORM代码是否真的会生成SQL语句：
+- 代码必须包含实际的数据库操作方法（Find、Create、Update、Delete、Count、First等）
+- 仅有查询构建方法（Where、Select、Join等）而没有执行方法的代码不会生成SQL
+- 如果...</p>
+                    <p><strong>模型响应:</strong></p>
+                    <div class="code">["SELECT id, confKey, confValue, status, createTime, updateTime, creator, modifier FROM dm_drgroup_members WHERE status = ?;"]</div>
+                    <p><strong>解析SQL数量:</strong> 1</p>
+                    <p><strong>有效SQL:</strong> 1 | <strong>匹配SQL:</strong> 0</p>
+                </div>
+                <h3>⚠️ 较差示例</h3>
+                <div class="example-box poor">
+                    <h4>示例 1: /Users/freedom/llms/singularity/internal/cbs_packing_srv/domain/cache/expiremap.go:98:100:Remove</h4>
+                    <p><strong>提示词片段:</strong> 请基于以下分析要求，直接输出GORM代码对应的SQL语句JSON格式结果：
+
+**首要判断：SQL生成有效性**
+在开始分析前，请判断给定的ORM代码是否真的会生成SQL语句：
+- 代码必须包含实际的数据库操作方法（Find、Create、Update、Delete、Count、First等）
+- 仅有查询构建方法（Where、Select、Join等）而没有执行方法的代码不会生成SQL
+- 如果...</p>
+                    <p><strong>模型响应:</strong></p>
+                    <div class="code">["DELETE FROM expired_map WHERE key = ?;"]</div>
+                    <p><strong>解析SQL数量:</strong> 1</p>
+                    <p><strong>有效SQL:</strong> 0 | <strong>匹配SQL:</strong> 0</p>
+                </div>
+                
+                <div class="example-box poor">
+                    <h4>示例 2: /Users/freedom/llms/singularity/internal/cbs_packing_srv/domain/cache/managers/shm.go:51:54:Remove</h4>
+                    <p><strong>提示词片段:</strong> 请基于以下分析要求，直接输出GORM代码对应的SQL语句JSON格式结果：
+
+**首要判断：SQL生成有效性**
+在开始分析前，请判断给定的ORM代码是否真的会生成SQL语句：
+- 代码必须包含实际的数据库操作方法（Find、Create、Update、Delete、Count、First等）
+- 仅有查询构建方法（Where、Select、Join等）而没有执行方法的代码不会生成SQL
+- 如果...</p>
+                    <p><strong>模型响应:</strong></p>
+                    <div class="code">["DELETE FROM cache WHERE key = ?;"]</div>
+                    <p><strong>解析SQL数量:</strong> 1</p>
+                    <p><strong>有效SQL:</strong> 0 | <strong>匹配SQL:</strong> 0</p>
+                </div>
+                
+                <div class="example-box poor">
+                    <h4>示例 3: /Users/freedom/llms/singularity/pkg/dlock/mysql/dlock.go:644:674:Refresh</h4>
+                    <p><strong>提示词片段:</strong> 请基于以下分析要求，直接输出GORM代码对应的SQL语句JSON格式结果：
+
+**首要判断：SQL生成有效性**
+在开始分析前，请判断给定的ORM代码是否真的会生成SQL语句：
+- 代码必须包含实际的数据库操作方法（Find、Create、Update、Delete、Count、First等）
+- 仅有查询构建方法（Where、Select、Join等）而没有执行方法的代码不会生成SQL
+- 如果...</p>
+                    <p><strong>模型响应:</strong></p>
+                    <div class="code">[{"type": "param_dependent", "variants": [{"scenario": "正常执行路径（所有检查都通过）", "sql": "COMMIT;"}, {"scenario": "fetchExistingLocksByKeysAndTokens失败", "sql": "ROLLBACK;"}, {"scenario": "锁检查失败（checkStrSetEqual返回false）", "sql": "ROLLBACK;"}, {"scenario": "更新锁TTL失败", "sql": "ROLLBACK;"}]}]</div>
+                    <p><strong>解析SQL数量:</strong> 4</p>
+                    <p><strong>有效SQL:</strong> 0 | <strong>匹配SQL:</strong> 0</p>
+                </div>
+                
+                </div>
+                
+                <div class="section">
+                    <h2 class="section-title">🔧 配置信息</h2>
+                    <div class="code">
+                        {
+  "data_config": {
+    "dataset_dir": "model/evaluation/fingerprint_eval/temp",
+    "eval_data_path": "model/evaluation/fingerprint_eval/data/eval_data.json",
+    "fingerprint_cache_path": "model/evaluation/fingerprint_eval/data/cbs_528_final.pkl",
+    "max_samples": null
+  },
+  "debug_config": {
+    "save_intermediate_results": false,
+    "test_mode": false,
+    "test_samples": 10,
+    "validate_config": true,
+    "verbose_logging": true
+  },
+  "environment_config": {
+    "bf16": true,
+    "cuda_visible_devices": "0",
+    "llamafactory_path": "model/training/LLaMA-Factory",
+    "trust_remote_code": true
+  },
+  "inference_config": {
+    "batch_size": 1,
+    "cutoff_len": 2048,
+    "generate_config": {
+      "do_sample": false,
+      "max_new_tokens": 512,
+      "temperature": 0.1,
+      "top_p": 0.9
+    },
+    "per_device_eval_batch_size": 1,
+    "timeout": 3600
+  },
+  "metrics_config": {
+    "detailed_metrics": [
+      "sql_validity_rate",
+      "sql_match_rate",
+      "parse_error_...
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        

@@ -1199,43 +1199,120 @@ class WorkflowManager:
         logger.info(f"关键词提取完成 - 从 {len(self.current_data):,} 条记录中提取了 {len(self.extracted_data):,} 条匹配记录")
         return step_info
 
-    async def _extract_keyword_data_with_llm(self, step_name: str) -> Dict[str, Any]:
-        """
-        使用LLM进行关键词数据提取
-        
+    def _llm_review_fix_sync(self, orm_code: str, caller: str, action: str, target_sql: str) -> Dict[str, Any]:
+        """使用LLM对单条修复操作进行审核。
+
         Args:
-            step_name: 步骤名称
-            
+            orm_code: ORM 代码全文或片段
+            caller: 调用者名称
+            action: 'remove' or 'add'
+            target_sql: 目标 SQL 文本
+
         Returns:
-            提取结果信息
+            dict: {"accepted": bool, "replacement": str}
         """
-        # 导入特殊关键词配置
-        import sys
-        import os
-        sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-        
         try:
-            from config.data_clean.special_keyword_prompt import SPECIAL_KEYWORD_PROMPT, SPECIAL_KEYWORDS
-        except ImportError:
-            raise ImportError("无法导入特殊关键词配置，请确保 config/data_clean/special_keyword_prompt.py 文件存在")
-        
-        # 导入LLM客户端
-        from utils.llm_client import LLMClient
-        
-        # 确保current_data不为None
-        if not self.current_data:
-            raise ValueError("当前数据为空，无法进行提取")
-        
-        logger.info(f"开始使用LLM进行关键词数据提取，共需处理 {len(self.current_data):,} 条记录")
-        
-        # 初始化LLM客户端
-        llm_client = LLMClient(server_name="v3")
-        
-        # 创建异步会话
-        async with aiohttp.ClientSession() as session:
-            # 并发数控制
-            semaphore = asyncio.Semaphore(5)  # 控制并发数为5
+            # 延迟导入避免循环依赖
+            from utils.llm_client import LLMClient
+            from config.data_clean.fix_review_prompts import REMOVAL_REVIEW_PROMPT, ADDITION_REVIEW_PROMPT  # type: ignore
+            prompt_tpl = REMOVAL_REVIEW_PROMPT if action == 'remove' else ADDITION_REVIEW_PROMPT
+            prompt = prompt_tpl.format(orm_code=orm_code[:2000], caller=caller, target_sql=target_sql)
+            client = LLMClient("v3")
+            response = client.call_sync(prompt, max_tokens=300, temperature=0.0, max_retries=5)
+            import json, re
+            # 提取 JSON
+            match = re.search(r"\{[\s\S]*\}", response)
+            if match:
+                resp_json = json.loads(match.group(0))
+                accepted = bool(resp_json.get("accepted", True))
+                replacement = resp_json.get("replacement", "")
+                return {"accepted": accepted, "replacement": replacement}
+        except Exception:
+            pass  # 出错时默认接受
+        return {"accepted": True, "replacement": ""}
+
+    async def _extract_keyword_data_with_llm(self, step_name: str) -> Dict[str, Any]:
+        """使用LLM进行关键词提取"""
+        if self.current_data is None:
+            raise ValueError("请先加载数据")
+
+        def parse_llm_keyword_response(response_text: str) -> List[str]:
+            """
+            解析LLM的关键词响应，处理多种格式
             
+            Args:
+                response_text: LLM返回的原始文本
+                
+            Returns:
+                解析出的有效关键词列表
+            """
+            if not response_text:
+                return []
+            
+            response_lower = response_text.strip().lower()
+            
+            # 检查是否为否定回答
+            if response_lower == "no" or response_lower.endswith("no"):
+                return []
+            
+            # 延迟导入关键词列表
+            try:
+                from config.data_clean.special_keyword_prompt import SPECIAL_KEYWORDS
+            except ImportError:
+                # 如果导入失败，使用默认关键词列表
+                SPECIAL_KEYWORDS = [
+                    "Preload", "Transaction", "Scopes", "Locking", "Migration", 
+                    "CreateOrUpdate", "save", "ForeignKey", "References"
+                ]
+            
+            matched_keywords = []
+            
+            # 1. 尝试找到JSON数组格式 ["keyword1", "keyword2"]
+            import re
+            json_pattern = r'\["([^"]+)"(?:,\s*"([^"]+)")*\]'
+            json_matches = re.findall(r'\[([^\]]+)\]', response_text)
+            
+            for match in json_matches:
+                # 清理引号和分割
+                items = [item.strip().strip('"').strip("'") for item in match.split(',')]
+                for item in items:
+                    if item in SPECIAL_KEYWORDS:
+                        matched_keywords.append(item)
+            
+            # 2. 如果没找到JSON格式，尝试查找关键词本身
+            if not matched_keywords:
+                for keyword in SPECIAL_KEYWORDS:
+                    # 检查关键词是否在文本中出现（忽略大小写）
+                    if keyword.lower() in response_lower:
+                        matched_keywords.append(keyword)
+            
+            # 3. 额外处理：查找被双引号包围的关键词
+            quoted_keywords = re.findall(r'"([^"]+)"', response_text)
+            for quoted in quoted_keywords:
+                if quoted in SPECIAL_KEYWORDS and quoted not in matched_keywords:
+                    matched_keywords.append(quoted)
+            
+            # 去重并保持顺序
+            seen = set()
+            unique_keywords = []
+            for kw in matched_keywords:
+                if kw not in seen:
+                    seen.add(kw)
+                    unique_keywords.append(kw)
+            
+            return unique_keywords
+
+        # 设置并发控制
+        concurrency = 20  # 降低并发数以避免服务器过载
+        semaphore = asyncio.Semaphore(concurrency)
+
+        # 延迟导入避免循环依赖
+        from utils.llm_client import LLMClient
+        from config.data_clean.special_keyword_prompt import SPECIAL_KEYWORD_PROMPT, SPECIAL_KEYWORDS
+
+        llm_client = LLMClient("v3")
+
+        async with aiohttp.ClientSession() as session:
             async def process_single_record(record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 """处理单条记录"""
                 async with semaphore:
@@ -1248,51 +1325,33 @@ class WorkflowManager:
                             sql_statements=json.dumps(record.get('sql_statement_list', []), ensure_ascii=False, indent=2)
                         )
                         
-                                        # 调用LLM
-                response = await llm_client.call_async(
-                    session, 
-                    prompt, 
-                    max_tokens=200, 
-                    temperature=0.0,
-                    max_retries=5
-                )
+                        # 调用LLM
+                        response = await llm_client.call_async(
+                            session, 
+                            prompt, 
+                            max_tokens=200, 
+                            temperature=0.0,
+                            max_retries=5
+                        )
                         
                         if response:
                             result_text = response.strip()
                             logger.debug(f"LLM响应 for {record.get('function_name', 'unknown')}: {result_text}")
                             
-                            # 解析LLM响应
-                            if result_text.lower() == "no":
-                                # 不匹配特殊关键词
-                                return None
-                            else:
-                                # 解析返回的关键词列表
-                                try:
-                                    # 尝试解析为JSON列表
-                                    if result_text.startswith('[') and result_text.endswith(']'):
-                                        matched_keywords = json.loads(result_text)
-                                    else:
-                                        # 如果不是JSON格式，尝试按行或逗号分割
-                                        matched_keywords = [kw.strip() for kw in result_text.replace('\n', ',').split(',') if kw.strip()]
-                                    
-                                    # 验证关键词是否在预定义列表中
-                                    valid_keywords = [kw for kw in matched_keywords if kw in SPECIAL_KEYWORDS]
-                                    
-                                    if valid_keywords:
+                            # 使用新的解析函数
+                            matched_keywords = parse_llm_keyword_response(result_text)
+                            
+                            if matched_keywords:
                                         # 添加匹配信息到记录
                                         matched_record = record.copy()
                                         matched_record['llm_keyword_analysis'] = {
-                                            'matched_keywords': valid_keywords,
+                                    'matched_keywords': matched_keywords,
                                             'llm_response': result_text,
                                             'analysis_timestamp': datetime.now().isoformat()
                                         }
                                         return matched_record
                                     else:
-                                        logger.warning(f"LLM返回的关键词不在预定义列表中: {matched_keywords}")
-                                        return None
-                                        
-                                except json.JSONDecodeError:
-                                    logger.warning(f"无法解析LLM响应为JSON: {result_text}")
+                                # 不匹配特殊关键词或解析失败
                                     return None
                         else:
                             logger.error(f"LLM调用失败 for {record.get('function_name', 'unknown')}: 无响应")
@@ -1547,64 +1606,47 @@ class WorkflowManager:
         
         logger.info(f"最终数据已导出: {export_path}")
         return str(export_path)
-    
+
+        return str(export_path)    
+        
     def print_workflow_summary(self):
-        """打印工作流摘要"""
-        print("\n" + "=" * 60)
-        print("🔄 数据处理工作流摘要")
-        print("=" * 60)
+        """打印工作流摘要（美化输出）"""
+        print(f"\n{'='*80}")
+        print(f"📋 工作流执行摘要")
+        print(f"{'='*80}")
+        print(f"🆔 工作流ID: workflow_{self.workflow_timestamp}")
+        print(f"📁 输出目录: {self.workflow_dir}")
+        print(f"⏱️  总步骤数: {len(self.workflow_steps)}")
+        print(f"📊 最终数据量: {len(self.current_data):,} 条记录" if self.current_data else "📊 最终数据量: 0 条记录")
         
-        print(f"📁 工作流目录: {self.workflow_dir}")
-        print(f"⏰ 工作流ID: workflow_{self.workflow_timestamp}")
-        print(f"📊 总步骤数: {len(self.workflow_steps)}")
-        print(f"📋 最终数据量: {len(self.current_data) if self.current_data else 0} 条记录")
-        print(f"🎯 提取数据量: {len(self.extracted_data) if self.extracted_data else 0} 条记录")
+        if self.extracted_data:
+            print(f"🎯 提取数据量: {len(self.extracted_data):,} 条记录")
         
-        print(f"\n🔍 处理步骤详情:")
+        print(f"\n📝 执行步骤:")
         for i, step in enumerate(self.workflow_steps, 1):
-            print(f"  {i}. {step['step_name']} ({step['step_type']})")
+            print(f"\n  {i}. {step['step_name']} ({step['step_type']})")
+            print(f"     ⏰ 时间: {step['timestamp']}")
             
             if step['step_type'] == 'data_loading':
-                print(f"     📥 加载记录: {step['total_records_loaded']:,}")
+                print(f"     📊 加载记录: {step['total_records_loaded']:,}")
                 print(f"     💾 数据大小: {step['data_size_mb']:.2f} MB")
                 
             elif step['step_type'] == 'sql_cleaning':
                 print(f"     📊 输入记录: {step['input_records']:,}")
                 print(f"     📊 输出记录: {step['output_records']:,}")
-                print(f"     🗑️ 移除无效SQL: {step['invalid_sql_removed']:,}")
-                print(f"     ✏️ 修改记录: {step['records_modified']:,}")
-                print(f"     ✅ 保留有效SQL: {step['valid_sql_retained']:,}")
-                if 'empty_sql_lists_found' in step:
-                    print(f"     📋 原始空列表: {step['empty_sql_lists_found']:,}")
-                if 'lists_emptied_after_cleaning' in step:
-                    print(f"     🧹 清洗后空列表: {step['lists_emptied_after_cleaning']:,}")
-                
-                # 显示ORM分析信息
-                if step.get('orm_analysis_available', False):
-                    print(f"     🔍 ORM指纹分析:")
-                    print(f"       🏷️ 分析ORM代码数: {step.get('total_orm_codes', 0):,}")
-                    print(f"       🔄 有冗余候选项的ORM: {step.get('orm_with_redundant_candidates', 0):,}")
-                    print(f"       ❓ 有缺漏候选项的ORM: {step.get('orm_with_missing_candidates', 0):,}")
-                    print(f"       ➕ 有新增指纹候选项的ORM: {step.get('orm_with_new_fp_candidates', 0):,}")
-                    print(f"       📊 总SQL记录数: {step.get('total_sql_records', 0):,}")
-                else:
-                    print(f"     🔍 ORM指纹分析: 未执行")
+                print(f"     🗑️  无效SQL删除: {step['invalid_sql_removed']:,}")
+                print(f"     ✏️  记录修改: {step['records_modified']:,}")
+                print(f"     📈 修改率: {step['modification_rate']:.2f}%")
                 
             elif step['step_type'] == 'sql_completeness_check':
-                print(f"     📊 输入记录: {step['input_records']:,}")
-                print(f"     🏷️ 标记缺少信息: {step['lack_info_records']:,}")
+                print(f"     📊 检查记录: {step['input_records']:,}")
                 print(f"     ✅ 完整记录: {step['complete_records']:,}")
-                print(f"     ❌ 处理错误: {step['error_records']:,}")
-                print(f"     📈 缺少信息率: {step['lack_info_rate']:.2f}%")
-                print(f"     🔄 并发请求数: {step['concurrent_requests']}")
+                print(f"     ❌ 不完整记录: {step['incomplete_records']:,}")
+                print(f"     📈 完整率: {step['completeness_rate']:.2f}%")
                 
             elif step['step_type'] == 'sql_correctness_check':
-                print(f"     📊 输入记录: {step['records_to_check']:,} (从 {step['input_records']:,} 中筛选)")
-                overridden_count = step.get('overridden_as_correct', 0)
-                if overridden_count > 0:
-                    print(f"     ✅ 正确记录: {step['correct_records']:,} (其中 {overridden_count:,} 条为关键词覆盖)")
-                else:
-                    print(f"     ✅ 正确记录: {step['correct_records']:,}")
+                print(f"     📊 检查记录: {step['input_records']:,}")
+                print(f"     ✅ 正确记录: {step['correct_records']:,}")
                 print(f"     ❌ 错误记录: {step['incorrect_records']:,}")
                 print(f"     🔥 处理异常: {step['error_records']:,}")
                 print(f"     📈 错误率: {step['incorrect_rate']:.2f}%")
@@ -1630,39 +1672,269 @@ class WorkflowManager:
             elif 'output_file' in step and step['output_file']:
                 print(f"   📄 {step['step_name']}: {step['output_file']}")
 
-    # ------------------------------------------------------------------
-    # 新增：LLM 修复审核工具函数
-    def _llm_review_fix_sync(self, orm_code: str, caller: str, action: str, target_sql: str) -> Dict[str, Any]:
-        """使用LLM对单条修复操作进行审核。
-
+    def load_from_existing_workflow(self, workflow_dir: str) -> bool:
+        """
+        从已有的工作流目录加载状态
+        
         Args:
-            orm_code: ORM 代码全文或片段
-            caller: 调用者名称
-            action: 'remove' or 'add'
-            target_sql: 目标 SQL 文本
-
+            workflow_dir: 工作流目录路径
+            
         Returns:
-            dict: {"accepted": bool, "replacement": str}
+            是否成功加载
+        """
+        workflow_path = Path(workflow_dir)
+        if not workflow_path.exists():
+            logger.error(f"工作流目录不存在: {workflow_dir}")
+            return False
+        
+        # 从目录名推断工作流时间戳
+        workflow_dir_name = workflow_path.name
+        if workflow_dir_name.startswith('workflow_'):
+            self.workflow_timestamp = workflow_dir_name.replace('workflow_', '')
+        else:
+            self.workflow_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # 设置工作流目录
+        self.workflow_dir = workflow_path
+        
+        # 尝试加载工作流摘要（如果存在）
+        summary_file = workflow_path / "workflow_summary.json"
+        if summary_file.exists():
+            try:
+                with open(summary_file, 'r', encoding='utf-8') as f:
+                    summary = json.load(f)
+                self.workflow_steps = summary.get('steps', [])
+                logger.info("📋 成功加载工作流摘要文件")
+            except Exception as e:
+                logger.warning(f"加载工作流摘要失败，将使用空步骤列表: {e}")
+                self.workflow_steps = []
+        else:
+            logger.info("📋 工作流摘要文件不存在，将使用空步骤列表")
+            self.workflow_steps = []
+        
+        # 查找最新的数据文件并加载
+        data_loaded = self._load_latest_data()
+        
+        if data_loaded:
+            logger.info(f"✅ 成功从工作流目录加载状态: {workflow_dir}")
+            data_count = len(self.current_data) if self.current_data else 0
+            logger.info(f"📊 当前数据量: {data_count:,} 条记录")
+            logger.info(f"📝 已完成步骤: {len(self.workflow_steps)}")
+            return True
+        else:
+            logger.error("❌ 无法加载数据文件")
+            return False
+    
+    def _load_latest_data(self) -> bool:
+        """
+        加载最新的数据文件
+        
+        Returns:
+            是否成功加载数据
+        """
+        logger.info(f"🔍 开始在目录 {self.workflow_dir} 中查找数据文件")
+        
+        # 按优先级查找数据文件，明确指定数据文件名
+        data_file_candidates = [
+            # 最高优先级：remove_no_sql_records步骤的输出
+            "remove_no_sql_records/*_step.json",
+            "remove_no_sql_records/remove_no_sql_records_step.json",
+            
+            # 其次：清洗步骤的输出
+            "cleaning_steps/*/cleaned_records.json",
+            "cleaning_steps/*/cleaned_records_with_redundant_marks.json",
+            
+            # 关键词提取的数据文件
+            "keyword_extraction*/llm_keyword_matched_records.json",
+            "keyword_extraction*/keyword_matched_records.json",
+            
+            # 合并数据
+            "merged_data/*.json",
+            
+            # 最终数据
+            "final_processed_dataset.json"
+        ]
+        
+        # 排除的统计文件和日志文件
+        exclude_patterns = [
+            "*statistics*",
+            "*log*", 
+            "*summary*",
+            "*unmatched*"
+        ]
+        
+        for pattern in data_file_candidates:
+            logger.debug(f"🔍 尝试模式: {pattern}")
+            data_files = list(self.workflow_dir.glob(pattern))
+            
+            # 过滤掉统计文件
+            filtered_files = []
+            for file in data_files:
+                exclude = False
+                for exclude_pattern in exclude_patterns:
+                    if file.match(exclude_pattern):
+                        exclude = True
+                        break
+                if not exclude:
+                    filtered_files.append(file)
+            
+            logger.debug(f"🔍 找到 {len(filtered_files)} 个数据文件: {[str(f) for f in filtered_files]}")
+            
+            if filtered_files:
+                # 选择最新的文件
+                latest_file = max(filtered_files, key=lambda f: f.stat().st_mtime)
+                logger.info(f"📁 尝试加载数据文件: {latest_file}")
+                
+                if self._try_load_file(latest_file):
+                    return True
+        
+        # 如果上面的特定模式都没找到，尝试所有JSON文件
+        logger.info("🔍 尝试加载所有JSON文件...")
+        all_json_files = list(self.workflow_dir.rglob("*.json"))
+        
+        # 过滤掉统计文件和日志文件
+        data_files = []
+        for file in all_json_files:
+            exclude = False
+            for exclude_pattern in exclude_patterns:
+                if file.match(exclude_pattern):
+                    exclude = True
+                    break
+            if not exclude:
+                data_files.append(file)
+        
+        logger.info(f"🔍 找到 {len(data_files)} 个候选数据文件")
+        
+        # 按文件大小排序，优先尝试大文件（通常是数据文件）
+        data_files.sort(key=lambda f: f.stat().st_size, reverse=True)
+        
+        for file in data_files:
+            logger.info(f"📁 尝试加载数据文件: {file} (大小: {file.stat().st_size/1024/1024:.1f} MB)")
+            if self._try_load_file(file):
+                return True
+        
+        logger.error("❌ 未找到可用的数据文件")
+        return False
+    
+    def _try_load_file(self, file_path: Path) -> bool:
+        """
+        尝试加载单个文件
+        
+        Args:
+            file_path: 文件路径
+            
+        Returns:
+            是否成功加载
         """
         try:
-            # 延迟导入避免循环依赖
-            from utils.llm_client import LLMClient
-            from config.data_clean.fix_review_prompts import REMOVAL_REVIEW_PROMPT, ADDITION_REVIEW_PROMPT  # type: ignore
-            prompt_tpl = REMOVAL_REVIEW_PROMPT if action == 'remove' else ADDITION_REVIEW_PROMPT
-            prompt = prompt_tpl.format(orm_code=orm_code[:2000], caller=caller, target_sql=target_sql)
-            client = LLMClient("v3")
-            response = client.call_sync(prompt, max_tokens=300, temperature=0.0, max_retries=5)
-            import json, re
-            # 提取 JSON
-            match = re.search(r"\{[\s\S]*\}", response)
-            if match:
-                resp_json = json.loads(match.group(0))
-                accepted = bool(resp_json.get("accepted", True))
-                replacement = resp_json.get("replacement", "")
-                return {"accepted": accepted, "replacement": replacement}
-        except Exception:
-            pass  # 出错时默认接受
-        return {"accepted": True, "replacement": ""}
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # 根据文件内容确定数据类型
+            if isinstance(data, list) and len(data) > 0:
+                # 检查是否是记录列表
+                if isinstance(data[0], dict) and 'function_name' in data[0]:
+                    self.current_data = data
+                    logger.info(f"✅ 成功加载列表格式数据，包含 {len(data)} 条记录")
+                    return True
+                else:
+                    logger.debug(f"❌ 列表格式但不是记录数据: {file_path}")
+                    
+            elif isinstance(data, dict):
+                # 尝试多个可能的数据字段
+                data_keys = ['records', 'data', 'items', 'results']
+                for key in data_keys:
+                    if key in data and isinstance(data[key], list) and len(data[key]) > 0:
+                        if isinstance(data[key][0], dict) and 'function_name' in data[key][0]:
+                            self.current_data = data[key]
+                            logger.info(f"✅ 成功加载字典格式数据（字段: {key}），包含 {len(data[key])} 条记录")
+                            return True
+                
+                logger.debug(f"❌ 字典格式但没有找到有效的数据字段: {file_path}")
+            else:
+                logger.debug(f"❌ 数据格式不符合预期: {file_path}")
+                
+        except Exception as e:
+            logger.warning(f"❌ 加载文件失败 {file_path}: {e}")
+            
+        return False
+    
+    def resume_from_step(self, step_name: str, **kwargs) -> Dict[str, Any]:
+        """
+        从指定步骤开始继续执行工作流
+        
+        Args:
+            step_name: 要开始执行的步骤名称
+            **kwargs: 步骤执行所需的额外参数
+            
+        Returns:
+            执行结果
+        """
+        logger.info(f"🔄 从步骤 '{step_name}' 开始继续执行工作流")
+        
+        # 检查步骤是否已经执行过
+        completed_steps = [step['step_name'] for step in self.workflow_steps]
+        if step_name in completed_steps:
+            logger.warning(f"⚠️ 步骤 '{step_name}' 已经执行过，将重新执行")
+        
+        # 步骤映射和执行
+        step_mapping = {
+            'remove_no_sql_records': self._execute_remove_no_sql_records,
+            'redundant_sql_validation': self._execute_redundant_sql_validation,
+            'sql_cleaning': self._execute_sql_cleaning,
+            'keyword_extraction': self._execute_keyword_extraction,
+            'export_final_data': self._execute_export_final_data
+        }
+        
+        if step_name not in step_mapping:
+            available_steps = list(step_mapping.keys())
+            raise ValueError(f"不支持的步骤名称: {step_name}。支持的步骤: {available_steps}")
+        
+        try:
+            result = step_mapping[step_name](**kwargs)
+            logger.info(f"✅ 步骤 '{step_name}' 执行完成")
+            return result
+        except Exception as e:
+            logger.error(f"❌ 步骤 '{step_name}' 执行失败: {e}")
+            raise
+    
+    def _execute_remove_no_sql_records(self, reanalyze_no_sql: bool = True, **kwargs) -> Dict[str, Any]:
+        """执行删除NO SQL记录步骤"""
+        return asyncio.run(self.remove_no_sql_records(
+            step_name="remove_no_sql_records_step", 
+            reanalyze_no_sql=reanalyze_no_sql
+        ))
+    
+    def _execute_redundant_sql_validation(self, apply_fix: bool = True, **kwargs) -> Dict[str, Any]:
+        """执行冗余SQL验证步骤"""
+        return asyncio.run(self.run_redundant_sql_validation(
+            apply_fix=apply_fix,
+            step_name="redundant_sql_validation_with_fix"
+        ))
+    
+    def _execute_sql_cleaning(self, step_name: str = "sql_cleaning_resume", **kwargs) -> Dict[str, Any]:
+        """执行SQL清洗步骤"""
+        return self.run_sql_cleaning(step_name)
+    
+    def _execute_keyword_extraction(self, keywords: Optional[List[str]] = None, use_llm: bool = True, **kwargs) -> Dict[str, Any]:
+        """执行关键词提取步骤"""
+        return asyncio.run(self.extract_keyword_data(
+            keywords=keywords, 
+            step_name="keyword_extraction_resume", 
+            use_llm=use_llm
+        ))
+    
+    def _execute_export_final_data(self, output_file: str = "final_processed_dataset.json", **kwargs) -> Dict[str, Any]:
+        """执行导出最终数据步骤"""
+        final_data_path = self.export_final_data(output_file)
+        summary_path = self.save_workflow_summary()
+        self.print_workflow_summary()
+        
+        return {
+            'final_data_path': final_data_path,
+            'summary_path': summary_path,
+            'workflow_directory': str(self.workflow_dir)
+        }
 
     async def remove_no_sql_records(self, step_name: str = "remove_no_sql_records_step", 
                              reanalyze_no_sql: bool = False,
@@ -1731,7 +2003,7 @@ class WorkflowManager:
         
         # 如果需要重新分析且有validator，则并发处理
         if reanalyze_no_sql and validator and no_sql_records:
-            logger.info(f"开始并发重新分析 {len(no_sql_records):,} 条 '<NO SQL GENERATE>' 记录，并发数: 100")
+            logger.info(f"开始并发重新分析 {len(no_sql_records):,} 条 '<NO SQL GENERATE>' 记录，并发数: 20")
             
             # 并发重新分析的函数
             async def reanalyze_single_record(session: aiohttp.ClientSession, record: Dict[str, Any]) -> Dict[str, Any]:
@@ -1882,7 +2154,7 @@ class WorkflowManager:
                 'reanalyzed_total': len(reanalyzed_success) + len(reanalyzed_failed),
                 'reanalysis_success_rate': len(reanalyzed_success) / (len(reanalyzed_success) + len(reanalyzed_failed)) * 100 if (len(reanalyzed_success) + len(reanalyzed_failed)) > 0 else 0.0,
                 'validator_config': validator_config_path,
-                'concurrency': 100,
+                'concurrency': concurrency,
                 'concurrent_processing_enabled': True
             })
         
@@ -1893,6 +2165,7 @@ class WorkflowManager:
         else:
             logger.info(f"删除完成 - 删除了 {len(removed_records):,} 条记录，保留了 {len(filtered_records):,} 条记录")
         return step_info
+
 
 
 def run_complete_workflow_from_raw_data(data_dir: str, keywords: Optional[List[str]] = None, base_output_dir: str = "workflow_output") -> Dict[str, Any]:
@@ -1991,11 +2264,11 @@ def run_keyword_first_workflow_from_raw_data(data_dir: str, keywords: Optional[L
         load_result = workflow.load_raw_dataset(data_dir)
 
         # 步骤 2: 提取关键词数据（默认 GORM 关键词）
-        extraction_result = workflow.extract_keyword_data(keywords, "keyword_extraction_step1", use_llm=True)
+        extraction_result = asyncio.run(workflow.extract_keyword_data(keywords, "keyword_extraction_step1", use_llm=True))
 
         # 步骤 2.1: 将已提取记录从当前数据集中剔除
         current_data_list = workflow.current_data if workflow.current_data is not None else []
-        extracted_names = {rec["function_name"] for rec in (workflow.extracted_data or [])}  # type: ignore[index]
+        extracted_names = {rec["function_name"] for rec in (workflow.extracted_data or [])}
         filtered_data = [rec for rec in current_data_list if rec.get("function_name") not in extracted_names]
         workflow.current_data = filtered_data
         removed_count = len(current_data_list) - len(filtered_data)
@@ -2092,4 +2365,4 @@ def run_complete_sql_cleaning_workflow(extracted_data_path: str, base_output_dir
         
     except Exception as e:
         logger.error(f"工作流执行失败: {e}")
-        raise 
+        raise

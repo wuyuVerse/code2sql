@@ -1,0 +1,49 @@
+# comparative_evaluation_config.yaml
+# 对比评估系统的配置文件
+
+# 1. 模型配置
+model_config:
+  # 需要被评估的模型的路径
+  model_path: "saves/qwen3-14b-ft-20250709_171410"
+  # 使用的模型加载类型 (deepspeed, bitsandbytes, hf)
+  load_type: "hf"
+  # 使用的设备 (cuda, cpu)
+  device: "cuda"
+
+# 2. 数据配置
+data_config:
+  # 基准评估集文件路径
+  baseline_data_path: "model/evaluation/comparative_eval/data/baseline_evaluation_set.json"
+
+# 3. 输出配置
+output_config:
+  # 结果输出的根目录
+  output_dir: "model/evaluation/comparative_eval/results"
+
+# 4. 调试与采样配置
+debug_config:
+  # 是否开启测试模式 (只处理少量样本)
+  test_mode: false
+  # 测试模式下处理的样本数量
+  test_samples: 5
+
+# 5. Prompt模板配置
+prompt_config:
+  # 用于构建Prompt的模板
+  # 可用变量: {function_name}, {orm_code}, {caller}, {callee}, {code_meta_data_str}
+  template: |
+    ### Instruction:
+    You are an expert in ORM. Your task is to analyze the provided ORM code and its context, then generate the corresponding SQL statements.
+
+    ### Context:
+    - Function Name: {function_name}
+    - ORM Code:
+    ```go
+    {orm_code}
+    ```
+    - Caller Context: {caller}
+    - Callee Context: {callee}
+    - Code Metadata: {code_meta_data_str}
+
+    ### Response:
+    Please provide the SQL statements in a structured JSON format. 
