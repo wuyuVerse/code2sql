@@ -65,66 +65,62 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-# 生成带时间戳的结果目录
+DATASETS=(cbs cos)
+
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-RESULT_DIR="model/evaluation/fingerprint_eval/results/${TIMESTAMP}_evaluation"
-mkdir -p "$RESULT_DIR"
 
-echo "📁 结果将保存到: $RESULT_DIR"
+for DS in "${DATASETS[@]}"; do
+    echo "\n🚀 开始处理数据集: $DS"
+    RESULT_DIR="model/evaluation/fingerprint_eval/results/${TIMESTAMP}_${DS}_evaluation"
+    mkdir -p "$RESULT_DIR"
+    echo "📁 结果将保存到: $RESULT_DIR"
 
-# 更新配置文件中的模型路径和输出目录
-echo "🔧 更新配置文件..."
-python3 -c "
-import yaml
-with open('$CONFIG_FILE', 'r', encoding='utf-8') as f:
-    config = yaml.safe_load(f)
-config['model_config']['model_path'] = '$MODEL_PATH'
-config['output_config']['output_dir'] = '$RESULT_DIR'
-if '$EVAL_MODE' == 'test':
-    config['debug_config']['test_mode'] = True
-    config['debug_config']['test_samples'] = 10
-else:
-    config['debug_config']['test_mode'] = False
-with open('$CONFIG_FILE', 'w', encoding='utf-8') as f:
-    yaml.dump(config, f, allow_unicode=True, indent=2)
-print('✅ 配置文件已更新')
-"
-
-# 运行评估
-echo "🔄 开始运行评估..."
-python3 model/evaluation/fingerprint_eval/scripts/run_evaluation.py --config "$CONFIG_FILE"
-
-# 检查评估结果并生成报告
-if [ -d "$RESULT_DIR" ]; then
-    LATEST_RESULT=$(ls -t "$RESULT_DIR"/evaluation_results_*.json 2>/dev/null | head -1)
-    if [ -f "$LATEST_RESULT" ]; then
-        echo "📊 生成评估报告..."
-        mkdir -p "$RESULT_DIR/reports"
-        python3 model/evaluation/fingerprint_eval/scripts/evaluation_report_generator.py \
-            --results "$LATEST_RESULT" \
-            --output_dir "$RESULT_DIR/reports"
-        
-        echo "📈 计算指纹覆盖率..."
-        FINGERPRINT_CACHE=$(python3 -c "import yaml; print(yaml.safe_load(open('$CONFIG_FILE'))['data_config']['fingerprint_cache_path'])")
-        python3 model/evaluation/fingerprint_eval/scripts/calculate_coverage.py \
-            --results_file "$LATEST_RESULT" \
-            --fingerprint_cache "$FINGERPRINT_CACHE"
-
-        echo "✅ 评估完成！"
-        echo "📁 结果目录: $RESULT_DIR"
-        echo "📄 评估结果: $LATEST_RESULT"
-        echo "📋 报告目录: $RESULT_DIR/reports"
-        
-        # 显示报告文件
-        if [ -d "$RESULT_DIR/reports" ]; then
-            echo "📊 生成的报告文件:"
-            ls -la "$RESULT_DIR/reports"/*.html 2>/dev/null || echo "  (未生成HTML报告)"
-        fi
+    # 计算数据与缓存路径
+    if [ "$DS" == "cbs" ]; then
+        EVAL_DATA_PATH="model/evaluation/fingerprint_eval/data/cbs.json"
+        FP_DB_PATH="model/evaluation/fingerprint_eval/data/cbs_528_final.pkl"
     else
-        echo "⚠️ 未找到评估结果文件"
+        EVAL_DATA_PATH="model/evaluation/fingerprint_eval/data/cos.json"
+        FP_DB_PATH="model/evaluation/fingerprint_eval/data/cos_526_final.pkl"
     fi
-else
-    echo "⚠️ 评估结果目录不存在"
-fi
 
-echo "🎉 指纹评估流程完成！" 
+    echo "🔧 更新配置文件..."
+    python3 - <<PY
+import yaml, sys
+cfg_path = '$CONFIG_FILE'
+with open(cfg_path, 'r', encoding='utf-8') as f:
+    cfg = yaml.safe_load(f)
+cfg['model_config']['model_path'] = '$MODEL_PATH'
+cfg['output_config']['output_dir'] = '$RESULT_DIR'
+cfg['data_config']['eval_data_path'] = '$EVAL_DATA_PATH'
+cfg['data_config']['fingerprint_db_path'] = '$FP_DB_PATH' # 使用新的变量
+if '$EVAL_MODE' == 'test':
+    cfg['debug_config']['test_mode'] = True
+    cfg['debug_config']['test_samples'] = 10
+else:
+    cfg['debug_config']['test_mode'] = False
+with open(cfg_path, 'w', encoding='utf-8') as f:
+    yaml.dump(cfg, f, allow_unicode=True, indent=2)
+print('✅ 配置文件已更新 \n   数据集:', '$DS')
+PY
+
+    echo "🔄 开始运行评估..."
+    python3 model/evaluation/fingerprint_eval/scripts/run_evaluation.py --config "$CONFIG_FILE"
+
+    RESULTS_FILE="$RESULT_DIR/evaluation_results.json"
+    if [ -f "$RESULTS_FILE" ]; then
+        echo "📊 评估分析已由 run_evaluation.py 内部完成。"
+        # echo "📊 生成评估报告..."
+        # REPORTS_SUBDIR="$RESULT_DIR/reports"
+        # mkdir -p "$REPORTS_SUBDIR"
+        # python3 model/evaluation/fingerprint_eval/scripts/evaluation_report_generator.py \
+        #     --results_file "$RESULTS_FILE" \
+        #     --output_dir "$REPORTS_SUBDIR"
+
+        echo "✅ $DS 评估完成！请通过Web服务器查看详细报告。"
+    else
+        echo "⚠️ 未找到评估结果文件: $RESULTS_FILE"
+    fi
+done
+
+echo "🎉 指纹评估流程(全部数据集)完成！" 

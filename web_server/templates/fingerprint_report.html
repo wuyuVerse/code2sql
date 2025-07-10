@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>指纹评估报告 - {{ timestamp }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .summary-card {
+            background-color: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 0.75rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+        }
+        .summary-card .card-header {
+            background-color: #e9f5ff;
+            color: #0d6efd;
+            font-weight: 600;
+            border-bottom: 0;
+        }
+        .metric-item {
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid #f1f3f5;
+        }
+        .metric-item:last-child {
+            border-bottom: 0;
+        }
+        .metric-key {
+            font-weight: 500;
+            color: #495057;
+        }
+        .metric-value {
+            font-weight: 600;
+            color: #212529;
+        }
+        .nav-pills .nav-link.active {
+            background-color: #0d6efd;
+        }
+        .accordion-button:not(.collapsed) {
+            background-color: #f1f7ff;
+            color: #0c5dd8;
+        }
+        .sql-code {
+            background-color: #e9ecef;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid my-4">
+        <header class="mb-4">
+            <h1 class="display-6">指纹评估报告</h1>
+            <p class="text-muted">评估时间: {{ timestamp }}</p>
+        </header>
+
+        <!-- 摘要信息 -->
+        {% if report_data.summary %}
+        <div class="card summary-card mb-4">
+            <div class="card-header">
+                <i class="bi bi-bar-chart-line-fill"></i> 核心指标摘要
+            </div>
+            <div class="card-body p-0">
+                <div class="row g-0">
+                    {% for key, value in report_data.flat_summary.items() %}
+                    <div class="col-md-4 col-sm-6">
+                        <div class="metric-item">
+                            <span class="metric-key">{{ key }}</span>: 
+                            <span class="metric-value">
+                                {% if value is number %}
+                                    {# 如果是小数，按百分比展示 #}
+                                    {% if value < 1 %}{{ "%.2f%%" % (value * 100) }}{% else %}{{ value }}{% endif %}
+                                {% else %}{{ value }}{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 详细信息Tabs -->
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="pills-matched-tab" data-bs-toggle="pill" data-bs-target="#pills-matched" type="button" role="tab" aria-controls="pills-matched" aria-selected="true">
+                    匹配的SQL <span class="badge bg-success">{{ report_data.matched|length if report_data.matched }}</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pills-unmatched-tab" data-bs-toggle="pill" data-bs-target="#pills-unmatched" type="button" role="tab" aria-controls="pills-unmatched" aria-selected="false">
+                    未匹配的SQL <span class="badge bg-warning text-dark">{{ report_data.unmatched|length if report_data.unmatched }}</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pills-excluded-tab" data-bs-toggle="pill" data-bs-target="#pills-excluded" type="button" role="tab" aria-controls="pills-excluded" aria-selected="false">
+                    被排除的SQL <span class="badge bg-secondary">{{ report_data.excluded|length if report_data.excluded }}</span>
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="pills-tabContent">
+            <!-- 匹配的SQL内容 -->
+            <div class="tab-pane fade show active" id="pills-matched" role="tabpanel" aria-labelledby="pills-matched-tab">
+                <div class="accordion" id="accordionMatched">
+                    {% if report_data.matched %}
+                        {% for item in report_data.matched %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingMatched{{ loop.index }}">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMatched{{ loop.index }}" aria-expanded="false" aria-controls="collapseMatched{{ loop.index }}">
+                                    <strong>#{{ loop.index }}</strong>&nbsp;-&nbsp;<code>{{ item.function_name }}</code>
+                                </button>
+                            </h2>
+                            <div id="collapseMatched{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="headingMatched{{ loop.index }}" data-bs-parent="#accordionMatched">
+                                <div class="accordion-body">
+                                    {% if item.matched_variant_sql is defined %}
+                                        <h6>模型生成的SQL (变体)</h6>
+                                        {% for variant in item.matched_variant_sql %}
+                                            <div class="mb-3 p-2 border rounded">
+                                                <p><strong>指纹:</strong> <code>{{ variant.fingerprint }}</code></p>
+                                                <p class="mb-1"><strong>模型SQL:</strong></p>
+                                                <pre class="sql-code">{{ variant.sql }}</pre>
+                                                <p class="mb-1 mt-2"><strong>匹配到的指纹库SQL:</strong></p>
+                                                <pre class="sql-code">{{ variant.csv_sql }}</pre>
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <h6>模型生成的SQL</h6>
+                                        <pre class="sql-code mb-3">{{ item.json_sql }}</pre>
+                                        <p><strong>匹配到的指纹库SQL:</strong></p>
+                                        <pre class="sql-code">{{ item.csv_sql }}</pre>
+                                        <p class="mt-2"><strong>指纹:</strong> <code>{{ item.fingerprint }}</code></p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-success" role="alert">所有SQL均未匹配。</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 未匹配的SQL内容 -->
+            <div class="tab-pane fade" id="pills-unmatched" role="tabpanel" aria-labelledby="pills-unmatched-tab">
+                <div class="accordion" id="accordionUnmatched">
+                    {% if report_data.unmatched %}
+                        {% for item in report_data.unmatched %}
+                        <div class="accordion-item">
+                             <h2 class="accordion-header" id="headingUnmatched{{ loop.index }}">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUnmatched{{ loop.index }}" aria-expanded="false" aria-controls="collapseUnmatched{{ loop.index }}">
+                                    <strong>#{{ loop.index }}</strong>&nbsp;-&nbsp;<code>{{ item.function_name }}</code>&nbsp;-&nbsp;<strong>指纹:</strong> <code>{{ item.fingerprint }}</code>
+                                </button>
+                            </h2>
+                            <div id="collapseUnmatched{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="headingUnmatched{{ loop.index }}" data-bs-parent="#accordionUnmatched">
+                                <div class="accordion-body">
+                                     <h6>模型生成的SQL</h6>
+                                     <pre class="sql-code">{{ item.sql | tojson(indent=2) }}</pre>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-warning" role="alert">没有未匹配的SQL。</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 被排除的SQL内容 -->
+            <div class="tab-pane fade" id="pills-excluded" role="tabpanel" aria-labelledby="pills-excluded-tab">
+                <div class="accordion" id="accordionExcluded">
+                     {% if report_data.excluded %}
+                        {% for item in report_data.excluded %}
+                        <div class="accordion-item">
+                             <h2 class="accordion-header" id="headingExcluded{{ loop.index }}">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExcluded{{ loop.index }}" aria-expanded="false" aria-controls="collapseExcluded{{ loop.index }}">
+                                   <strong>#{{ loop.index }}</strong>&nbsp;-&nbsp;<code>{{ item.function_name }}</code>&nbsp;-&nbsp;<strong>原因:</strong> <span class="badge bg-info text-dark">{{ item.exclude_type }}</span>
+                                </button>
+                            </h2>
+                            <div id="collapseExcluded{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="headingExcluded{{ loop.index }}" data-bs-parent="#accordionExcluded">
+                                <div class="accordion-body">
+                                    <h6>被排除的SQL</h6>
+                                    <pre class="sql-code">{{ item.sql }}</pre>
+                                    <p class="mt-2"><strong>指纹:</strong> <code>{{ item.fingerprint }}</code></p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-secondary" role="alert">没有被排除的SQL。</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

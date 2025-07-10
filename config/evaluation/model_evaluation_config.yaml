@@ -1,7 +1,8 @@
 data_config:
   dataset_dir: model/evaluation/fingerprint_eval/temp
-  eval_data_path: model/evaluation/fingerprint_eval/data/eval_data.json
+  eval_data_path: model/evaluation/fingerprint_eval/data/cos.json
   fingerprint_cache_path: model/evaluation/fingerprint_eval/data/cbs_528_final.pkl
+  fingerprint_db_path: model/evaluation/fingerprint_eval/data/cos_526_final.pkl
   max_samples: null
 debug_config:
   save_intermediate_results: false
@@ -48,7 +49,7 @@ model_config:
   template: qwen
 output_config:
   keep_temp_files: false
-  output_dir: model/evaluation/fingerprint_eval/results/20250710_163915_evaluation
+  output_dir: model/evaluation/fingerprint_eval/results/20250710_202908_cos_evaluation
   result_prefix: qwen3_evaluation
   save_detailed_results: true
 validation_config:

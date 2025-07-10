@@ -963,6 +963,30 @@ def process_json_and_compare(
 ):
 
     print(f"开始处理JSON文件: {json_filepath}")
+
+    # --- 数据加载和预处理 ---
+    try:
+        with open(json_filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except Exception as e:
+        print(f"FATAL: 无法加载或解析JSON文件: {json_filepath}, 错误: {e}")
+        return
+
+    # --- 兼容性修复：将新的列表格式转换为旧的字典格式 ---
+    # 旧格式是 {'func_name': data}, 新格式是 [{'sample_id': 'func_name', ...}]
+    if isinstance(data, list):
+        print("检测到新的列表格式JSON，正在转换为字典格式以便处理...")
+        data_dict = {
+            item.get('sample_id', f'item_{i}'): item for i, item in enumerate(data)
+        }
+        data = data_dict
+        print("转换完成。")
+
+    if not isinstance(data, dict):
+        print(f"错误：无法处理的数据格式，根对象类型为 {type(data)}，期望为字典。")
+        return
+
+    total_lines = len(data) # 总行数就是字典的长度
     matching_count = 0  # SQL语句匹配计数
     valid_sql_count = 0  # 总SQL语句计数（不包括被排除的类型）
     excluded_sql_count = 0  # 被排除的SQL语句计数
@@ -1006,9 +1030,13 @@ def process_json_and_compare(
             invalid_csv_fingerprints.add(fp)
     print(f"有效CSV指纹数: {len(valid_csv_fingerprints)}")
     print(f"被排除的CSV指纹数: {len(csv_fingerprints) - len(valid_csv_fingerprints)}")
-    with open("/data/local_disk0/shawn/dirty_work/416/invalid_csv_fingerprints.json", 'w', encoding='utf-8') as f:
+    
+    # 将被排除的指纹保存到当前评估的输出目录中，用于调试
+    invalid_fingerprints_path = os.path.join(output_dir, "invalid_csv_fingerprints.json")
+    with open(invalid_fingerprints_path, 'w', encoding='utf-8') as f:
         json.dump(list(invalid_csv_fingerprints), f, ensure_ascii=False, indent=2)
-    print(f"被排除的CSV指纹已保存到: /data/local_disk0/shawn/dirty_work/416/invalid_csv_fingerprints.json")
+    print(f"被排除的CSV指纹已保存到: {invalid_fingerprints_path}")
+    
     log_file = os.path.join(output_dir, "temp.log")
     with open(log_file, 'w', encoding='utf-8') as log:
         log.write("===== SQL解析日志 =====\n\n")
@@ -1020,7 +1048,8 @@ def process_json_and_compare(
     # 获取文件行数以便显示进度
     try:
         with open(json_filepath, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+            # data = json.load(f) # 注释掉此行，防止覆盖已转换好的data字典
+            pass # 添加pass防止语法错误
         # 如果能一次性读取，说明是一个"整体 JSON"，而不是 JSON Lines
         total_lines = len(data)
         is_jsonl = False
@@ -1223,16 +1252,41 @@ def process_json_and_compare(
     if not is_jsonl:
         # 处理整体 JSON
         with open(json_filepath, 'r', encoding='utf-8') as f:
-            data = json.load(f)  # dict，形如 { function_name: {...}, ... }
-
+            # data = json.load(f)  # 注释掉此行，防止第二次覆盖
+            pass # 添加pass防止语法错误
+ 
         from tqdm import tqdm
-        for function_name, function_data in tqdm(data.items(), total=total_lines, desc="处理JSON数据"):
+        # 循环处理JSON中的每一项
+        # 旧代码期望一个字典，新代码处理列表
+        if isinstance(data, dict):
+            # 兼容旧的字典格式
+            data_iterator = data.items()
+        elif isinstance(data, list):
+            # 处理新的列表格式
+            data_iterator = [
+                (item.get('sample_id', f'item_{i}'), item) for i, item in enumerate(data)
+            ]
+        else:
+            print(f"错误：JSON文件根对象既不是字典也不是列表，无法处理。")
+            return {} # 或者抛出异常
+
+        for function_name, function_data in tqdm(data_iterator, total=total_lines, desc="处理JSON数据"):
             write_log(f"\n\n===== 处理函数: {function_name} =====")
             
             line_has_match = False
-            sql_pattern_cnt = function_data.get("sql_pattern_cnt", "")
-            # 检查是否有caller_results字段（4_14格式的新增字段）
-            full_sql_cnt_official += int(sql_pattern_cnt)
+            # --- 兼容性修复 ---
+            # 旧格式依赖 "sql_pattern_cnt" 键，新格式需要从 sql 列表的长度动态计算
+            if "sql_pattern_cnt" in function_data:
+                sql_pattern_cnt = function_data.get("sql_pattern_cnt", 0)
+            else:
+                # 从我们传入的 sql_key (即 'parsed_sql') 对应的列表长度来计算
+                sql_pattern_cnt = len(function_data.get(sql_key, []))
+            
+            try:
+                full_sql_cnt_official += int(sql_pattern_cnt or 0)
+            except (ValueError, TypeError):
+                # 如果 sql_pattern_cnt 仍然有问题（例如为None或空字符串），则跳过，避免崩溃
+                pass
             caller_results = function_data.get("caller_results", [])
             if caller_results:
                 write_log(f"发现 {len(caller_results)} 个调用者结果")
@@ -1317,6 +1371,20 @@ def process_json_and_compare(
     for reason, count in sorted(excluded_types_count.items(), key=lambda x: x[1], reverse=True):
         if count > 0:
             print(f"  - {reason}: {count}条")
+    
+    # --- 额外写入统计摘要文件，供前端读取 ---
+    summary_path = os.path.join(output_dir, "statistics_summary.json")
+    try:
+        with open(summary_path, 'w', encoding='utf-8') as f:
+            json.dump({
+                "total_samples": total_lines,
+                "valid_sql": valid_sql_count,
+                "matched_sql": matching_count,
+                "match_rate": matching_count / valid_sql_count if valid_sql_count else 0
+            }, f, ensure_ascii=False, indent=4)
+        print(f"统计摘要已写入: {summary_path}")
+    except Exception as e:
+        print(f"写入统计摘要失败: {e}")
     
     return matching_lines, matching_pairs, matched_fingerprints, total_lines, valid_sql_count, matching_count, unmatched_pairs,excluded_sql_count,csv_fingerprints,full_sql_cnt_official
 
@@ -1603,6 +1671,7 @@ def extract_unmatched_csv_fingerprints(csv_fingerprints, matched_fingerprints, f
     
     print(f"未匹配的CSV指纹及示例SQL已保存到: {output_path}")
     return valid_unmatched_fingerprints
+    
 def get_fingerprint_coverage(human_review=False, output_dir="model/evaluation/fingerprint_eval/results"):
     target_fingerprint_cache = FINGERPRINT_CACHE_HUMAN if human_review else FINGERPRINT_CACHE
     csv_path=CSV_PATH

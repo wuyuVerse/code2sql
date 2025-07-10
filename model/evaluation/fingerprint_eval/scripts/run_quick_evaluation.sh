@@ -35,7 +35,7 @@ python3 model/evaluation/fingerprint_eval/scripts/run_evaluation.py \
 
 # 4. 运行报告生成器
 RESULTS_FILE="$DATA_DIR/evaluation_results.json"
-echo "📊 生成评估报告..."
+        echo "📊 生成评估报告..."
 
 if [ -f "$RESULTS_FILE" ]; then
     python3 model/evaluation/fingerprint_eval/scripts/evaluation_report_generator.py \

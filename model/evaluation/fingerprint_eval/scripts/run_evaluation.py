@@ -16,6 +16,7 @@ from typing import Dict, List, Any, Optional
 import argparse
 from tqdm import tqdm
 import torch
+from utils.response_parser import parse_model_response, recursively_extract_sql
 
 # 添加项目根目录到sys.path
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
@@ -25,7 +26,10 @@ if str(PROJECT_ROOT) not in sys.path:
 # 延迟导入，避免环境问题
 try:
     from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
-    from data_processing.cleaning.sql_feature_extractor import match_single_sql
+    from data_processing.cleaning.sql_feature_extractor import (
+        process_json_and_compare,
+        load_fingerprints,
+    )
     from config.training.data_conversion.orm2sql_prompt_template import PROMPT_TEMPLATE
 except ImportError as e:
     print(f"导入模块失败: {e}")
@@ -54,11 +58,9 @@ class SimpleModelEvaluator:
         self.model = None
         self.tokenizer = None
         
-        # 从配置加载或使用覆盖的输出目录
-        self.output_dir = self.config.get('output_config', {}).get('output_dir', 'evaluation_results')
-        if output_dir_override:
-            self.output_dir = output_dir_override
-        self.output_dir = Path(self.output_dir)
+        # 从配置加载或使用覆盖的输出目录，并确保是Path对象
+        output_dir_str = output_dir_override or self.config.get('output_config', {}).get('output_dir', 'evaluation_results')
+        self.output_dir = Path(output_dir_str).resolve()
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         # 初始化结果存储
@@ -66,9 +68,8 @@ class SimpleModelEvaluator:
         self.stats = {
             'total_samples': 0,
             'successful_inference': 0,
-            'valid_sql_generated': 0,
-            'fingerprint_matched': 0,
-            'parse_errors': 0,
+            'valid_sql_generated': 0, # 基于解析是否成功
+            'parse_errors': 0, # 基于通用解析函数
             'inference_errors': 0
         }
         
@@ -173,7 +174,7 @@ class SimpleModelEvaluator:
             code_meta_data_str=code_meta_data_str
         )
         return prompt.strip()
-
+    
     def run_inference(self, prompt: str) -> str:
         """运行单个样本的推理"""
         if self.model is None or self.tokenizer is None:
@@ -193,282 +194,221 @@ class SimpleModelEvaluator:
                 add_generation_prompt=True
             )
             
-            # 编码输入
-            inputs = self.tokenizer.encode(text, return_tensors="pt")
-            inputs = inputs.to(self.model.device)
+            model_inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
             
-            # 生成配置
-            gen_config = GenerationConfig(
-                max_new_tokens=self.config['inference_config']['generate_config']['max_new_tokens'],
-                temperature=self.config['inference_config']['generate_config']['temperature'],
-                top_p=self.config['inference_config']['generate_config']['top_p'],
-                do_sample=self.config['inference_config']['generate_config']['do_sample'],
-                pad_token_id=self.tokenizer.eos_token_id
+            # 创建 GenerationConfig
+            generation_config = GenerationConfig(
+                max_new_tokens=self.config['model_config'].get('max_new_tokens', 1024),
+                do_sample=self.config['model_config'].get('do_sample', True),
+                top_p=self.config['model_config'].get('top_p', 0.7),
+                temperature=self.config['model_config'].get('temperature', 0.95),
+            )
+
+            generated_ids = self.model.generate(
+                model_inputs.input_ids,
+                attention_mask=model_inputs.attention_mask,
+                generation_config=generation_config
             )
             
-            # 推理
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    inputs,
-                    generation_config=gen_config
-                )
+            # 解码时跳过特殊token
+            response = self.tokenizer.decode(generated_ids[0], skip_special_tokens=True)
             
-            # 解码输出
-            response = self.tokenizer.decode(
-                outputs[0][len(inputs[0]):], 
-                skip_special_tokens=True
-            )
+            # 清理 response，只取模型生成的部分
+            # response 通常会包含输入的prompt，需要移除
+            # 找到 text 在 response 中的位置并截取之后的内容
+            prompt_in_response_index = response.find(text)
+            if prompt_in_response_index != -1:
+                response = response[prompt_in_response_index + len(text):].strip()
             
-            return response.strip()
+            # 更进一步，找到 assistant 角色的开始标记
+            assistant_marker = "assistant\n"
+            marker_index = response.find(assistant_marker)
+            if marker_index != -1:
+                response = response[marker_index + len(assistant_marker):].strip()
+
+            return response
             
         except Exception as e:
-            logger.warning(f"推理失败: {e}")
+            logger.error(f"推理过程中发生错误: {e}", exc_info=True)
             return ""
-
-    def _recursively_extract_sql(self, data: Any) -> List[str]:
-        """
-        递归地遍历数据结构以提取所有SQL字符串。
-        """
-        extracted_sql = []
-        if isinstance(data, str):
-            # 基本情况：它是一个SQL字符串
-            if data.strip():
-                extracted_sql.append(data.strip())
-        elif isinstance(data, dict):
-            # 如果是param_dependent结构
-            if data.get("type") == "param_dependent" and "variants" in data:
-                for variant in data.get("variants", []):
-                    # 从变体的sql字段中递归提取
-                    extracted_sql.extend(self._recursively_extract_sql(variant.get("sql")))
-            # 这里可以添加其他字典结构的处理
-        elif isinstance(data, list):
-            # 如果是列表，则迭代并递归
-            for item in data:
-                extracted_sql.extend(self._recursively_extract_sql(item))
-        
-        return extracted_sql
-
-    def parse_sql_response(self, response: str) -> List[str]:
-        """
-        解析模型的JSON类响应以提取所有SQL语句，
-        能处理像 'param_dependent' 这样的复杂结构。
-        """
-        if not response.strip():
-            return []
-
-        # 尝试将响应解析为JSON对象
-        try:
-            # LLM可能返回一个不完全是JSON的字符串，我们尝试找到其中的JSON部分
-            # 通常是我们期望的列表格式 `[...]`
-            start = response.find('[')
-            end = response.rfind(']')
-            if start != -1 and end != -1 and start < end:
-                json_string = response[start:end+1]
-                parsed_data = json.loads(json_string)
-            else:
-                # 如果找不到 `[]`，尝试直接解析整个字符串
-                try:
-                    parsed_data = json.loads(response)
-                except json.JSONDecodeError:
-                    # 如果不能解析为JSON，则将其视为单个原始SQL语句
-                    logger.debug(f"响应不是有效的JSON，将其视为原始字符串: {response}")
-                    return [response.strip()] if response.strip() else []
-        except json.JSONDecodeError:
-            logger.warning(f"无法将模型响应解析为JSON。将其视为原始字符串。响应: {response}")
-            return [response.strip()] if response.strip() else []
-        
-        # 获得解析后的数据后 (很可能是一个列表)，递归地提取SQL
-        return self._recursively_extract_sql(parsed_data)
-    
-    def evaluate_sql_quality(self, sql_list: List[str]) -> Dict:
-        """评估SQL质量"""
-        if not sql_list:
-            return {
-                'total_sql': 0,
-                'valid_sql': 0,
-                'matched_sql': 0,
-                'excluded_sql': 0,
-                'fingerprint_results': []
-            }
-        
-        fingerprint_cache_path = self.config['data_config']['fingerprint_cache_path']
-        fingerprint_results = []
-        valid_count = 0
-        matched_count = 0
-        excluded_count = 0
-        
-        for sql in sql_list:
-            if not sql.strip():
-                continue
-            
-            try:
-                match_result = match_single_sql(sql.strip(), fingerprint_cache_path)
-                fingerprint_results.append({
-                    'sql': sql,
-                    'match_result': match_result
-                })
-                
-                if not match_result.get('excluded', False):
-                    valid_count += 1
-                    if match_result.get('matched', False):
-                        matched_count += 1
-                else:
-                    excluded_count += 1
-                    
-            except Exception as e:
-                logger.warning(f"SQL验证失败: {e}")
-                fingerprint_results.append({
-                    'sql': sql,
-                    'match_result': {'error': str(e)}
-                })
-        
-        return {
-            'total_sql': len(sql_list),
-            'valid_sql': valid_count,
-            'matched_sql': matched_count,
-            'excluded_sql': excluded_count,
-            'fingerprint_results': fingerprint_results
-        }
     
     def run_evaluation(self):
-        """运行完整评估"""
-        logger.info("开始模型评估...")
+        """运行完整的评估流程"""
+        if not self.model or not self.tokenizer:
+            self.load_model()
         
-        # 加载模型
-        self.load_model()
-        
-        # 加载验证数据
         eval_samples = self.load_eval_data()
         self.stats['total_samples'] = len(eval_samples)
         
-        # 逐个处理样本
-        for i, sample in enumerate(tqdm(eval_samples, desc="评估进度")):
+        # 加载指纹库
+        fingerprint_db_path = self.config['data_config'].get('fingerprint_db_path')
+        csv_fingerprints, fingerprint_to_sql = None, None
+        if not fingerprint_db_path:
+            logger.warning("配置文件中未指定 fingerprint_db_path，无法进行指纹覆盖率计算")
+        else:
+            try:
+                csv_fingerprints, fingerprint_to_sql = load_fingerprints(fingerprint_db_path)
+                logger.info(f"成功加载 {len(csv_fingerprints)} 个指纹")
+            except Exception as e:
+                logger.error(f"加载指纹库失败: {e}", exc_info=True)
+                fingerprint_db_path = None # 标记为失败，后续不再尝试
+
+        pbar = tqdm(total=self.stats['total_samples'], desc="模型评估中")
+
+        for sample in eval_samples:
+            try:
+                prompt = self.create_prompt(sample)
+                response = self.run_inference(prompt)
             
-            # 创建提示词
-            prompt = self.create_prompt(sample)
-            
-            # 推理
-            response = self.run_inference(prompt)
-            
-            # 处理结果
-            result = {
-                'sample_id': sample['sample_id'],
-                'prompt': prompt,
-                'response': response,
-                'parsed_sql': [],
-                'sql_evaluation': {},
-                'inference_success': bool(response.strip())
-            }
-            
-            if response.strip():
-                self.stats['successful_inference'] += 1
-                
-                try:
-                    # 解析SQL
-                    sql_list = self.parse_sql_response(response)
-                    result['parsed_sql'] = sql_list
+                if response:
+                    self.stats['successful_inference'] += 1
+                    # 使用通用解析函数
+                    parsed_response = parse_model_response(response)
+                    sql_list = recursively_extract_sql(parsed_response)
+
+                    result_entry = {
+                        'sample_id': sample['sample_id'],
+                        'prompt': prompt,
+                        'response': response,
+                        'parsed_sql': sql_list, # 保存提取后的SQL列表
+                        'ground_truth_sql': sample.get('sql', 'N/A')
+                    }
                     
                     if sql_list:
-                        # SQL质量评估
-                        sql_eval = self.evaluate_sql_quality(sql_list)
-                        result['sql_evaluation'] = sql_eval
-                        
-                        # 更新统计
-                        if sql_eval['valid_sql'] > 0:
-                            self.stats['valid_sql_generated'] += 1
-                        if sql_eval['matched_sql'] > 0:
-                            self.stats['fingerprint_matched'] += 1
+                        self.stats['valid_sql_generated'] += 1
                     
-                except Exception as e:
-                    logger.warning(f"处理第 {i} 个样本时出错: {e}")
-                    result['parse_error'] = str(e)
-                    self.stats['parse_errors'] += 1
-            else:
+                    self.eval_results.append(result_entry)
+                else:
+                    self.stats['inference_errors'] += 1
+            except Exception as e:
+                logger.error(f"处理样本 {sample.get('sample_id', 'N/A')} 时发生严重错误: {e}", exc_info=True)
                 self.stats['inference_errors'] += 1
             
-            self.eval_results.append(result)
+            pbar.update(1)
+
+        pbar.close()
         
-        # 生成和保存结果
-        final_stats = self.generate_final_statistics()
-        self.save_results(final_stats)
+        # 将原始推理结果保存到文件，供后续分析使用
+        raw_results_path = self.output_dir / "evaluation_results.json"
         
-        logger.info("评估完成!")
-        return final_stats
+        # --- 防御性修复 ---
+        # 在写入文件前，再次确保输出目录一定存在，避免因未知状态问题导致目录丢失
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        with open(raw_results_path, 'w', encoding='utf-8') as f:
+            json.dump(self.eval_results, f, indent=4, ensure_ascii=False)
+        logger.info(f"原始评估结果已保存到: {raw_results_path}")
+
+        # 调用指纹分析函数，该函数会将结果直接写入文件，而不是返回
+        if fingerprint_db_path and csv_fingerprints is not None:
+            logger.info("开始进行指纹覆盖率分析...")
+            try:
+                # 调用函数，但不期望有返回值
+                process_json_and_compare(
+                    json_filepath=str(raw_results_path),
+                    csv_fingerprints=csv_fingerprints,
+                    fingerprint_to_sql=fingerprint_to_sql,
+                    output_dir=str(self.output_dir),
+                    sql_key='parsed_sql'
+                )
+                logger.info("指纹覆盖率分析完成，结果已写入输出目录。")
+
+                # 由于核心报告由 process_json_and_compare 生成，我们尝试读取它创建的摘要文件
+                analysis_report = self.load_generated_report()
+
+            except Exception as e:
+                logger.error(f"指纹覆盖率分析失败: {e}", exc_info=True)
+                analysis_report = None # 分析失败，报告为空
+        else:
+            analysis_report = None # 未进行分析，报告为空
+        
+        # 保存并打印我们能获取到的信息
+        self.save_inference_summary()
+        self.print_summary(analysis_report if analysis_report else self.stats)
+
+    def load_generated_report(self) -> Optional[Dict]:
+        """尝试加载由 process_json_and_compare 生成的统计报告"""
+        report_path = self.output_dir / "statistics_summary.json"
+        if report_path.exists():
+            try:
+                with open(report_path, 'r', encoding='utf-8') as f:
+                    report = json.load(f)
+                logger.info(f"成功加载分析报告: {report_path}")
+                return report
+            except Exception as e:
+                logger.error(f"加载分析报告失败: {e}", exc_info=True)
+        else:
+            logger.warning(f"分析报告文件不存在: {report_path}")
+        return None
+
+    def save_inference_summary(self):
+        """仅保存本次推理的基本统计信息"""
+        summary_stats = self.generate_final_statistics()
+        summary_path = self.output_dir / "evaluation_summary.json"
+        try:
+            with open(summary_path, 'w', encoding='utf-8') as f:
+                json.dump(summary_stats, f, indent=4, ensure_ascii=False)
+            logger.info(f"推理过程摘要已保存到: {summary_path}")
+        except Exception as e:
+            logger.error(f"保存推理过程摘要失败: {e}", exc_info=True)
     
     def generate_final_statistics(self) -> Dict:
-        """生成最终统计"""
-        stats = self.stats.copy()
+        """
+        生成最终的统计数据。
+        注意：这个方法现在更多的是一个占位符，因为核心统计已移至 process_json_and_compare。
+        我们只计算一些基本的推理统计。
+        """
+        return self.stats
+
+    def save_results(self, analysis_report: Optional[Dict]):
+        """
+        此方法的功能已被拆分和重构。
+        - 推理摘要保存由 save_inference_summary() 完成。
+        - 详细报告由 process_json_and_compare() 直接写入。
+        保留此方法以防万一，但标记为废弃。
+        """
+        logger.warning("方法 `save_results` 已被废弃。")
+        pass
+
+
+    def _compute_fingerprint_coverage(self):
+        """
+        此方法已被 process_json_and_compare 函数替代，保留为空或标记为废弃。
+        """
+        logger.warning("方法 `_compute_fingerprint_coverage` 已被废弃。")
+        pass
+
+
+    def print_summary(self, final_report: Dict):
+        """
+        打印评估总结。
         
-        total = stats['total_samples']
-        if total > 0:
-            stats['inference_success_rate'] = stats['successful_inference'] / total
-            stats['valid_sql_rate'] = stats['valid_sql_generated'] / total
-            stats['fingerprint_match_rate'] = stats['fingerprint_matched'] / total
-            stats['parse_error_rate'] = stats['parse_errors'] / total
-            stats['inference_error_rate'] = stats['inference_errors'] / total
+        Args:
+            final_report: 最终的报告字典，可以是详细报告或基本统计。
+        """
+        logger.info("\n" + "="*20 + " 评估总结 " + "="*20)
         
-        # SQL级别统计
-        total_sql = sum(len(r.get('parsed_sql', [])) for r in self.eval_results)
-        valid_sql = sum(r.get('sql_evaluation', {}).get('valid_sql', 0) for r in self.eval_results)
-        matched_sql = sum(r.get('sql_evaluation', {}).get('matched_sql', 0) for r in self.eval_results)
+        if not final_report:
+            logger.warning("没有可用的报告信息。")
+            final_report = self.stats # Fallback
+
+        # 优雅地打印报告内容
+        for key, value in final_report.items():
+            if isinstance(value, dict):
+                logger.info(f"\n--- {key.replace('_', ' ').title()} ---")
+                for sub_key, sub_value in value.items():
+                    # 格式化浮点数
+                    if isinstance(sub_value, float):
+                        sub_value_str = f"{sub_value:.2%}"
+                    else:
+                        sub_value_str = str(sub_value)
+                    logger.info(f"  {sub_key.replace('_', ' ').title()}: {sub_value_str}")
+            elif isinstance(value, list):
+                 logger.info(f"{key.replace('_', ' ').title()}: (包含 {len(value)} 项)")
+            else:
+                logger.info(f"{key.replace('_', ' ').title()}: {value}")
         
-        stats['total_sql_generated'] = total_sql
-        stats['total_valid_sql'] = valid_sql
-        stats['total_matched_sql'] = matched_sql
-        
-        if total_sql > 0:
-            stats['sql_validity_rate'] = valid_sql / total_sql
-            stats['sql_match_rate'] = matched_sql / total_sql
-        
-        return stats
-    
-    def save_results(self, final_stats: Dict):
-        """保存评估结果"""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-        # 保存详细结果
-        results_file = self.output_dir / "evaluation_results.json"
-        with open(results_file, 'w', encoding='utf-8') as f:
-            json.dump({
-                'config': self.config,
-                'statistics': final_stats,
-                'detailed_results': self.eval_results
-            }, f, ensure_ascii=False, indent=2)
-        
-        # 保存统计摘要
-        summary_file = self.output_dir / f"evaluation_summary_{timestamp}.json"
-        with open(summary_file, 'w', encoding='utf-8') as f:
-            json.dump(final_stats, f, ensure_ascii=False, indent=2)
-        
-        logger.info(f"结果已保存: {results_file}")
-        logger.info(f"摘要已保存: {summary_file}")
-        
-        # 打印摘要
-        self.print_summary(final_stats)
-    
-    def print_summary(self, stats: Dict):
-        """打印评估摘要"""
-        print("\n" + "="*80)
-        print("模型评估结果摘要")
-        print("="*80)
-        print(f"模型路径: {self.config['model_config']['model_path']}")
-        print(f"验证集: {self.config['data_config']['eval_data_path']}")
-        print(f"总样本数: {stats['total_samples']}")
-        
-        print("\n📊 推理结果:")
-        print(f"  ✅ 成功推理: {stats['successful_inference']}/{stats['total_samples']} ({stats.get('inference_success_rate', 0):.2%})")
-        print(f"  ❌ 推理错误: {stats['inference_errors']} ({stats.get('inference_error_rate', 0):.2%})")
-        print(f"  ⚠️  解析错误: {stats['parse_errors']} ({stats.get('parse_error_rate', 0):.2%})")
-        
-        print("\n🎯 SQL生成质量:")
-        print(f"  📝 生成有效SQL样本: {stats['valid_sql_generated']}/{stats['total_samples']} ({stats.get('valid_sql_rate', 0):.2%})")
-        print(f"  🎯 指纹匹配样本: {stats['fingerprint_matched']}/{stats['total_samples']} ({stats.get('fingerprint_match_rate', 0):.2%})")
-        
-        print(f"\n📈 SQL语句级别统计:")
-        print(f"  总生成SQL数: {stats.get('total_sql_generated', 0)}")
-        print(f"  有效SQL数: {stats.get('total_valid_sql', 0)} ({stats.get('sql_validity_rate', 0):.2%})")
-        print(f"  指纹匹配SQL数: {stats.get('total_matched_sql', 0)} ({stats.get('sql_match_rate', 0):.2%})")
-        print("="*80)
+        logger.info("="*52 + "\n")
 
 
 def main():
@@ -484,7 +424,7 @@ def main():
         evaluator = SimpleModelEvaluator(config_path=args.config, output_dir_override=args.output_dir)
         
         # 运行评估
-        results = evaluator.run_evaluation()
+        evaluator.run_evaluation()
         
         print(f"\n✅ 评估完成！结果已保存到: {evaluator.output_dir}")
         

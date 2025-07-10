@@ -24,6 +24,7 @@ from pathlib import Path
 import argparse
 from typing import Dict, List, Any, Set, Tuple
 import re # Added missing import for re
+from utils.response_parser import parse_model_response, recursively_extract_sql
 from datetime import datetime # Added missing import for datetime
 
 # --- 日志配置 ---
@@ -100,29 +101,54 @@ class ComparativeEvaluator:
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_path,
                 torch_dtype=torch.bfloat16,
-                device_map="auto",
+                device_map=device,
                 trust_remote_code=True
-            ).to(device).eval()
+            ).eval()
             logger.info("模型和分词器加载成功。")
         except Exception as e:
             logger.error(f"加载模型或分词器失败: {e}")
             sys.exit(1)
 
     def _load_baseline_data(self) -> List[Dict]:
-        """加载基准评估数据集"""
+        """从目录中加载所有基准评估数据集"""
         baseline_path = Path(self.config['data_config']['baseline_data_path'])
-        logger.info(f"正在加载基准评估集: {baseline_path}")
-        if not baseline_path.exists():
-            logger.error(f"基准评估集文件不存在: {baseline_path}")
-            sys.exit(1)
-            
-        with open(baseline_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        logger.info(f"正在从目录中加载所有基准评估集: {baseline_path}")
 
-        if self.test_samples and isinstance(data, list):
+        if not baseline_path.is_dir():
+            logger.error(f"基准评估集路径不是一个有效的目录: {baseline_path}")
+            sys.exit(1)
+        
+        all_data = []
+        json_files = sorted(list(baseline_path.glob('*.json'))) # 排序以保证一致性
+        
+        if not json_files:
+            logger.error(f"在目录 {baseline_path} 中未找到任何 .json 文件。")
+            sys.exit(1)
+        
+        logger.info(f"找到 {len(json_files)} 个JSON文件进行加载。")
+        for json_file in json_files:
+            try:
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        all_data.extend(data)
+                        logger.debug(f"成功加载 {len(data)} 条记录从 {json_file.name}")
+                    else:
+                        logger.warning(f"文件 {json_file.name} 的内容不是一个列表，已跳过。")
+            except Exception as e:
+                logger.error(f"加载文件 {json_file.name} 失败: {e}")
+
+        if not all_data:
+            logger.error("未能从任何文件中加载有效数据。")
+            sys.exit(1)
+
+        logger.info(f"总共加载了 {len(all_data)} 条基准记录。")
+        
+        if self.test_samples and isinstance(all_data, list):
             logger.info(f"已截取前 {self.test_samples} 个样本进行测试。")
-            return data[:self.test_samples]
-        return data
+            return all_data[:self.test_samples]
+            
+        return all_data
 
     def _build_prompt(self, sample: Dict) -> str:
         """根据模板构建prompt"""
@@ -163,97 +189,89 @@ class ComparativeEvaluator:
         response = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
         return response
 
-    def _extract_sql_from_response(self, response: str) -> List[Any]:
-        """从模型响应中提取SQL列表"""
-        try:
-            # 尝试直接解析JSON
-            return json.loads(response)
-        except json.JSONDecodeError:
-            # 如果失败，尝试从Markdown代码块中提取
-            match = re.search(r"```json\s*([\s\S]+?)\s*```", response)
-            if match:
-                try:
-                    return json.loads(match.group(1))
-                except json.JSONDecodeError:
-                    logger.warning(f"无法解析Markdown代码块中的JSON: {match.group(1)}")
-            else:
-                logger.warning(f"响应不是有效的JSON，也未找到JSON代码块: {response}")
-        return []
-
-    def _get_fingerprints_from_sql_list(self, sql_list: List[Any]) -> Set[str]:
-        """从SQL列表中提取所有指纹"""
+    def _get_fingerprints_from_sql_list(self, model_output: Any) -> Set[str]:
+        """
+        从模型输出的任何结构中递归提取SQL，然后计算指纹集合。
+        """
+        # 首先，使用递归工具从复杂结构中提取出扁平的SQL列表
+        sql_list = recursively_extract_sql(model_output)
+        
         fingerprints = set()
-        if not isinstance(sql_list, list):
-            sql_list = [sql_list]
-
-        for sql_item in sql_list:
-            sql_text = ""
-            if isinstance(sql_item, str):
-                sql_text = sql_item
-            elif isinstance(sql_item, dict) and sql_item.get("type") == "param_dependent":
-                # 对于param_dependent，我们将其所有变体的sql合并处理
-                for variant in sql_item.get("variants", []):
-                    if isinstance(variant.get("sql"), str):
-                        fp = self.sql_extractor.extract(variant["sql"])
-                        if fp: fingerprints.add(fp)
-                continue # 跳过后续处理
-            elif isinstance(sql_item, dict) and "sql" in sql_item:
-                sql_text = sql_item["sql"]
-
-            if isinstance(sql_text, str) and sql_text.strip():
-                fp = self.sql_extractor.extract(sql_text)
-                if fp: fingerprints.add(fp)
+        for sql in sql_list:
+            if isinstance(sql, str) and sql.strip():
+                try:
+                    fingerprint = self.sql_extractor.extract(sql.strip())
+                    fingerprints.add(fingerprint)
+                except Exception as e:
+                    logger.warning(f"为SQL计算指纹时出错: '{sql[:100]}...'. 错误: {e}")
         return fingerprints
 
     def run(self):
-        """主执行函数"""
-        logger.info("开始执行对比评估流程...")
+        """执行完整的对比评估流程"""
         self._load_model_and_tokenizer()
         baseline_data = self._load_baseline_data()
-
-        all_results = []
         
-        from tqdm import tqdm
-        for i, sample in enumerate(tqdm(baseline_data, desc="对比评估进度")):
-            sample_id = sample.get('function_name', f'sample_{i}')
-            logger.info(f"--- 正在处理样本: {sample_id} ---")
+        comparison_results = []
 
-            # 1. 构建Prompt并推理
-            prompt = self._build_prompt(sample)
-            model_response = self._run_inference(prompt)
-            model_sql_list = self._extract_sql_from_response(model_response)
-
-            # 2. 获取基准和模型的指纹集
-            baseline_sql_list = sample.get('sql_statement_list', [])
-            baseline_fingerprints = self._get_fingerprints_from_sql_list(baseline_sql_list)
-            model_fingerprints = self._get_fingerprints_from_sql_list(model_sql_list)
-
-            # 3. 计算差异
-            consistent_fps = baseline_fingerprints.intersection(model_fingerprints)
-            missing_fps = baseline_fingerprints.difference(model_fingerprints)
-            superfluous_fps = model_fingerprints.difference(baseline_fingerprints)
+        logger.info(f"开始对 {len(baseline_data)} 个样本进行对比评估...")
+        for i, sample in enumerate(baseline_data):
+            logger.info(f"--- 正在处理样本 {i+1}/{len(baseline_data)} (ID: {sample.get('id', 'N/A')}) ---")
             
-            # 4. 汇总结果
-            result_summary = {
-                "sample_id": sample_id,
-                "prompt": prompt,
-                "baseline_sql": baseline_sql_list,
-                "model_response": model_response,
-                "model_sql": model_sql_list,
-                "comparison": {
-                    "consistent_count": len(consistent_fps),
-                    "missing_count": len(missing_fps),
-                    "superfluous_count": len(superfluous_fps),
-                    "consistent_fingerprints": list(consistent_fps),
-                    "missing_fingerprints": list(missing_fps),
-                    "superfluous_fingerprints": list(superfluous_fps),
-                }
-            }
-            all_results.append(result_summary)
-        
-        # 5. 保存结果
-        self._save_results(all_results)
-        logger.info("对比评估全部完成！")
+            prompt = self._build_prompt(sample)
+            
+            try:
+                # 1. 模型推理
+                model_response_raw = self._run_inference(prompt)
+                
+                # 2. 解析模型输出为结构化数据 (JSON/List/Dict)
+                model_generated_structured = parse_model_response(model_response_raw)
+                
+                # 3. 从基准答案和模型输出中提取指纹
+                baseline_sql_list = sample.get('sql', [])
+                baseline_fingerprints = self._get_fingerprints_from_sql_list(baseline_sql_list)
+                model_fingerprints = self._get_fingerprints_from_sql_list(model_generated_structured)
+                
+                # 4. 对比指纹
+                common_fingerprints = baseline_fingerprints.intersection(model_fingerprints)
+                missing_fingerprints = baseline_fingerprints.difference(model_fingerprints)
+                extra_fingerprints = model_fingerprints.difference(baseline_fingerprints)
+                
+                # 5. 存储结果
+                comparison_results.append({
+                    "sample_id": sample.get('id', f'sample_{i}'),
+                    "function_name": sample.get('function_name', 'N/A'),
+                    "orm_code": sample.get('orm_code', ''),
+                    "prompt": prompt,
+                    "baseline_sql": baseline_sql_list,
+                    "model_response_raw": model_response_raw,
+                    "model_generated_structured": model_generated_structured, # 保存完整的结构化输出
+                    "metrics": {
+                        "baseline_fingerprint_count": len(baseline_fingerprints),
+                        "model_fingerprint_count": len(model_fingerprints),
+                        "common_fingerprint_count": len(common_fingerprints),
+                        "missing_fingerprint_count": len(missing_fingerprints),
+                        "extra_fingerprint_count": len(extra_fingerprints),
+                    },
+                    "fingerprints": {
+                        "common": sorted(list(common_fingerprints)),
+                        "missing": sorted(list(missing_fingerprints)),
+                        "extra": sorted(list(extra_fingerprints)),
+                    }
+                })
+                logger.info(f"样本 {i+1} 处理完成。发现 {len(common_fingerprints)} 个一致指纹, {len(missing_fingerprints)} 个缺失, {len(extra_fingerprints)} 个多余。")
+
+            except Exception as e:
+                logger.error(f"处理样本 {i+1} 时发生严重错误: {e}", exc_info=True)
+                # 记录失败的样本信息
+                comparison_results.append({
+                    "sample_id": sample.get('id', f'sample_{i}'),
+                    "function_name": sample.get('function_name', 'N/A'),
+                    "error": str(e),
+                    "prompt": prompt
+                })
+
+        self._save_results(comparison_results)
+        logger.info("对比评估流程全部完成。")
 
     def _save_results(self, results: List[Dict]):
         """将结果保存到文件"""

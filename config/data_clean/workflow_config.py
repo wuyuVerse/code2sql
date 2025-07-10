@@ -14,6 +14,7 @@ class ConcurrencyConfig(BaseModel):
     sql_completeness_check: int = 50
     sql_correctness_check: int = 50
     redundant_sql_validation: int = 50
+    keyword_data_processing: int = 10  # 新增关键词处理步骤的并发配置
     default: int = 50
 
 
@@ -116,6 +117,7 @@ class WorkflowConfigManager:
             'sql_completeness_check': self.config.concurrency.sql_completeness_check,
             'sql_correctness_check': self.config.concurrency.sql_correctness_check,
             'redundant_sql_validation': self.config.concurrency.redundant_sql_validation,
+            'keyword_data_processing': self.config.concurrency.keyword_data_processing,
         }
         return concurrency_map.get(step_type, self.config.concurrency.default)
     

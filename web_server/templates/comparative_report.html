@@ -6,25 +6,31 @@
     <title>对比评估报告 - {{ timestamp }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
         body { background-color: #f8f9fa; }
         .container-fluid { padding-top: 2rem; }
-        .summary-card { background-color: #e9ecef; border: none; }
+        .summary-card { background-color: #fff; border: 1px solid #e9ecef; border-radius: 0.75rem; box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05); }
         .accordion-button:not(.collapsed) { background-color: #cfe2ff; }
         .sql-code {
+            background-color: #e9ecef;
+            padding: 0.75rem;
+            border-radius: 0.3rem;
+            font-family: 'Courier New', Courier, monospace;
             white-space: pre-wrap;
-            word-wrap: break-word;
-            font-size: 0.875em;
-            background-color: #f5f5f5;
-            border-radius: 4px;
-            padding: 10px;
+            word-break: break-all;
+            font-size: 0.875rem;
+        }
+        .code-scrollable {
+            max-height: 250px;
+            overflow-y: auto;
         }
         .fingerprint-badge { margin-bottom: 5px; }
         .comparison-section { margin-top: 1.5rem; }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
+    <div class="container-fluid my-4">
         <header class="text-center mb-4">
             <h1 class="display-5">对比评估报告</h1>
             <p class="lead text-muted">运行时间: {{ timestamp }}</p>
@@ -51,60 +57,64 @@
         </div>
 
         <!-- 详细结果 -->
-        <div class="accordion" id="resultsAccordion">
-            {% for result in report_data.results %}
+        <div class="accordion" id="accordionResults">
+            {% for item in report_data.results %}
                 <div class="accordion-item">
-                    <h2 class="accordion-header" id="heading-{{ loop.index }}">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ loop.index }}" aria-expanded="false" aria-controls="collapse-{{ loop.index }}">
-                            <strong>样本: {{ result.sample_id }}</strong>&nbsp;-&nbsp;
-                            <span class="badge bg-success me-2">一致: {{ result.comparison.consistent_count }}</span>
-                            <span class="badge bg-warning me-2">缺失: {{ result.comparison.missing_count }}</span>
-                            <span class="badge bg-danger">多余: {{ result.comparison.superfluous_count }}</span>
-                        </button>
-                    </h2>
-                    <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ loop.index }}" data-bs-parent="#resultsAccordion">
-                        <div class="accordion-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h5>基准 SQL</h5>
-                                    <pre class="sql-code"><code class="language-json">{{ result.baseline_sql|tojson(indent=2) }}</code></pre>
+                    {% if not item.error %}
+                        <h2 class="accordion-header" id="heading{{ loop.index }}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="false" aria-controls="collapse{{ loop.index }}">
+                                <strong>#{{ loop.index }}</strong>&nbsp;-&nbsp;<code>{{ item.function_name }}</code>
+                                <span class="ms-auto">
+                                    <span class="badge bg-success">一致: {{ item.metrics.common_fingerprint_count }}</span>
+                                    <span class="badge bg-warning text-dark">缺失: {{ item.metrics.missing_fingerprint_count }}</span>
+                                    <span class="badge bg-danger">多余: {{ item.metrics.extra_fingerprint_count }}</span>
+                                </span>
+                            </button>
+                        </h2>
+                        <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="heading{{ loop.index }}" data-bs-parent="#accordionResults">
+                            <div class="accordion-body">
+                                
+                                <div class="mb-3">
+                                    <h6><i class="bi bi-journal-code"></i> ORM Code</h6>
+                                    <pre class="sql-code bg-light code-scrollable">{{ item.orm_code }}</pre>
                                 </div>
-                                <div class="col-md-6">
-                                    <h5>模型生成 SQL</h5>
-                                    <pre class="sql-code"><code class="language-json">{{ result.model_sql|tojson(indent=2) }}</code></pre>
-                                </div>
-                            </div>
-                            <div class="comparison-section">
-                                <h5>指纹对比</h5>
+
                                 <div class="row">
-                                    <div class="col-md-4">
-                                        <h6><span class="badge bg-success">一致</span></h6>
-                                        {% for fp in result.comparison.consistent_fingerprints %}
-                                            <span class="badge text-dark bg-light fingerprint-badge">{{ fp }}</span>
-                                        {% else %}
-                                            <p class="text-muted small">无</p>
-                                        {% endfor %}
+                                    <div class="col-md-6">
+                                        <h6><i class="bi bi-file-earmark-code"></i> 基准答案 (Baseline)</h6>
+                                        <pre class="sql-code">{{ item.baseline_sql | tojson(indent=2) }}</pre>
                                     </div>
-                                    <div class="col-md-4">
-                                        <h6><span class="badge bg-warning">缺失</span></h6>
-                                        {% for fp in result.comparison.missing_fingerprints %}
-                                            <span class="badge text-dark bg-light fingerprint-badge">{{ fp }}</span>
+                                    <div class="col-md-6">
+                                        <h6><i class="bi bi-robot"></i> 模型输出 (Model Output)</h6>
+                                        {# 优先展示结构化输出，如果不存在则回退到原始响应 #}
+                                        {% if item.model_generated_structured %}
+                                            <pre class="sql-code">{{ item.model_generated_structured | tojson(indent=2) }}</pre>
                                         {% else %}
-                                            <p class="text-muted small">无</p>
-                                        {% endfor %}
-                                    </div>
-                                    <div class="col-md-4">
-                                        <h6><span class="badge bg-danger">多余</span></h6>
-                                        {% for fp in result.comparison.superfluous_fingerprints %}
-                                            <span class="badge text-dark bg-light fingerprint-badge">{{ fp }}</span>
-                                        {% else %}
-                                            <p class="text-muted small">无</p>
-                                        {% endfor %}
+                                            <pre class="sql-code">{{ item.model_response_raw }}</pre>
+                                        {% endif %}
                                     </div>
                                 </div>
+                                <hr>
+                                <h6><i class="bi bi-body-text"></i> Prompt</h6>
+                                <pre class="sql-code bg-light">{{ item.prompt }}</pre>
                             </div>
                         </div>
-                    </div>
+                    {% else %}
+                        <h2 class="accordion-header" id="headingError{{ loop.index }}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseError{{ loop.index }}" aria-expanded="false" aria-controls="collapseError{{ loop.index }}">
+                                <strong class="text-danger">#{{ loop.index }} - 处理失败</strong>&nbsp;-&nbsp;<code>{{ item.function_name }}</code>
+                            </button>
+                        </h2>
+                        <div id="collapseError{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="headingError{{ loop.index }}" data-bs-parent="#accordionResults">
+                            <div class="accordion-body">
+                                <h6 class="text-danger">错误信息</h6>
+                                <pre class="sql-code bg-danger-subtle text-danger-emphasis">{{ item.error }}</pre>
+                                <hr>
+                                <h6><i class="bi bi-body-text"></i> Prompt</h6>
+                                <pre class="sql-code bg-light">{{ item.prompt }}</pre>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
             {% endfor %}
         </div>

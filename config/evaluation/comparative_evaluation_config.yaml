@@ -8,12 +8,12 @@ model_config:
   # 使用的模型加载类型 (deepspeed, bitsandbytes, hf)
   load_type: "hf"
   # 使用的设备 (cuda, cpu)
-  device: "cuda"
+  device: "cuda:4"
 
 # 2. 数据配置
 data_config:
-  # 基准评估集文件路径
-  baseline_data_path: "model/evaluation/comparative_eval/data/baseline_evaluation_set.json"
+  # 基准评估集文件路径 (现在是一个目录)
+  baseline_data_path: "model/evaluation/comparative_eval/data/ivc_answer_0710"
 
 # 3. 输出配置
 output_config:
