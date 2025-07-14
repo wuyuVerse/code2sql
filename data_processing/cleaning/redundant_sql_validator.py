@@ -230,12 +230,17 @@ class RedundantSQLValidator:
         for sql_record in redundant_sqls:  # 处理所有SQL，移除[:3]限制
             sql_text = sql_record['sql_text'].replace(' <REDUNDANT SQL>', '').strip()
             
+            # 新增：获取 reference_caller 的 SQL
+            reference_sqls = candidate_info.get('reference_sqls', [])
+            reference_sql_texts = [ref['sql_text'] for ref in reference_sqls]
+            
             # Step 2: 业务合理性检测
             prompt = REDUNDANT_BUSINESS_VALIDATION_PROMPT.format(
                 orm_code=candidate['orm_code_content'][:2000],  # 限制长度
                 caller=candidate['target_caller'],
                 reference_caller=candidate['reference_caller'],
-                target_sql=sql_text
+                target_sql=sql_text,
+                reference_sql_json=json.dumps(reference_sql_texts, indent=2)  # 传入参考SQL
             )
             
             # 使用重试机制调用LLM
@@ -252,10 +257,23 @@ class RedundantSQLValidator:
                 'is_redundant': False
             }
             
-            if response and ('是，冗余' in response or response.strip().startswith('是')):
-                step_result['is_redundant'] = True
-                confirmed_redundant_count += 1
-            
+            try:
+                # 提取JSON内容
+                json_match = re.search(r'```json\s*({[^}]+})\s*```', response)
+                if json_match:
+                    response_json = json.loads(json_match.group(1))
+                    if response_json.get('is_redundant') is True:
+                        step_result['is_redundant'] = True
+                        confirmed_redundant_count += 1
+                    step_result['reasoning'] = response_json.get('reasoning', '')
+                else:
+                    # 兼容旧的 "是，冗余" 格式以确保平滑过渡
+                    if response and ('是，冗余' in response or response.strip().startswith('是')):
+                        step_result['is_redundant'] = True
+                        confirmed_redundant_count += 1
+            except (json.JSONDecodeError, TypeError, AttributeError) as e:
+                logger.warning(f"解析LLM响应时出错: {str(e)}，响应内容: {response[:100]}...")
+
             steps.append(step_result)
             self.validation_stats['step_stats']['business_check']['processed'] += 1
             if step_result['is_redundant']:
@@ -286,27 +304,45 @@ class RedundantSQLValidator:
         for sql_record in new_sqls:  # 处理所有SQL，移除[:3]限制
             sql_text = sql_record['sql_text'].strip()
             
+            # 新增：获取 reference_caller 的 SQL
+            reference_sqls = candidate_info.get('reference_sqls', [])
+            reference_sql_texts = [ref['sql_text'] for ref in reference_sqls]
+
             # Step 3: 新增指纹合理性检测
             prompt = NEW_FINGERPRINT_VALIDATION_PROMPT.format(
                 orm_code=candidate['orm_code_content'][:2000],
                 caller=candidate['target_caller'],
                 reference_caller=candidate['reference_caller'],
-                new_sql=sql_text
+                new_sql=sql_text,
+                reference_sql_json=json.dumps(reference_sql_texts, indent=2)  # 传入参考SQL
             )
             
             response = await self.llm_client.call_async(self.session, prompt, max_tokens=300, temperature=0.0)
             
             step_result = {
                 'step': 'new_fingerprint_validation',
-                    'sql_text': sql_text,
+                'sql_text': sql_text,
                 'prompt_length': len(prompt),
                 'llm_response': response,
                 'is_valid_new': False
             }
             
-            if response and '合理新增' in response:
-                step_result['is_valid_new'] = True
-                valid_new_count += 1
+            try:
+                # 提取JSON内容
+                json_match = re.search(r'```json\s*({[^}]+})\s*```', response)
+                if json_match:
+                    response_json = json.loads(json_match.group(1))
+                    if response_json.get('is_valid_new') is True:
+                        step_result['is_valid_new'] = True
+                        valid_new_count += 1
+                    step_result['reasoning'] = response_json.get('reasoning', '')
+                else:
+                    # 兼容旧的格式
+                    if response and '合理新增' in response:
+                        step_result['is_valid_new'] = True
+                        valid_new_count += 1
+            except (json.JSONDecodeError, TypeError, AttributeError) as e:
+                logger.warning(f"解析LLM响应时出错: {str(e)}，响应内容: {response[:100]}...")
             
             steps.append(step_result)
         
@@ -332,6 +368,10 @@ class RedundantSQLValidator:
         # 对每个缺失SQL进行验证 - 全量处理，移除数量限制
         truly_missing_count = 0
         
+        # 新增：获取 target_caller 实际生成的 SQL
+        target_sqls = candidate_info.get('target_sqls', [])
+        target_sql_texts = [t['sql_text'] for t in target_sqls]
+
         for sql_record in missing_sql_examples:  # 处理所有SQL，移除[:3]限制
             sql_text = sql_record['sql_text'].strip()
             
@@ -340,7 +380,8 @@ class RedundantSQLValidator:
                 orm_code=candidate['orm_code_content'][:2000],
                 caller=candidate['target_caller'],
                 reference_caller=candidate['reference_caller'],
-                missing_sql=sql_text
+                missing_sql=sql_text,
+                target_sql_json=json.dumps(target_sql_texts, indent=2)  # 传入调用者已生成的SQL
             )
             
             response = await self.llm_client.call_async(self.session, prompt, max_tokens=300, temperature=0.0)
@@ -352,10 +393,23 @@ class RedundantSQLValidator:
                 'llm_response': response,
                 'is_truly_missing': False
             }
-            
-            if response and '确实缺失' in response:
-                step_result['is_truly_missing'] = True
-                truly_missing_count += 1
+
+            try:
+                # 提取JSON内容
+                json_match = re.search(r'```json\s*({[^}]+})\s*```', response)
+                if json_match:
+                    response_json = json.loads(json_match.group(1))
+                    if response_json.get('is_truly_missing') is True:
+                        step_result['is_truly_missing'] = True
+                        truly_missing_count += 1
+                    step_result['reasoning'] = response_json.get('reasoning', '')
+                else:
+                    # 兼容旧的格式
+                    if response and '确实缺失' in response:
+                        step_result['is_truly_missing'] = True
+                        truly_missing_count += 1
+            except (json.JSONDecodeError, TypeError, AttributeError) as e:
+                logger.warning(f"解析LLM响应时出错: {str(e)}，响应内容: {response[:100]}...")
             
             steps.append(step_result)
         

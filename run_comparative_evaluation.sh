@@ -16,7 +16,7 @@ function show_help {
 }
 
 # 默认评估模式
-EVAL_MODE="test"
+EVAL_MODE="full"
 
 # 解析命令行参数
 while [[ $# -gt 0 ]]; do

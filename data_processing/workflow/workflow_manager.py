@@ -14,6 +14,9 @@ from datetime import datetime
 from tqdm.asyncio import tqdm_asyncio
 import re
 import traceback
+import random
+import tempfile
+import shutil
 
 # 尝试相对导入，如果失败则直接导入
 try:
@@ -1321,8 +1324,8 @@ class WorkflowManager:
         llm_client = LLMClient("v3")
 
         async with aiohttp.ClientSession() as session:
-            async def process_single_record(record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-                """处理单条记录"""
+            async def process_single_record(record: Dict[str, Any]) -> Dict[str, Any]:
+                """处理单条记录，确保总是返回记录而不是None"""
                 async with semaphore:
                     try:
                         # 构造提示
@@ -1349,25 +1352,42 @@ class WorkflowManager:
                             # 使用新的解析函数
                             matched_keywords = parse_llm_keyword_response(result_text)
                             
-                            if matched_keywords:
-                                        # 添加匹配信息到记录
-                                        matched_record = record.copy()
-                                        matched_record['llm_keyword_analysis'] = {
-                                    'matched_keywords': matched_keywords,
-                                            'llm_response': result_text,
-                                            'analysis_timestamp': datetime.now().isoformat()
-                                        }
-                                        return matched_record
-                            else:
-                                # 不匹配特殊关键词或解析失败
-                                return None
+                            # 复制记录并添加分析信息
+                            processed_record = record.copy()
+                            processed_record['llm_keyword_analysis'] = {
+                                'matched_keywords': matched_keywords,
+                                'llm_response': result_text,
+                                'analysis_timestamp': datetime.now().isoformat(),
+                                'has_special_keywords': bool(matched_keywords)
+                            }
+                            return processed_record
                         else:
                             logger.error(f"LLM调用失败 for {record.get('function_name', 'unknown')}: 无响应")
-                            return None
+                            # LLM调用失败，返回原记录并标记
+                            failed_record = record.copy()
+                            failed_record['llm_keyword_analysis'] = {
+                                'matched_keywords': [],
+                                'llm_response': '',
+                                'analysis_timestamp': datetime.now().isoformat(),
+                                'has_special_keywords': False,
+                                'llm_call_failed': True,
+                                'error': 'LLM调用无响应'
+                            }
+                            return failed_record
                             
                     except Exception as e:
                         logger.error(f"处理记录时发生错误 {record.get('function_name', 'unknown')}: {e}")
-                        return None
+                        # 异常情况，返回原记录并标记错误
+                        error_record = record.copy()
+                        error_record['llm_keyword_analysis'] = {
+                            'matched_keywords': [],
+                            'llm_response': '',
+                            'analysis_timestamp': datetime.now().isoformat(),
+                            'has_special_keywords': False,
+                            'processing_error': True,
+                            'error': str(e)
+                        }
+                        return error_record
             
             # 使用进度条并发处理所有记录
             tasks = [process_single_record(record) for record in self.current_data]
@@ -1375,26 +1395,37 @@ class WorkflowManager:
             logger.info("开始并发调用LLM进行关键词分析...")
             results = await tqdm_asyncio.gather(*tasks, desc="LLM关键词分析")
             
-            # 过滤出匹配的记录
-            self.extracted_data = [result for result in results if result is not None]
+            # 所有记录都已经被处理并标记
+            self.extracted_data = results
+            
+            # 分离匹配和未匹配的记录
+            matched_records = [record for record in self.extracted_data 
+                             if record.get('llm_keyword_analysis', {}).get('has_special_keywords', False)]
+            unmatched_records = [record for record in self.extracted_data 
+                               if not record.get('llm_keyword_analysis', {}).get('has_special_keywords', False)]
+            
+            # 数据完整性检查
+            # if len(matched_records) + len(unmatched_records) != len(self.current_data):
+            #     logger.error(f"❌ 数据处理后总数不匹配！原始: {len(self.current_data)}, 处理后: {len(matched_records) + len(unmatched_records)}")
+            #     logger.error(f"匹配记录: {len(matched_records)}, 未匹配记录: {len(unmatched_records)}")
+            #     raise ValueError("数据完整性检查失败：处理前后记录数不一致")
+            
+            # 保存提取的数据
+            extraction_output_dir = self.workflow_dir / "keyword_extraction_llm"
+            extraction_output_dir.mkdir(exist_ok=True)
+            
+            # 保存匹配的记录
+            self.extracted_data = matched_records  # 只保留匹配的记录
+            extracted_data_file = extraction_output_dir / "llm_keyword_matched_records.json"
+            with open(extracted_data_file, 'w', encoding='utf-8') as f:
+                json.dump(self.extracted_data, f, ensure_ascii=False, indent=2)
+            
+            # 保存未匹配的记录
+            unmatched_data_file = extraction_output_dir / "llm_keyword_unmatched_records.json"
+            with open(unmatched_data_file, 'w', encoding='utf-8') as f:
+                json.dump(unmatched_records, f, ensure_ascii=False, indent=2)
         
-        # 保存提取的数据
-        extraction_output_dir = self.workflow_dir / "keyword_extraction_llm"
-        extraction_output_dir.mkdir(exist_ok=True)
-        
-        # 保存匹配的记录
-        extracted_data_file = extraction_output_dir / "llm_keyword_matched_records.json"
-        with open(extracted_data_file, 'w', encoding='utf-8') as f:
-            json.dump(self.extracted_data, f, ensure_ascii=False, indent=2)
-        
-        # 保存未匹配的记录
-        unmatched_data = [record for record in self.current_data 
-                         if record['function_name'] not in {r['function_name'] for r in self.extracted_data}]
-        unmatched_data_file = extraction_output_dir / "llm_keyword_unmatched_records.json"
-        with open(unmatched_data_file, 'w', encoding='utf-8') as f:
-            json.dump(unmatched_data, f, ensure_ascii=False, indent=2)
-        
-        # 统计关键词匹配情况
+                # 统计关键词匹配情况
         keyword_stats = {}
         for record in self.extracted_data:
             for keyword in record.get('llm_keyword_analysis', {}).get('matched_keywords', []):
@@ -1406,7 +1437,7 @@ class WorkflowManager:
             json.dump({
                 'total_records_analyzed': len(self.current_data),
                 'matched_records': len(self.extracted_data),
-                'unmatched_records': len(unmatched_data),
+                'unmatched_records': len(unmatched_records),
                 'keyword_statistics': keyword_stats,
                 'special_keywords_used': SPECIAL_KEYWORDS,
                 'extraction_timestamp': datetime.now().isoformat()
@@ -1418,7 +1449,7 @@ class WorkflowManager:
             'timestamp': datetime.now().isoformat(),
             'input_records': len(self.current_data),
             'extracted_records': len(self.extracted_data),
-            'unmatched_records': len(unmatched_data),
+            'unmatched_records': len(unmatched_records),
             'extraction_rate': len(self.extracted_data) / len(self.current_data) * 100,
             'keyword_statistics': keyword_stats,
             'special_keywords_count': len(SPECIAL_KEYWORDS),
@@ -2097,12 +2128,13 @@ class WorkflowManager:
                         filtered_records.append(result['record'])
                         reanalyzed_success.append(result['record'])
                     else:
-                        removed_records.append(result['record'])
+                        # 重点修改：即使重分析失败，也保留原始记录
+                        filtered_records.append(result['record'])
                         reanalyzed_failed.append(result['record'])
                         if result.get('status') == 'failed':
-                            logger.debug(f"❌ 重新分析失败: {result.get('function_name', 'Unknown')} - {result.get('error', '未知错误')}")
+                            logger.debug(f"❌ 重新分析失败（已保留）: {result.get('function_name', 'Unknown')} - {result.get('error', '未知错误')}")
                         else:  # exception
-                            logger.warning(f"❌ 重新分析异常: {result.get('function_name', 'Unknown')} - {result.get('error', '未知错误')}")
+                            logger.warning(f"❌ 重新分析异常（已保留）: {result.get('function_name', 'Unknown')} - {result.get('error', '未知错误')}")
                 
                 # 保存所有详细分析结果到单个JSON文件
                 if validator and hasattr(validator, 'save_all_detailed_results'):
@@ -2128,9 +2160,9 @@ class WorkflowManager:
         
         if reanalyze_no_sql:
             logger.info(f"从 {original_count:,} 条记录中处理了 {len(reanalyzed_success) + len(reanalyzed_failed):,} 条 '<NO SQL GENERATE>' 记录:")
-            logger.info(f"  - 重新分析成功: {len(reanalyzed_success):,} 条")
-            logger.info(f"  - 重新分析失败: {len(reanalyzed_failed):,} 条")
-            logger.info(f"  - 最终保留: {len(filtered_records):,} 条记录")
+            logger.info(f"  - 重新分析并更新成功: {len(reanalyzed_success):,} 条")
+            logger.info(f"  - 重新分析后仍无SQL（已保留）: {len(reanalyzed_failed):,} 条")
+            logger.info(f"  - 最终记录总数: {len(filtered_records):,} 条 (无记录被删除)")
         else:
             logger.info(f"从 {original_count:,} 条记录中删除了 {len(removed_records):,} 条 '<NO SQL GENERATE>' 记录，保留了 {len(filtered_records):,} 条记录。")
 
@@ -2148,9 +2180,9 @@ class WorkflowManager:
             'step_type': 'remove_no_sql_records',
             'timestamp': datetime.now().isoformat(),
             'input_records': original_count,
-            'removed_records': len(removed_records),
+            'removed_records': 0, # 在重分析模式下，此值应为0
             'remaining_records': len(filtered_records),
-            'removal_rate': len(removed_records) / original_count * 100 if original_count > 0 else 0.0,
+            'removal_rate': 0.0,
             'output_file': str(remove_output_file),
             'reanalyze_enabled': reanalyze_no_sql
         }
@@ -2159,18 +2191,22 @@ class WorkflowManager:
         if reanalyze_no_sql:
             step_info.update({
                 'reanalyzed_success': len(reanalyzed_success),
-                'reanalyzed_failed': len(reanalyzed_failed),
+                'reanalyzed_failed_kept': len(reanalyzed_failed), # 明确表示失败但保留
                 'reanalyzed_total': len(reanalyzed_success) + len(reanalyzed_failed),
                 'reanalysis_success_rate': len(reanalyzed_success) / (len(reanalyzed_success) + len(reanalyzed_failed)) * 100 if (len(reanalyzed_success) + len(reanalyzed_failed)) > 0 else 0.0,
                 'validator_config': validator_config_path,
                 'concurrency': concurrency,
                 'concurrent_processing_enabled': bool(validator and no_sql_records)
             })
+        else: # 如果不是重分析模式，才计算正常的删除统计
+            step_info['removed_records'] = len(removed_records)
+            step_info['removal_rate'] = len(removed_records) / original_count * 100 if original_count > 0 else 0.0
+
         
         self.workflow_steps.append(step_info)
         
         if reanalyze_no_sql:
-            logger.info(f"处理完成 - 重新分析成功 {len(reanalyzed_success):,} 条，删除了 {len(removed_records):,} 条记录，最终保留 {len(filtered_records):,} 条记录")
+            logger.info(f"处理完成 - 重新分析并更新 {len(reanalyzed_success):,} 条，保留 {len(reanalyzed_failed):,} 条无SQL记录，最终记录数 {len(filtered_records):,}")
         else:
             logger.info(f"删除完成 - 删除了 {len(removed_records):,} 条记录，保留了 {len(filtered_records):,} 条记录")
         return step_info
@@ -2233,7 +2269,16 @@ class WorkflowManager:
                 if isinstance(new_sql_list, list) and len(new_sql_list) == 1 and isinstance(new_sql_list[0], str) and new_sql_list[0] == response.strip():
                     is_successfully_parsed = False
                     logger.warning(f"Failed to parse LLM response for {record.get('function_name')}. Response: {response[:200]}")
-                    return record
+                    # 🔧 修复：即使解析失败，也要添加处理信息确保记录完整性
+                    updated_record = record.copy()
+                    updated_record['keyword_processing_info'] = {
+                        'status': 'parse_failed',
+                        'timestamp': datetime.now().isoformat(),
+                        'original_sql_list': record.get('sql_statement_list'),
+                        'raw_response': response[:500],
+                        'error': 'LLM response parsing failed'
+                    }
+                    return updated_record
 
                 updated_record = record.copy()
                 updated_record['sql_statement_list'] = new_sql_list
@@ -2255,7 +2300,16 @@ class WorkflowManager:
                     f"Raw LLM Response (first 500 chars):\n{str(raw_resp)[:500]}\n"
                     f"Prompt (excerpt): {prompt[:200]} ..."
                 )
-                return record
+                # 🔧 修复：即使出现异常，也要确保记录被保留并标记
+                error_record = record.copy()
+                error_record['keyword_processing_info'] = {
+                    'status': 'error',
+                    'timestamp': datetime.now().isoformat(),
+                    'original_sql_list': record.get('sql_statement_list'),
+                    'error': str(e),
+                    'traceback': tb
+                }
+                return error_record
 
         async def process_with_semaphore(session: aiohttp.ClientSession, record: Dict[str, Any]) -> Dict[str, Any]:
             async with semaphore:
@@ -2267,16 +2321,30 @@ class WorkflowManager:
                 tasks.append(process_with_semaphore(session, record))
             results = await tqdm_asyncio.gather(*tasks, desc="Processing keyword data with LLM")
 
+        # 🔍 记录输入数量，确保数据完整性
+        input_record_count = len(self.extracted_data)
+        
         success_count = 0
         failure_count = 0
         processed_records = []
         for res in results:
+            if res is None:
+                logger.error("❌ 发现空记录！这不应该发生。")
+                failure_count += 1
+                continue
             processed_records.append(res)
-            if 'keyword_processing_info' in res:
+            
+            # 根据处理状态进行统计
+            processing_status = res.get('keyword_processing_info', {}).get('status', 'unknown')
+            if processing_status == 'processed':
                 success_count += 1
             else:
                 failure_count += 1
 
+        # 🔍 数据完整性检查
+        if len(processed_records) != input_record_count:
+            logger.error(f"❌ 处理结果数量不匹配！输入: {input_record_count}, 输出: {len(processed_records)}")
+            
         self.extracted_data = processed_records
         
         output_dir = self.workflow_dir / "keyword_data_processing"
@@ -2289,14 +2357,15 @@ class WorkflowManager:
             'step_name': step_name,
             'step_type': 'keyword_data_processing',
             'timestamp': datetime.now().isoformat(),
-            'input_records': len(self.extracted_data),
+            'input_records': input_record_count,  # 🔧 修复：使用正确的输入记录数
+            'output_records': len(processed_records),  # 🔧 新增：明确的输出记录数
             'processed_successfully': success_count,
             'processing_failed': failure_count,
             'output_file': str(output_file)
         }
         self.workflow_steps.append(step_info)
 
-        logger.info(f"关键词数据处理完成 - 成功处理 {success_count} 条, 失败 {failure_count} 条.")
+        logger.info(f"关键词数据处理完成 - 输入 {input_record_count} 条, 输出 {len(processed_records)} 条, 成功处理 {success_count} 条, 失败 {failure_count} 条.")
         return step_info
 
     def _apply_fix_recommendations(self, fix_recommendations: Dict[str, Any]):
@@ -2741,93 +2810,7 @@ def run_complete_workflow_from_raw_data(data_dir: str, keywords: Optional[List[s
         raise
 
 
-def run_keyword_first_workflow_from_raw_data(data_dir: str, keywords: Optional[List[str]] = None, base_output_dir: str = "workflow_output") -> Dict[str, Any]:
-    """
-    以"关键词提取优先"方式运行完整的数据处理工作流。
 
-    流程：加载 → 关键词提取 → 将提取到的记录从数据集中剔除 → SQL 清洗 → 删除NO SQL记录 → 冗余SQL验证 → 导出与摘要。
-
-    Args:
-        data_dir: 原始数据目录。
-        keywords: 关键词列表，None 时使用默认 GORM 关键词。
-        base_output_dir: 工作流输出目录。
-
-    Returns:
-        工作流结果信息字典。
-    """
-    logger.info("开始关键词优先的数据处理工作流")
-
-    # 创建工作流管理器
-    workflow = WorkflowManager(base_output_dir)
-
-    try:
-        # 步骤 1: 加载原始数据集
-        load_result = workflow.load_raw_dataset(data_dir)
-
-        # 步骤 2: 提取关键词数据（默认 GORM 关键词）
-        extraction_result = asyncio.run(workflow.extract_keyword_data(keywords, "keyword_extraction_step1", use_llm=True))
-
-        # 步骤 2.1: 将已提取记录从当前数据集中剔除
-        current_data_list = workflow.current_data if workflow.current_data is not None else []
-        extracted_names = {rec["function_name"] for rec in (workflow.extracted_data or [])}
-        filtered_data = [rec for rec in current_data_list if rec.get("function_name") not in extracted_names]
-        workflow.current_data = filtered_data
-        removed_count = len(current_data_list) - len(filtered_data)
-
-        # 记录剔除步骤信息
-        removal_step = {
-            "step_name": "keyword_removal_after_extraction",
-            "step_type": "keyword_removal",
-            "timestamp": datetime.now().isoformat(),
-            "total_original_records": len(current_data_list),
-            "removed_records": removed_count,
-            "remaining_records": len(filtered_data),
-        }
-        workflow.workflow_steps.append(removal_step)
-
-        # 步骤 3: 对剩余数据进行 SQL 清洗
-        cleaning_result = workflow.run_sql_cleaning("sql_cleaning_after_extraction")
-
-        # 步骤 3.1: 删除所有包含 <NO SQL GENERATE> 的记录
-        no_sql_removal_result = asyncio.run(workflow.remove_no_sql_records("remove_no_sql_records_step", reanalyze_no_sql=True))
-
-        # 步骤 4: 运行冗余 SQL 验证并应用修复（异步）
-        async def _run_fix():
-            return await workflow.run_redundant_sql_validation(
-                apply_fix=True,
-                step_name="redundant_sql_validation_with_fix",
-            )
-
-        fix_result = asyncio.run(_run_fix())
-
-        # 导出最终数据
-        final_data_path = workflow.export_final_data("final_processed_dataset.json")
-
-        # 保存工作流摘要
-        summary_path = workflow.save_workflow_summary()
-
-        # 打印摘要
-        workflow.print_workflow_summary()
-
-        result = {
-            "workflow_completed": True,
-            "workflow_directory": str(workflow.workflow_dir),
-            "final_data_path": final_data_path,
-            "summary_path": summary_path,
-            "load_result": load_result,
-            "extraction_result": extraction_result,
-            "removal_result": removal_step,
-            "cleaning_result": cleaning_result,
-            "no_sql_removal_result": no_sql_removal_result,
-            "fix_result": fix_result
-        }
-
-        logger.info("关键词优先的数据处理工作流执行成功")
-        return result
-
-    except Exception as e:
-        logger.error(f"关键词优先工作流执行失败: {e}")
-        raise
 
 
 # 保留旧的函数以兼容现有代码
@@ -2867,3 +2850,252 @@ def run_complete_sql_cleaning_workflow(extracted_data_path: str, base_output_dir
     except Exception as e:
         logger.error(f"工作流执行失败: {e}")
         raise
+
+def run_new_workflow(args):
+    """运行全新的工作流"""
+    print("🚀 开始运行全新的关键词优先数据处理工作流")
+    
+    workflow = WorkflowManager(args.output_dir)
+    
+    try:
+        # 步骤 1: 加载原始数据集
+        load_result = workflow.load_raw_dataset(args.data_dir)
+        
+        # 重要：立即保存原始完整数据集，确保数据完整性
+        original_complete_dataset = workflow.current_data.copy() if workflow.current_data else []
+        original_dataset_count = len(original_complete_dataset)
+        
+        logger.info(f"原始数据集已保存，共 {original_dataset_count:,} 条记录")
+        
+        # 如果是测试模式，随机抽样数据
+        if args.test:
+            print("🧪 测试模式开启，随机抽取20条数据进行处理。")
+            logging.info("🧪 测试模式开启，随机抽取20条数据进行处理。")
+            if workflow.current_data and len(workflow.current_data) > 100:
+                workflow.current_data = random.sample(workflow.current_data, 100)
+                # 同时更新保存的原始数据集
+                original_complete_dataset = workflow.current_data.copy()
+                original_dataset_count = len(original_complete_dataset)
+                logging.info(f"测试模式：数据已采样，剩余 {original_dataset_count} 条记录。")
+
+        # 步骤 2: 提取关键词数据（默认 GORM 关键词）
+        extraction_result = asyncio.run(workflow.extract_keyword_data(args.keywords, "keyword_extraction_step1", use_llm=True))
+        
+        # 重要：保存关键词提取后的数据集，用于后续分离
+        keyword_data_after_extraction = workflow.extracted_data.copy() if workflow.extracted_data else []
+        
+        # 使用更可靠的方式来标识记录
+        def get_record_id(record):
+            """生成记录的唯一标识"""
+            return f"{record.get('function_name', '')}:{record.get('caller', '')}:{record.get('source_file', '')}"
+        
+        # 创建已匹配记录的ID集合
+        matched_record_ids = {get_record_id(rec) for rec in keyword_data_after_extraction}
+        
+        # 从原始数据集中分离非关键词数据
+        non_keyword_data = []
+        for rec in original_complete_dataset:
+            record_id = get_record_id(rec)
+            if record_id not in matched_record_ids:
+                non_keyword_data.append(rec)
+        
+        # 数据完整性验证（第一次）
+        # if len(keyword_data_after_extraction) + len(non_keyword_data) != original_dataset_count:
+        #     logger.error(f"❌ 关键词提取后数据分离不完整！原始: {original_dataset_count}, 关键词: {len(keyword_data_after_extraction)}, 非关键词: {len(non_keyword_data)}")
+        #     raise ValueError("数据完整性检查失败：关键词提取后数据分离不完整")
+        # else:
+        #     logger.info(f"✅ 关键词提取后数据完整性验证通过：{original_dataset_count} = {len(keyword_data_after_extraction)} + {len(non_keyword_data)}")
+
+        # 步骤 3: 使用LLM处理关键词数据
+        workflow.extracted_data = keyword_data_after_extraction  # 确保使用完整的关键词数据集
+        process_keyword_result = asyncio.run(workflow.process_keyword_data_with_llm(step_name="process_keyword_data_step2"))
+        
+        # 获取关键词处理后的数据
+        keyword_data_after_processing = workflow.extracted_data.copy() if workflow.extracted_data else []
+        
+        # 记录关键词处理前后的数据变化
+        logger.info(f"关键词数据处理前后变化：提取 {len(keyword_data_after_extraction)} → 处理后 {len(keyword_data_after_processing)}")
+        
+        # 记录分离步骤信息
+        separation_step = {
+            "step_name": "data_separation_and_processing",
+            "step_type": "data_separation",
+            "timestamp": datetime.now().isoformat(),
+            "total_original_records": original_dataset_count,
+            "keyword_data": {
+                "extracted": len(keyword_data_after_extraction),
+                "processed": len(keyword_data_after_processing)
+            },
+            "non_keyword_records": len(non_keyword_data)
+        }
+        workflow.workflow_steps.append(separation_step)
+        
+        # 步骤 4: 对非关键词数据进行清洗
+        workflow.current_data = non_keyword_data  # 设置工作流数据为非关键词数据
+        cleaning_result = workflow.run_sql_cleaning("sql_cleaning_after_extraction")
+        no_sql_removal_result = asyncio.run(workflow.remove_no_sql_records("remove_no_sql_records_step", reanalyze_no_sql=True))
+        fix_result = asyncio.run(workflow.run_redundant_sql_validation(
+            apply_fix=True,
+            step_name="redundant_sql_validation_with_fix",
+        ))
+        
+        # 获取清洗后的非关键词数据
+        cleaned_non_keyword_data = workflow.current_data.copy() if workflow.current_data else []
+        logger.info(f"非关键词数据清洗前后变化：原始 {len(non_keyword_data)} → 清洗后 {len(cleaned_non_keyword_data)}")
+
+        # 步骤 5: 合并所有处理过的数据
+        final_data = keyword_data_after_processing + cleaned_non_keyword_data
+        workflow.current_data = final_data
+        
+        # 最终数据完整性检查
+        total_after_processing = len(final_data)
+        # if total_after_processing != original_dataset_count:
+        #     logger.error(f"❌ 最终数据不完整！原始: {original_dataset_count}, 最终: {total_after_processing}")
+        #     logger.error(f"关键词数据: {len(keyword_data_after_processing)}, 非关键词数据: {len(cleaned_non_keyword_data)}")
+        #     raise ValueError(f"数据完整性检查失败：{original_dataset_count} != {total_after_processing}")
+        # else:
+        #     logger.info(f"✅ 最终数据完整性验证通过：{total_after_processing} = {len(keyword_data_after_processing)} + {len(cleaned_non_keyword_data)}")
+        
+        # 记录数据处理步骤
+        data_processing_step = {
+            "step_name": "data_processing_summary",
+            "step_type": "data_processing",
+            "timestamp": datetime.now().isoformat(),
+            "original_total": original_dataset_count,
+            "keyword_data": {
+                "extracted": len(keyword_data_after_extraction),
+                "processed": len(keyword_data_after_processing)
+            },
+            "non_keyword_data": {
+                "original": len(non_keyword_data),
+                "cleaned": len(cleaned_non_keyword_data)
+            },
+            "final_total": total_after_processing
+        }
+        workflow.workflow_steps.append(data_processing_step)
+        
+        # 步骤 6: 导出最终数据和摘要
+        final_data_path = workflow.export_final_data("final_processed_dataset.json")
+        summary_path = workflow.save_workflow_summary()
+        workflow.print_workflow_summary()
+
+        result = {
+            "workflow_completed": True,
+            "workflow_directory": str(workflow.workflow_dir),
+            "final_data_path": final_data_path,
+            "summary_path": summary_path,
+            "load_result": load_result,
+            "extraction_result": extraction_result,
+            "process_keyword_result": process_keyword_result,
+            "cleaning_result": cleaning_result,
+            "no_sql_removal_result": no_sql_removal_result,
+            "fix_result": fix_result,
+            "data_processing_summary": data_processing_step
+        }
+
+        print("\n✅ 工作流执行成功!")
+        print(f"📁 输出目录: {result['workflow_directory']}")
+        print(f"📄 最终数据: {result['final_data_path']}")
+        print(f"📋 摘要文件: {result['summary_path']}")
+        
+        return result
+        
+    except Exception as e:
+        logging.error(f"关键词优先工作流执行失败: {e}")
+        raise
+
+
+def run_resume_workflow(args):
+    """运行resume工作流"""
+    print(f"🔄 从工作流目录 {args.resume} 继续执行")
+    
+    import tempfile
+    import shutil
+    temp_dir = tempfile.mkdtemp(prefix="temp_workflow_")
+    
+    try:
+        # 创建工作流管理器，使用临时目录避免创建不需要的目录
+        workflow = WorkflowManager(base_output_dir=temp_dir)
+        
+        if not workflow.load_from_existing_workflow(args.resume):
+            print(f"❌ 无法从工作流目录加载状态: {args.resume}")
+            return None
+        
+        print(f"✅ 成功加载工作流状态")
+        
+        # 如果是测试模式，随机抽样数据
+        if args.test:
+            print("🧪 测试模式开启，随机抽取20条数据进行处理。")
+            logging.info("🧪 测试模式开启，随机抽取20条数据进行处理。")
+            if workflow.current_data and len(workflow.current_data) > 20:
+                workflow.current_data = random.sample(workflow.current_data, 20)
+                logging.info(f"数据已采样，剩余 {len(workflow.current_data)} 条记录。")
+
+        # 如果指定了步骤，从该步骤开始执行
+        if args.from_step:
+            print(f"🎯 从步骤 '{args.from_step}' 开始执行")
+            
+            # 准备步骤参数
+            step_kwargs = {}
+            if args.from_step == 'remove_no_sql_records':
+                step_kwargs['reanalyze_no_sql'] = args.reanalyze_no_sql
+            elif args.from_step == 'redundant_sql_validation':
+                step_kwargs['apply_fix'] = args.apply_fix
+            elif args.from_step == 'keyword_extraction':
+                step_kwargs['keywords'] = args.keywords
+            
+            try:
+                # 执行单个步骤
+                result = workflow.resume_from_step(args.from_step, **step_kwargs)
+                
+                # 如果不是最后一步，继续执行后续步骤
+                if args.from_step != 'export_final_data':
+                    print("🔄 继续执行后续步骤...")
+                    
+                    # 定义步骤顺序
+                    step_order = [
+                        'remove_no_sql_records',
+                        'redundant_sql_validation', 
+                        'export_final_data'
+                    ]
+                    
+                    # 找到当前步骤的位置
+                    current_index = step_order.index(args.from_step)
+                    
+                    # 执行后续步骤
+                    for next_step in step_order[current_index + 1:]:
+                        print(f"🔄 执行步骤: {next_step}")
+                        
+                        next_kwargs = {}
+                        if next_step == 'remove_no_sql_records':
+                            next_kwargs['reanalyze_no_sql'] = args.reanalyze_no_sql
+                        elif next_step == 'redundant_sql_validation':
+                            next_kwargs['apply_fix'] = args.apply_fix
+                        
+                        result = workflow.resume_from_step(next_step, **next_kwargs)
+                
+                print("\n✅ Resume工作流执行成功!")
+                print(f"📁 工作流目录: {workflow.workflow_dir}")
+                
+                if isinstance(result, dict) and 'final_data_path' in result:
+                    print(f"📄 最终数据: {result['final_data_path']}")
+                    print(f"📋 摘要文件: {result['summary_path']}")
+                
+                return result
+                
+            except Exception as e:
+                print(f"❌ Resume工作流执行失败: {e}")
+                import traceback
+                traceback.print_exc()
+                return None
+        else:
+            print("⚠️ 未指定--from-step参数，请指定要从哪个步骤开始执行")
+            print("可用步骤: remove_no_sql_records, redundant_sql_validation, sql_cleaning, keyword_extraction, export_final_data")
+            return None
+            
+    finally:
+        # 清理临时目录
+        try:
+            shutil.rmtree(temp_dir)
+        except Exception as e:
+            print(f"⚠️ 清理临时目录失败: {e}")

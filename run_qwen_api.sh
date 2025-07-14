@@ -1,0 +1,5 @@
+nohup env API_HOST=0.0.0.0 API_PORT=8001 API_MODEL_NAME=code2sql uv run python -m llamafactory.cli api --model_name_or_path /home/wuyu/code2sql/saves/qwen3-14b-ft-20250710_154849 --template qwen > code2sql_8001.log 2>&1 &
+nohup env CUDA_VISIBLE_DEVICES=7 API_HOST=0.0.0.0 API_PORT=8001 API_MODEL_NAME=code2sql uv run python -m llamafactory.cli api --model_name_or_path /home/wuyu/code2sql/saves/qwen3-14b-ft-20250710_154849 --template qwen > code2sql_8001.log 2>&1 &
+
+# 新的sglang启动命令
+nohup env CUDA_VISIBLE_DEVICES=6,7 python -m sglang.launch_server --model-path /home/wuyu/code2sql/saves/qwen3-14b-ft-20250710_154849 --host 0.0.0.0 --port 8001 --tensor-parallel-size 2 --tp-size 2 --max-running-requests 100 --max-total-tokens 8192 --enable-metrics --log-requests --log-requests-level 1 > code2sql_sglang_8001.log 2>&1 &

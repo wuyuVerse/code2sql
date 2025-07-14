@@ -2,14 +2,25 @@
 # 基于 VERL 框架的 REINFORCE++ 算法
 # 根据 zuowei.sh 脚本配置
 
+# 数据转换配置
+data_conversion:
+  # 数据转换配置文件路径
+  conversion_config_path: "config/rl/data_conversion/conversion_config.yaml"
+  # 是否在训练前自动进行数据转换
+  auto_convert: true
+  # 数据转换输出目录
+  output_dir: "model/data/orm2sql_rl_data"
+  # 转换后的数据文件名前缀
+  output_name_prefix: "orm2sql_rl"
+
 # 数据配置
 data:
-  # 数据文件路径
-  train_files: "/data/local_disk3/zuowei/verl_train_dataset_train_no_think.parquet"
-  val_files: "/data/local_disk3/zuowei/verl_train_dataset_val_no_think.parquet"
+  # 数据文件路径（将由数据转换器自动生成）
+  train_files: "/home/wuyu/code2sql/model/data/orm2sql_rl_data/orm2sql_rl_20250708_162812_train.parquet"
+  val_files: "/home/wuyu/code2sql/model/data/orm2sql_rl_data/orm2sql_rl_20250708_162812_val.parquet"
   
   # 训练参数
-  train_batch_size: 64
+  train_batch_size: 60  # 调整为60，能被6整除
   max_prompt_length: 8192
   max_response_length: 4096
   filter_overlong_prompts: true
@@ -24,7 +35,7 @@ algorithm:
 # Actor, Rollout, Reference 模型配置
 actor_rollout_ref:
   model:
-    path: "/data/local_disk3/zuowei/models/Qwen3-32B"
+    path: "/home/wuyu/code2sql/saves/qwen3-14b-ft-20250710_154849"
     use_remove_padding: true
     enable_gradient_checkpointing: true
     trust_remote_code: true
@@ -32,7 +43,7 @@ actor_rollout_ref:
   actor:
     optim:
       lr: 3e-6
-    ppo_mini_batch_size: 64
+    ppo_mini_batch_size: 60  # 调整为60，与train_batch_size保持一致
     ppo_micro_batch_size_per_gpu: 2
     clip_ratio_low: 0.2
     clip_ratio_high: 0.28
@@ -47,7 +58,7 @@ actor_rollout_ref:
   
   rollout:
     log_prob_micro_batch_size_per_gpu: 1
-    tensor_model_parallel_size: 4
+    tensor_model_parallel_size: 2
     name: "vllm"
     gpu_memory_utilization: 0.9
     n: 1
@@ -64,8 +75,8 @@ reward_model:
 
 # 自定义奖励函数配置
 custom_reward_function:
-  path: "/data/local_disk3/zuowei/verl-main/reward_lib/composite_reward.py"
-  name: "compute_score_batch"
+  path: "/home/wuyu/code2sql/model/rl/code2sql_reward.py"
+  name: "code2sql_reward"
 
 # 训练器配置
 trainer:
@@ -73,14 +84,22 @@ trainer:
   logger: ["console", "swanlab"]
   project_name: "verl_reinforce_plus_plus_formal"
   experiment_name: "qwen3_32b_rl-0704-reinforce-plus-plus"
-  n_gpus_per_node: 8
-  nnodes: 4
+  n_gpus_per_node: 6  # 使用6个GPU (2,3,4,5,6,7号卡)
+  nnodes: 1  # 单节点训练
   save_freq: 20
   test_freq: 5
   total_epochs: 20
+  # 模型保存路径设置
+  default_local_dir: "/home/wuyu/code2sql/saves/rl/checkpoints"
 
 # 环境变量配置（用于脚本设置）
 environment:
+  CUDA_VISIBLE_DEVICES: "2,3,4,5,6,7"  # 指定使用2,3,4,5,6,7号GPU
+  HF_MODULES_CACHE: "/home/wuyu/code2sql/saves/rl/hf_modules_cache"
+  TRANSFORMERS_CACHE: "/home/wuyu/code2sql/saves/rl/transformers_cache"
+  HF_HOME: "/home/wuyu/code2sql/saves/rl/huggingface"
+  # 设置模型保存路径
+  VERL_SAVE_DIR: "/home/wuyu/code2sql/saves/rl"
   GLOO_SOCKET_IFNAME: "eth0"
   NCCL_SOCKET_IFNAME: "eth0"
   NCCL_IB_DISABLE: "1"

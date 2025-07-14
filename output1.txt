@@ -1,0 +1,12 @@
+nohup: ignoring input
+   Building code2sql @ file:///home/wuyu/code2sql
+Downloading transformers (10.3MiB)
+Downloading pandas (11.5MiB)
+Downloading aiohttp (1.6MiB)
+ Downloading aiohttp
+ Downloading transformers
+ Downloading pandas
+      Built code2sql @ file:///home/wuyu/code2sql
+Uninstalled 12 packages in 367ms
+Installed 12 packages in 35ms
+/home/wuyu/code2sql/.venv/bin/python3: can't open file '/home/wuyu/code2sql/test_workflow_keyword_first.py': [Errno 2] No such file or directory

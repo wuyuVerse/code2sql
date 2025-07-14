@@ -26,7 +26,7 @@ if str(PROJECT_ROOT) not in sys.path:
 # 延迟导入，避免环境问题
 try:
     from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
-    from data_processing.cleaning.sql_feature_extractor import (
+    from utils.sql_feature_extractor import (
         process_json_and_compare,
         load_fingerprints,
     )
@@ -303,11 +303,13 @@ class SimpleModelEvaluator:
         if fingerprint_db_path and csv_fingerprints is not None:
             logger.info("开始进行指纹覆盖率分析...")
             try:
+                # print(f"csv_fingerprints: {csv_fingerprints}")
+                # print(f"fingerprint_to_sql: {fingerprint_to_sql}")
                 # 调用函数，但不期望有返回值
                 process_json_and_compare(
                     json_filepath=str(raw_results_path),
-                    csv_fingerprints=csv_fingerprints,
-                    fingerprint_to_sql=fingerprint_to_sql,
+                    csv_fingerprints=csv_fingerprints, # 这里传入了指纹集合
+                    fingerprint_to_sql=fingerprint_to_sql, # 这里传入了指纹到SQL的映射
                     output_dir=str(self.output_dir),
                     sql_key='parsed_sql'
                 )

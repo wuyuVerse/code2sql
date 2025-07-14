@@ -53,11 +53,20 @@ except IndexError:
 try:
     import torch
     from transformers import AutoTokenizer, AutoModelForCausalLM
-    from data_processing.cleaning.sql_feature_extractor import SQLFeatureExtractor
+    from utils.sql_feature_extractor import SQLFeatureExtractor
 except ImportError as e:
     logger.error(f"导入核心模块失败: {e}")
     logger.error("请确保已安装 'torch', 'transformers' 等依赖，并检查项目结构是否正确。")
     sys.exit(1)
+
+
+# --- JSON编码器 ---
+class ChineseJSONEncoder(json.JSONEncoder):
+    """处理中文字符的JSON编码器"""
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 
 class ComparativeEvaluator:
@@ -227,7 +236,11 @@ class ComparativeEvaluator:
                 model_generated_structured = parse_model_response(model_response_raw)
                 
                 # 3. 从基准答案和模型输出中提取指纹
-                baseline_sql_list = sample.get('sql', [])
+                baseline_sql_list = []
+                if 'sql_statement_list' in sample:
+                    baseline_sql_list = sample['sql_statement_list']
+                elif 'sql' in sample:
+                    baseline_sql_list = sample['sql']
                 baseline_fingerprints = self._get_fingerprints_from_sql_list(baseline_sql_list)
                 model_fingerprints = self._get_fingerprints_from_sql_list(model_generated_structured)
                 
@@ -241,6 +254,9 @@ class ComparativeEvaluator:
                     "sample_id": sample.get('id', f'sample_{i}'),
                     "function_name": sample.get('function_name', 'N/A'),
                     "orm_code": sample.get('orm_code', ''),
+                    "caller": sample.get('caller', ''),
+                    "callee": sample.get('callee', ''),
+                    "code_meta_data": sample.get('code_meta_data', []),
                     "prompt": prompt,
                     "baseline_sql": baseline_sql_list,
                     "model_response_raw": model_response_raw,
@@ -290,8 +306,9 @@ class ComparativeEvaluator:
             "results": results
         }
         
+        # 使用ensure_ascii=False确保中文字符正确保存
         with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(final_output, f, ensure_ascii=False, indent=2)
+            json.dump(final_output, f, ensure_ascii=False, indent=2, cls=ChineseJSONEncoder)
         
         logger.info("结果保存成功。")
 

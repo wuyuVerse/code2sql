@@ -853,6 +853,114 @@ class SQLFeatureExtractor:
         if hasattr(expression, 'this') and expression.this is not None:
             self.check_for_aggregation(expression.this)
 
+    def extract_tables_and_columns(self, sql_text: str) -> dict:
+        """
+        提取SQL中涉及到的表名和字段名
+        
+        Args:
+            sql_text: 要分析的SQL语句
+            
+        Returns:
+            dict: 包含表名和字段名的字典，格式如下：
+            {
+                "tables": set,  # 表名集合
+                "columns": set,  # 字段名集合
+                "table_columns": dict,  # 表名到字段名的映射 {table_name: set(columns)}
+                "select_columns": set,  # SELECT子句中的字段
+                "where_columns": set,   # WHERE子句中的字段
+                "join_columns": set,    # JOIN子句中的字段
+                "group_columns": set,   # GROUP BY子句中的字段
+                "order_columns": set,   # ORDER BY子句中的字段
+                "insert_columns": set,  # INSERT子句中的字段
+                "update_columns": set,  # UPDATE子句中的字段
+                "stmt_type": str        # 语句类型
+            }
+        """
+        # 初始化结果字典
+        result = {
+            "tables": set(),
+            "columns": set(),
+            "table_columns": {},
+            "select_columns": set(),
+            "where_columns": set(),
+            "join_columns": set(),
+            "group_columns": set(),
+            "order_columns": set(),
+            "insert_columns": set(),
+            "update_columns": set(),
+            "stmt_type": None
+        }
+        
+        try:
+            # 使用现有的extract方法解析SQL
+            self.extract(sql_text)
+            
+            # 从解析结果中提取信息
+            result["tables"] = set(self.table_count_dict.keys())
+            result["columns"] = set(self.projection_count_dict.keys()) | set(self.predicate_count_dict.keys())
+            result["stmt_type"] = self.get_stmt_type_name()
+            
+            # 按语句类型分别处理
+            if self.stmt_type == DMLType.SELECT:
+                result["select_columns"] = set(self.projection_count_dict.keys())
+                result["where_columns"] = set(self.predicate_count_dict.keys())
+                result["group_columns"] = set(self.group_count_dict.keys())
+                result["order_columns"] = set(self.order_count_dict.keys())
+                
+            elif self.stmt_type == DMLType.INSERT:
+                result["insert_columns"] = set(self.projection_count_dict.keys())
+                
+            elif self.stmt_type == DMLType.UPDATE:
+                result["update_columns"] = set(self.projection_count_dict.keys())
+                result["where_columns"] = set(self.predicate_count_dict.keys())
+                
+            elif self.stmt_type == DMLType.DELETE:
+                result["where_columns"] = set(self.predicate_count_dict.keys())
+            
+            # 构建表名到字段名的映射
+            for table_name in result["tables"]:
+                result["table_columns"][table_name] = set()
+                
+            # 将所有字段按表名分类（简化处理，实际可能需要更复杂的解析）
+            for column_name in result["columns"]:
+                # 检查字段名是否包含表名前缀
+                if '.' in column_name:
+                    table_name, col_name = column_name.split('.', 1)
+                    if table_name in result["tables"]:
+                        result["table_columns"][table_name].add(col_name)
+                else:
+                    # 如果没有表名前缀，将字段添加到所有表中（简化处理）
+                    for table_name in result["tables"]:
+                        result["table_columns"][table_name].add(column_name)
+            
+            # 清理空集合
+            for key in list(result.keys()):
+                if isinstance(result[key], set) and not result[key]:
+                    result[key] = set()
+                elif isinstance(result[key], dict):
+                    # 清理table_columns中的空集合
+                    result[key] = {k: v for k, v in result[key].items() if v}
+            
+        except Exception as e:
+            print(f"提取表名和字段名时出错: {e}")
+            # 返回空结果
+            pass
+        
+        return result
+    
+    def get_stmt_type_name(self) -> str:
+        """获取语句类型的名称"""
+        if self.stmt_type == DMLType.SELECT:
+            return "SELECT"
+        elif self.stmt_type == DMLType.INSERT:
+            return "INSERT"
+        elif self.stmt_type == DMLType.UPDATE:
+            return "UPDATE"
+        elif self.stmt_type == DMLType.DELETE:
+            return "DELETE"
+        else:
+            return "UNKNOWN"
+
 
 
 # 将函数移到外部，使其可以被pickle
@@ -1375,14 +1483,40 @@ def process_json_and_compare(
     # --- 额外写入统计摘要文件，供前端读取 ---
     summary_path = os.path.join(output_dir, "statistics_summary.json")
     try:
+        summary_data = {
+            # 基本统计
+            "total_samples": total_lines,                    # 总样本数
+            "matching_lines": matching_lines,                # 有匹配的行数
+            "valid_sql_count": valid_sql_count,             # 有效SQL语句数
+            "matching_count": matching_count,                # 匹配SQL语句数
+            "excluded_sql_count": excluded_sql_count,        # 被排除SQL语句数
+            "full_sql_cnt_official": full_sql_cnt_official,  # 官方SQL计数
+            
+            # 指纹统计
+            "total_fingerprints": len(csv_fingerprints),           # CSV指纹总数
+            "matched_fingerprints_count": len(matched_fingerprints), # 匹配到的指纹数
+            
+            # 匹配详情统计
+            "matching_pairs_count": len(matching_pairs),     # 匹配SQL对数量
+            "unmatched_pairs_count": len(unmatched_pairs),  # 未匹配SQL对数量
+            
+            # 计算比率
+            "sql_match_rate": matching_count / valid_sql_count if valid_sql_count else 0,  # SQL匹配率
+            "fingerprint_coverage": len(matched_fingerprints) / len(csv_fingerprints) if csv_fingerprints else 0  # 指纹覆盖率
+        }
+        
         with open(summary_path, 'w', encoding='utf-8') as f:
-            json.dump({
-                "total_samples": total_lines,
-                "valid_sql": valid_sql_count,
-                "matched_sql": matching_count,
-                "match_rate": matching_count / valid_sql_count if valid_sql_count else 0
-            }, f, ensure_ascii=False, indent=4)
+            json.dump(summary_data, f, ensure_ascii=False, indent=4)
         print(f"统计摘要已写入: {summary_path}")
+        
+        # 打印详细统计信息
+        print("\n======= 详细统计信息 =======")
+        for key, value in summary_data.items():
+            if isinstance(value, float):
+                print(f"{key}: {value:.2%}")
+            else:
+                print(f"{key}: {value}")
+                
     except Exception as e:
         print(f"写入统计摘要失败: {e}")
     

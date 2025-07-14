@@ -27,6 +27,37 @@
         }
         .fingerprint-badge { margin-bottom: 5px; }
         .comparison-section { margin-top: 1.5rem; }
+        .filter-btn.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .hidden {
+            display: none !important;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .code-scrollable {
+                max-height: none !important;
+                overflow: visible !important;
+            }
+            .accordion-collapse {
+                display: block !important;
+            }
+            .accordion-button::after {
+                display: none;
+            }
+            .accordion-button {
+                border: none !important;
+                padding: 1rem 0;
+            }
+            .container-fluid {
+                width: 100% !important;
+                max-width: none !important;
+                padding: 0 !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -34,7 +65,13 @@
         <header class="text-center mb-4">
             <h1 class="display-5">对比评估报告</h1>
             <p class="lead text-muted">运行时间: {{ timestamp }}</p>
-            <a href="/" class="btn btn-secondary">返回仪表盘</a>
+            <div class="btn-group no-print mb-3">
+                <a href="/" class="btn btn-secondary">返回仪表盘</a>
+                <button type="button" class="btn btn-outline-primary filter-btn" data-filter="all">显示全部</button>
+                <button type="button" class="btn btn-outline-warning filter-btn" data-filter="missing">仅显示缺失</button>
+                <button type="button" class="btn btn-outline-danger filter-btn" data-filter="extra">仅显示多余</button>
+                <button type="button" class="btn btn-success" onclick="exportHTML()">导出报告</button>
+            </div>
         </header>
 
         <!-- 摘要信息 -->
@@ -44,9 +81,9 @@
                 <div class="row text-center mt-3">
                     {% set totals = namespace(consistent=0, missing=0, superfluous=0) %}
                     {% for result in report_data.results %}
-                        {% set totals.consistent = totals.consistent + result.comparison.consistent_count %}
-                        {% set totals.missing = totals.missing + result.comparison.missing_count %}
-                        {% set totals.superfluous = totals.superfluous + result.comparison.superfluous_count %}
+                        {% set totals.consistent = totals.consistent + result.metrics.common_fingerprint_count %}
+                        {% set totals.missing = totals.missing + result.metrics.missing_fingerprint_count %}
+                        {% set totals.superfluous = totals.superfluous + result.metrics.extra_fingerprint_count %}
                     {% endfor %}
                     <div class="col-md-3"><h5>总样本数</h5><p class="fs-4">{{ report_data.results|length }}</p></div>
                     <div class="col-md-3"><h5>一致指纹</h5><p class="fs-4 text-success">{{ totals.consistent }}</p></div>
@@ -79,24 +116,38 @@
                                     <pre class="sql-code bg-light code-scrollable">{{ item.orm_code }}</pre>
                                 </div>
 
+                                <div class="mb-3">
+                                    <h6><i class="bi bi-diagram-2"></i> 调用上下文</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <strong>Caller:</strong>
+                                            <pre class="sql-code bg-light code-scrollable" style="max-height: 100px;">{{ item.caller | safe or "无" }}</pre>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>代码元数据:</strong>
+                                            <pre class="sql-code bg-light code-scrollable" style="max-height: 100px;">{{ item.code_meta_data_formatted | safe if item.code_meta_data_formatted else "无" }}</pre>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="row">
                                     <div class="col-md-6">
                                         <h6><i class="bi bi-file-earmark-code"></i> 基准答案 (Baseline)</h6>
-                                        <pre class="sql-code">{{ item.baseline_sql | tojson(indent=2) }}</pre>
+                                        <pre class="sql-code code-scrollable" style="max-height: 200px;">{{ item.baseline_sql_formatted | safe }}</pre>
                                     </div>
                                     <div class="col-md-6">
                                         <h6><i class="bi bi-robot"></i> 模型输出 (Model Output)</h6>
                                         {# 优先展示结构化输出，如果不存在则回退到原始响应 #}
                                         {% if item.model_generated_structured %}
-                                            <pre class="sql-code">{{ item.model_generated_structured | tojson(indent=2) }}</pre>
+                                            <pre class="sql-code code-scrollable" style="max-height: 200px;">{{ item.model_generated_structured_formatted | safe }}</pre>
                                         {% else %}
-                                            <pre class="sql-code">{{ item.model_response_raw }}</pre>
+                                            <pre class="sql-code code-scrollable" style="max-height: 200px;">{{ item.model_response_raw | safe }}</pre>
                                         {% endif %}
                                     </div>
                                 </div>
                                 <hr>
                                 <h6><i class="bi bi-body-text"></i> Prompt</h6>
-                                <pre class="sql-code bg-light">{{ item.prompt }}</pre>
+                                <pre class="sql-code bg-light code-scrollable" style="max-height: 150px;">{{ item.prompt | safe }}</pre>
                             </div>
                         </div>
                     {% else %}
@@ -108,10 +159,10 @@
                         <div id="collapseError{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="headingError{{ loop.index }}" data-bs-parent="#accordionResults">
                             <div class="accordion-body">
                                 <h6 class="text-danger">错误信息</h6>
-                                <pre class="sql-code bg-danger-subtle text-danger-emphasis">{{ item.error }}</pre>
+                                <pre class="sql-code bg-danger-subtle text-danger-emphasis code-scrollable" style="max-height: 150px;">{{ item.error }}</pre>
                                 <hr>
                                 <h6><i class="bi bi-body-text"></i> Prompt</h6>
-                                <pre class="sql-code bg-light">{{ item.prompt }}</pre>
+                                <pre class="sql-code bg-light code-scrollable" style="max-height: 150px;">{{ item.prompt }}</pre>
                             </div>
                         </div>
                     {% endif %}
@@ -122,5 +173,58 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script>
+        // 筛选功能
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // 更新按钮状态
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const filterType = this.dataset.filter;
+                const items = document.querySelectorAll('.accordion-item');
+                
+                items.forEach(item => {
+                    if (!item.querySelector('.accordion-button')) return;
+                    
+                    const missingCount = parseInt(item.querySelector('.badge.bg-warning').textContent.split(': ')[1]);
+                    const extraCount = parseInt(item.querySelector('.badge.bg-danger').textContent.split(': ')[1]);
+                    
+                    switch(filterType) {
+                        case 'missing':
+                            item.classList.toggle('hidden', missingCount === 0);
+                            break;
+                        case 'extra':
+                            item.classList.toggle('hidden', extraCount === 0);
+                            break;
+                        default: // 'all'
+                            item.classList.remove('hidden');
+                    }
+                });
+            });
+        });
+
+        // 导出功能
+        function exportHTML() {
+            // 获取当前页面的HTML内容
+            const htmlContent = document.documentElement.outerHTML;
+            
+            // 创建一个Blob对象
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            
+            // 创建下载链接
+            const downloadLink = document.createElement('a');
+            downloadLink.href = URL.createObjectURL(blob);
+            downloadLink.download = `comparative_report_${new Date().toISOString().slice(0,10)}.html`;
+            
+            // 触发下载
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            // 清理URL对象
+            URL.revokeObjectURL(downloadLink.href);
+        }
+    </script>
 </body>
 </html> 

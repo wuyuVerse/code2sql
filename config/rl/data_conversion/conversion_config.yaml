@@ -64,39 +64,6 @@ prompt_template:
   # 是否包含代码元数据
   include_code_metadata: true
 
-# RL特有配置
-reinforcement_learning:
-  # 奖励函数配置
-  reward_config:
-    # SQL正确性奖励权重
-    sql_correctness_weight: 0.6
-    # 代码效率奖励权重
-    efficiency_weight: 0.2
-    # 代码可读性奖励权重
-    readability_weight: 0.2
-    # 最大奖励值
-    max_reward: 1.0
-    # 最小奖励值
-    min_reward: -1.0
-  
-  # 动作空间配置
-  action_space:
-    # SQL操作类型
-    sql_operations: ["SELECT", "INSERT", "UPDATE", "DELETE", "JOIN"]
-    # WHERE条件操作
-    where_conditions: ["AND", "OR", "IN", "LIKE", "BETWEEN"]
-    # 聚合函数
-    aggregate_functions: ["COUNT", "SUM", "AVG", "MAX", "MIN"]
-  
-  # 状态表示配置
-  state_representation:
-    # 是否包含AST特征
-    include_ast_features: true
-    # 是否包含代码复杂度特征
-    include_complexity_features: true
-    # 是否包含语义特征
-    include_semantic_features: true
-
 # 质量控制配置
 quality_control:
   # 最小ORM代码长度
@@ -109,8 +76,6 @@ quality_control:
   max_sql_count: 20
   # 是否过滤空SQL语句
   filter_empty_sql: true
-  # RL特有：最小奖励值过滤
-  min_reward_threshold: -0.5
 
 # 日志配置
 logging:

@@ -25,7 +25,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 # 延迟导入，避免环境问题
 try:
-    from data_processing.cleaning.sql_feature_extractor import SQLFeatureExtractor, match_single_sql
+    from utils.sql_feature_extractor import SQLFeatureExtractor, match_single_sql
     from config.training.data_conversion.orm2sql_prompt_template import PROMPT_TEMPLATE
 except ImportError as e:
     print(f"导入模块失败: {e}")

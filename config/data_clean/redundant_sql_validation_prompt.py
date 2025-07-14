@@ -20,86 +20,163 @@ SYNTAX_EQUIVALENCE_PROMPT = """你是SQL分析专家，需要判断目标SQL是�
 只需要简单回答"是"或"否"，不需要解释。"""
 
 # Step 2: 冗余SQL业务合理性检测
-REDUNDANT_BUSINESS_VALIDATION_PROMPT = """你是Go+SQL分析专家，判断以下SQL在给定的业务上下文中是否确实冗余。
+REDUNDANT_BUSINESS_VALIDATION_PROMPT = """<ROLE>
+你是一位资深的Go语言代码审计专家，专注于识别并优化代码中的数据库操作。你的任务是精确、严谨地判断一个SQL查询在特定业务场景下是否属于不必要的冗余。
+</ROLE>
 
-ORM代码上下文:
+<CONTEXT>
+系统通过SQL指纹对比，发现了一个潜在的冗余数据库操作。
+
+- **调用者 (Target Caller)**: `{caller}`
+- **参考标准 (Reference Caller)**: `{reference_caller}`
+
+**Go 代码上下文:**
 ```go
 {orm_code}
 ```
 
-调用者(caller): {caller}
-参考调用者: {reference_caller}
-
-目标SQL:
+**待验证的 SQL (由 Target Caller 生成):**
 ```sql
 {target_sql}
 ```
 
-系统检测结果：此SQL的指纹被参考调用者的指纹集合完全包含，可能是冗余的。
+**参考 SQL (由 Reference Caller 生成):**
+```sql
+{reference_sql_json}
+```
+</CONTEXT>
 
-请分析：
-1. 考虑代码执行流程和业务逻辑，这个SQL在当前调用者"{caller}"的上下文中是否确实多余？
-2. 还是虽然SQL功能相同，但在不同的业务场景或代码分支中都有其必要性？
+<ANALYSIS_TASK>
+**系统发现**: '调用者 (Target Caller)' 产生了一个或多个 '参考标准 (Reference Caller)' 中不存在的 SQL。
 
-如果确实冗余可以安全删除，请回答"是，冗余"；
-如果不是冗余或不确定，请回答"否，保留"并简要说明原因。
+**你的核心任务**: 判断这个新增的 `{target_sql}` 是否真的多余。
 
-注意：只有在明确确认SQL完全多余且删除不会影响业务逻辑时，才应该判断为冗余。"""
+请遵循以下步骤进行思考：
+1.  **理解业务逻辑**: 仔细阅读 Go 代码，理解 `{caller}` 函数的核心业务目标。
+2.  **对比 SQL**: 对比 "待验证的 SQL" 和 "参考 SQL"。它们的功能是否重叠？`{target_sql}` 是否只是在做 "参考 SQL" 已经做过或应该做的事情？
+3.  **考虑执行路径**: 这个 `{target_sql}` 是否位于一个不同于 "参考 SQL" 的、有必要的代码分支中（例如，不同的 if/else 逻辑）？或者它是否在一个循环内，造成了不必要的重复查询？
+4.  **得出结论**: 综合以上分析，该 SQL 是否可以被安全地移除而不影响任何业务功能？
+
+**重要原则**: 宁缺毋滥。只有在你 **100% 确定**该 SQL 是多余的、可以安全删除时，才将其判断为冗余。任何不确定性都应标记为“非冗余”。
+</ANALYSIS_TASK>
+
+<OUTPUT_FORMAT>
+请严格按照以下 JSON 格式返回你的分析结果，不要添加任何额外的解释或说明。
+
+```json
+{{
+  "is_redundant": boolean,
+  "reasoning": "在这里用一句话简要说明你的判断依据。例如：该查询结果已被外部缓存，此处为重复获取。"
+}}
+```
+</OUTPUT_FORMAT>
+"""
 
 # Step 3: 新增指纹合理性检测
-NEW_FINGERPRINT_VALIDATION_PROMPT = """你是Go+SQL分析专家，判断以下新增SQL指纹是否合理。
+NEW_FINGERPRINT_VALIDATION_PROMPT = """<ROLE>
+你是一位资深的Go语言代码审计专家，负责评估新出现的数据库查询模式是否符合业务逻辑和最佳实践。你的任务是判断一个全新的SQL指纹是合理的业务演进还是潜在的代码错误。
+</ROLE>
 
-ORM代码上下文:
+<CONTEXT>
+系统在项目中发现了一个全新的、从未出现过的SQL查询指纹。
+
+- **调用者 (Target Caller)**: `{caller}`
+- **参考标准 (Reference Caller)**: `{reference_caller}` (一个功能相似的参考函数)
+
+**Go 代码上下文:**
 ```go
 {orm_code}
 ```
 
-调用者(caller): {caller}
-参考调用者: {reference_caller}
-
-新增SQL:
+**待验证的新 SQL (由 Target Caller 生成):**
 ```sql
 {new_sql}
 ```
 
-系统检测结果：此SQL的指纹在参考调用者中不存在，是一个新的SQL模式。
+**参考 SQL (由 Reference Caller 生成，用于对比):**
+```sql
+{reference_sql_json}
+```
+</CONTEXT>
 
-请分析：
-1. 考虑代码执行路径，当前调用者"{caller}"是否真的能够生成这个SQL？
-2. 这个新的SQL模式是否符合ORM代码的业务逻辑？
-3. 还是这可能是代码分析错误或者不应该出现的SQL？
+<ANALYSIS_TASK>
+**系统发现**: '{caller}' 产生了一个在整个项目中都未曾见过的全新SQL查询。
 
-如果这是合理的新增SQL，请回答"合理新增"；
-如果这是错误的SQL，请回答"错误SQL"并说明原因。
+**你的核心任务**: 判断这个新SQL `{new_sql}` 是否合理。
 
-注意：重点关注代码路径的可达性和业务逻辑的合理性。"""
+请遵循以下步骤进行思考：
+1.  **理解业务逻辑**: 仔细阅读 Go 代码，理解 `{caller}` 函数的业务目的，以及它与 `{reference_caller}` 的异同。
+2.  **评估新颖性**: 这个新SQL实现的功能，是现有业务逻辑的合理扩展吗？（例如，查询了新的字段，或增加了新的过滤条件）。
+3.  **检查潜在错误**: 这个新SQL有没有可能是因错误的ORM用法（如错误的链式调用）而意外产生的？
+4.  **得出结论**: 综合分析，这个新SQL是应该被接受的合理新增，还是应该被拒绝的潜在错误？
+
+**重要原则**: 审慎评估。只有在明确确认该SQL是符合预期的业务新增时，才判断为合理。
+</ANALYSIS_TASK>
+
+<OUTPUT_FORMAT>
+请严格按照以下 JSON 格式返回你的分析结果，不要添加任何额外的解释或说明。
+
+```json
+{{
+  "is_valid_new": boolean,
+  "reasoning": "在这里用一句话简要说明你的判断依据。例如：该查询为新业务增加了必要的字段过滤，是合理的。"
+}}
+```
+</OUTPUT_FORMAT>
+"""
 
 # Step 4: 缺失SQL必要性检测
-MISSING_SQL_VALIDATION_PROMPT = """你是Go+SQL分析专家，判断以下缺失的SQL是否应该在当前调用者中生成。
+MISSING_SQL_VALIDATION_PROMPT = """<ROLE>
+你是一位资深的Go语言代码审计专家，擅长通过对比分析来发现代码中缺失的数据库操作。你的任务是判断一个函数是否遗漏了必要的SQL查询。
+</ROLE>
 
-ORM代码上下文:
+<CONTEXT>
+系统通过SQL指纹对比，发现了一个潜在的缺失数据库操作。
+
+- **调用者 (Target Caller)**: `{caller}`
+- **参考标准 (Reference Caller)**: `{reference_caller}`
+
+**Go 代码上下文:**
 ```go
 {orm_code}
 ```
 
-调用者(caller): {caller}
-参考调用者: {reference_caller}
-
-缺失的SQL示例:
+**疑似缺失的SQL (由 Reference Caller 生成):**
 ```sql
 {missing_sql}
 ```
 
-系统检测结果：参考调用者能生成此SQL，但当前调用者没有生成，可能是缺漏。
+**调用者已生成的SQL (由 Target Caller 生成，用于对比):**
+```sql
+{target_sql_json}
+```
+</CONTEXT>
 
-请分析：
-1. 考虑代码执行路径，当前调用者"{caller}"是否应该也能生成这个SQL？
-2. 还是由于业务逻辑差异，当前调用者确实不需要生成这个SQL？
+<ANALYSIS_TASK>
+**系统发现**: '{caller}' 未能生成 '{reference_caller}' 中存在的 SQL 查询 `{missing_sql}`。
 
-如果确实应该生成但缺失了，请回答"确实缺失"；
-如果由于业务逻辑不同而不需要生成，请回答"无需生成"并说明原因。
+**你的核心任务**: 判断这次缺失是合理的业务差异，还是一个应该被修复的遗漏？
 
-注意：重点关注不同调用者的业务场景差异。"""
+请遵循以下步骤进行思考：
+1.  **理解业务逻辑**: 仔细阅读 Go 代码，理解 `{caller}` 和 `{reference_caller}` 的业务目标和功能差异。
+2.  **评估必要性**: 基于 `{caller}` 的业务逻辑，执行 `{missing_sql}` 这个操作是否是必需的？如果不执行，会否导致功能不完整或数据错误？
+3.  **检查是否被替代**: `{caller}` 已生成的SQL中，是否有其他查询已经等效地完成了 `{missing_sql}` 的任务？
+4.  **得出结论**: 综合分析，这个SQL是确实遗漏了，还是在当前上下文中本就不需要？
+
+**重要原则**: 只有在明确确认业务逻辑要求必须有此查询时，才判断为“确实缺失”。
+</ANALYSIS_TASK>
+
+<OUTPUT_FORMAT>
+请严格按照以下 JSON 格式返回你的分析结果，不要添加任何额外的解释或说明。
+
+```json
+{{
+  "is_truly_missing": boolean,
+  "reasoning": "在这里用一句话简要说明你的判断依据。例如：缺少了对关联表的必要查询，导致数据不完整。"
+}}
+```
+</OUTPUT_FORMAT>
+"""
 
 # Step 0: 规则预过滤（简单差异检测）
 RULE_BASED_FILTER_PROMPT = """你是SQL预处理专家，判断以下SQL差异是否为简单的格式差异。

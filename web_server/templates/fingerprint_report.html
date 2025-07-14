@@ -22,9 +22,25 @@
             font-weight: 600;
             border-bottom: 0;
         }
+        .metric-section {
+            border-bottom: 1px solid #e9ecef;
+            padding: 1rem;
+        }
+        .metric-section:last-child {
+            border-bottom: none;
+        }
+        .metric-section-title {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
         .metric-item {
             padding: 0.75rem 1.25rem;
             border-bottom: 1px solid #f1f3f5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .metric-item:last-child {
             border-bottom: 0;
@@ -36,6 +52,12 @@
         .metric-value {
             font-weight: 600;
             color: #212529;
+        }
+        .metric-value.positive {
+            color: #198754;
+        }
+        .metric-value.warning {
+            color: #ffc107;
         }
         .nav-pills .nav-link.active {
             background-color: #0d6efd;
@@ -69,20 +91,116 @@
                 <i class="bi bi-bar-chart-line-fill"></i> 核心指标摘要
             </div>
             <div class="card-body p-0">
-                <div class="row g-0">
-                    {% for key, value in report_data.flat_summary.items() %}
-                    <div class="col-md-4 col-sm-6">
-                        <div class="metric-item">
-                            <span class="metric-key">{{ key }}</span>: 
-                            <span class="metric-value">
-                                {% if value is number %}
-                                    {# 如果是小数，按百分比展示 #}
-                                    {% if value < 1 %}{{ "%.2f%%" % (value * 100) }}{% else %}{{ value }}{% endif %}
-                                {% else %}{{ value }}{% endif %}
-                            </span>
+                <!-- 基础统计 -->
+                <div class="metric-section">
+                    <div class="metric-section-title">
+                        <i class="bi bi-clipboard-data"></i> 基础统计
+                    </div>
+                    <div class="row g-0">
+                        <div class="col-md-4">
+                            <div class="metric-item">
+                                <span class="metric-key">总样本数</span>
+                                <span class="metric-value">{{ report_data.flat_summary.total_samples }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="metric-item">
+                                <span class="metric-key">有匹配的行数</span>
+                                <span class="metric-value">{{ report_data.flat_summary.matching_lines }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="metric-item">
+                                <span class="metric-key">代码提取SQL总数</span>
+                                <span class="metric-value">{{ report_data.flat_summary.full_sql_cnt_official }}</span>
+                            </div>
                         </div>
                     </div>
-                    {% endfor %}
+                </div>
+
+                <!-- SQL统计 -->
+                <div class="metric-section">
+                    <div class="metric-section-title">
+                        <i class="bi bi-code-square"></i> SQL统计
+                    </div>
+                    <div class="row g-0">
+                        <div class="col-md-3">
+                            <div class="metric-item">
+                                <span class="metric-key">有效SQL数</span>
+                                <span class="metric-value">{{ report_data.flat_summary.valid_sql_count }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-item">
+                                <span class="metric-key">匹配SQL数</span>
+                                <span class="metric-value">{{ report_data.flat_summary.matching_count }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-item">
+                                <span class="metric-key">被排除SQL数</span>
+                                <span class="metric-value">{{ report_data.flat_summary.excluded_sql_count }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-item">
+                                <span class="metric-key">SQL匹配率</span>
+                                <span class="metric-value {% if report_data.flat_summary.sql_match_rate >= 0.7 %}positive{% elif report_data.flat_summary.sql_match_rate < 0.5 %}warning{% endif %}">
+                                    {{ "%.2f%%" % (report_data.flat_summary.sql_match_rate * 100) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 指纹覆盖统计 -->
+                <div class="metric-section">
+                    <div class="metric-section-title">
+                        <i class="bi bi-fingerprint"></i> 指纹覆盖统计
+                    </div>
+                    <div class="row g-0">
+                        <div class="col-md-4">
+                            <div class="metric-item">
+                                <span class="metric-key">CSV指纹总数</span>
+                                <span class="metric-value">{{ report_data.flat_summary.total_fingerprints }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="metric-item">
+                                <span class="metric-key">匹配到的指纹数</span>
+                                <span class="metric-value">{{ report_data.flat_summary.matched_fingerprints_count }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="metric-item">
+                                <span class="metric-key">指纹覆盖率</span>
+                                <span class="metric-value {% if report_data.flat_summary.fingerprint_coverage >= 0.7 %}positive{% elif report_data.flat_summary.fingerprint_coverage < 0.5 %}warning{% endif %}">
+                                    {{ "%.2f%%" % (report_data.flat_summary.fingerprint_coverage * 100) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 匹配详情统计 -->
+                <div class="metric-section">
+                    <div class="metric-section-title">
+                        <i class="bi bi-list-check"></i> 匹配详情统计
+                    </div>
+                    <div class="row g-0">
+                        <div class="col-md-6">
+                            <div class="metric-item">
+                                <span class="metric-key">匹配SQL对数量</span>
+                                <span class="metric-value">{{ report_data.flat_summary.matching_pairs_count }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="metric-item">
+                                <span class="metric-key">未匹配SQL对数量</span>
+                                <span class="metric-value">{{ report_data.flat_summary.unmatched_pairs_count }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

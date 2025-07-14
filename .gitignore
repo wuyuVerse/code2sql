@@ -166,6 +166,11 @@ Thumbs.db
 # Training data files
 model/data/
 
+# External repositories - should be managed separately
+model/training/LLaMA-Factory/
+model/rl/verl/
+model/rl/outputs/
+
 # -----------------------------------------------------------------------------
 # Project-specific ignores for evaluation artifacts
 # -----------------------------------------------------------------------------

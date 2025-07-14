@@ -8,11 +8,11 @@ from tqdm import tqdm
 
 # 尝试导入SQL特征提取器
 try:
-    from .sql_feature_extractor import SQLFeatureExtractor, DMLType
+    from utils.sql_feature_extractor import SQLFeatureExtractor, DMLType
 except ImportError:
     # 如果相对导入失败，尝试绝对导入
     try:
-        from data_processing.cleaning.sql_feature_extractor import SQLFeatureExtractor, DMLType
+        from utils.sql_feature_extractor import SQLFeatureExtractor, DMLType
     except ImportError:
         # # 如果都失败，定义简单的替代类
         # class SQLFeatureExtractor:

@@ -127,11 +127,18 @@ def build_verl_command(config: Dict[str, Any], extra_args: Optional[List[str]] =
         'data.gsm8k_train_path', 'data.gsm8k_test_path', 
         'data.math_train_path', 'data.math_test_path',
         'data.train_files', 'data.val_files',
-        'environment', 'logging'
+        'environment', 'logging', 'data_conversion', 'trainer.save_dir'
     }
     
     for key, value in flat_config.items():
-        if key not in excluded_keys:
+        # 检查是否应该排除这个键
+        should_exclude = False
+        for excluded_key in excluded_keys:
+            if key == excluded_key or key.startswith(f"{excluded_key}."):
+                should_exclude = True
+                break
+        
+        if not should_exclude:
             # 处理布尔值
             if isinstance(value, bool):
                 value = str(value).lower()
@@ -165,7 +172,10 @@ def main():
     args, extra_args = parser.parse_known_args()
     
     # 构建配置文件路径
-    config_path = str(Path(__file__).parents[2] / "config" / "rl" / "qwen" / args.config)
+    # 从当前脚本位置计算项目根目录
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent.parent  # 从 model/rl 回到项目根目录
+    config_path = str(project_root / "config" / "rl" / "qwen" / args.config)
     
     if not os.path.exists(config_path):
         logger.error(f"配置文件不存在: {config_path}")

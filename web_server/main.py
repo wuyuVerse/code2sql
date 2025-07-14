@@ -15,6 +15,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from datetime import datetime
 
 # --- 日志配置 ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -26,6 +27,18 @@ app = FastAPI(
     description="一个用于查看和分析不同类型模型评估报告的Web应用。",
     version="1.0.0"
 )
+
+# --- 自定义JSON编码器 ---
+class ChineseJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+def load_json_file(file_path: Path) -> dict:
+    """加载JSON文件，确保中文正确解码"""
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 # --- 路径配置 ---
 BASE_DIR = Path(__file__).parent.parent
@@ -208,19 +221,43 @@ async def get_comparative_report(request: Request, timestamp: str):
         logger.warning(f"对比评估结果文件未找到: {result_file}")
         raise HTTPException(status_code=404, detail="结果文件未找到")
     
-    with open(result_file, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    try:
+        data = load_json_file(result_file)
         
-    # 在这里可以添加对数据的预处理或统计
-    
-    return templates.TemplateResponse(
-        "comparative_report.html",
-        {
-            "request": request,
-            "report_data": data,
-            "timestamp": timestamp
-        }
-    )
+        # 预处理数据，确保所有字符串都是原始Unicode形式
+        def decode_unicode(obj):
+            if isinstance(obj, str):
+                return obj
+            elif isinstance(obj, dict):
+                return {k: decode_unicode(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [decode_unicode(item) for item in obj]
+            return obj
+        
+        data = decode_unicode(data)
+        
+        # 为每个结果项预生成格式化的JSON字符串
+        if isinstance(data, dict) and 'results' in data:
+            for result in data['results']:
+                if isinstance(result, dict):
+                    if 'baseline_sql' in result:
+                        result['baseline_sql_formatted'] = json.dumps(result['baseline_sql'], indent=2, ensure_ascii=False)
+                    if 'model_generated_structured' in result:
+                        result['model_generated_structured_formatted'] = json.dumps(result['model_generated_structured'], indent=2, ensure_ascii=False)
+                    if 'code_meta_data' in result:
+                        result['code_meta_data_formatted'] = json.dumps(result['code_meta_data'], indent=2, ensure_ascii=False)
+        
+        return templates.TemplateResponse(
+            "comparative_report.html",
+            {
+                "request": request,
+                "report_data": data,
+                "timestamp": timestamp
+            }
+        )
+    except Exception as e:
+        logger.error(f"处理结果文件时出错: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"处理结果文件时出错: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

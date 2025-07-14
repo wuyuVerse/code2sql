@@ -49,7 +49,7 @@ model_config:
   template: qwen
 output_config:
   keep_temp_files: false
-  output_dir: model/evaluation/fingerprint_eval/results/20250710_202908_cos_evaluation
+  output_dir: model/evaluation/fingerprint_eval/results/20250711_175513_cos_evaluation
   result_prefix: qwen3_evaluation
   save_detailed_results: true
 validation_config:
