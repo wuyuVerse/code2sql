@@ -8,6 +8,7 @@
 import json
 import os
 import logging
+import random
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
@@ -136,7 +137,6 @@ class TrainingDataConverter:
             function_name=function_name,
             orm_code=orm_code,
             caller=caller,
-            callee=callee,
             code_meta_data_str=code_meta_data_str,
         )
         return prompt.strip()
@@ -154,12 +154,13 @@ class TrainingDataConverter:
         sql_statement_list = record.get('sql_statement_list', [])
         return json.dumps(sql_statement_list, ensure_ascii=False, indent=None)
     
-    def convert_to_training_format(self, data: List[Dict]) -> List[Dict]:
+    def convert_to_training_format(self, data: List[Dict], shuffle: bool = True) -> List[Dict]:
         """
         将ORM数据转换为训练格式
         
         Args:
             data: workflow处理后的数据
+            shuffle: 是否打乱数据顺序，默认True
             
         Returns:
             转换后的训练数据
@@ -167,6 +168,14 @@ class TrainingDataConverter:
         training_data = []
         
         logger.info("开始转换训练数据...")
+        
+        # 如果需要打乱数据，先打乱原始数据
+        if shuffle:
+            logger.info("正在打乱数据顺序...")
+            data_copy = data.copy()
+            random.shuffle(data_copy)
+            data = data_copy
+            logger.info("数据打乱完成")
         
         for i, record in enumerate(data):
             if i % 1000 == 0:
@@ -184,12 +193,12 @@ class TrainingDataConverter:
                 }
                 
                 # 可选：添加额外的元信息用于调试
-                training_sample["metadata"] = {
+                metadata = {
                     "function_name": record.get('function_name', ''),
                     "source_file": record.get('source_file', ''),
-                    "sql_pattern_cnt": record.get('sql_pattern_cnt', 0),
                     "sql_types": record.get('sql_types', [])
                 }
+                training_sample["metadata"] = metadata
                 
                 training_data.append(training_sample)
                 
@@ -272,8 +281,8 @@ class TrainingDataConverter:
         # 2. 加载数据
         data = self.load_workflow_data(workflow_dir)
         
-        # 3. 转换为训练格式
-        training_data = self.convert_to_training_format(data)
+        # 3. 转换为训练格式（默认打乱数据）
+        training_data = self.convert_to_training_format(data, shuffle=True)
         
         # 4. 保存训练数据
         output_path = self.save_training_data(training_data, output_name)

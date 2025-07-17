@@ -1,6 +1,224 @@
 # LLM提示词配置文件
 # 用于code2sql_reward.py中的表名和字段名抽取
 
+# === 【修改点1】新增关键词评估提示词 ===
+# 关键词契合度评估提示词
+keyword_evaluation_prompt: |
+  你是一位资深的 GORM 和 SQL 专家，具备深厚的 ORM 框架理解和数据库优化经验。
+
+  **任务目标：**
+  评估模型生成的 SQL-JSON 结果是否正确体现了 GORM 代码中特殊关键词的预期行为。这些关键词会影响 SQL 的生成模式、执行策略和数据库操作方式。
+
+  **业务背景：**
+  在 GORM ORM 框架中，某些特殊方法和配置会显著改变生成 SQL 的结构和行为。我们的模型需要准确理解这些关键词，并生成符合其语义的 SQL 语句。
+
+  **评估维度：**
+  1. **行为一致性**：生成的 SQL 是否体现了关键词的核心行为特征
+  2. **结构完整性**：SQL 结构是否包含关键词所需的必要组件（如 JOIN、事务语句等）
+  3. **语义准确性**：SQL 执行效果是否符合 GORM 关键词的预期结果
+
+  ## 特殊关键词行为规范详解
+
+  ### 查询增强类关键词
+
+  **1. Preload**
+  - **核心行为**：预加载关联数据，避免 N+1 查询问题
+  - **SQL 表现**：
+    - 基础查询：`SELECT * FROM main_table WHERE conditions;`
+    - 关联查询：`SELECT * FROM related_table WHERE foreign_key IN (主查询结果的主键列表);`
+    - 或使用 JOIN：`SELECT m.*, r.* FROM main_table m LEFT JOIN related_table r ON m.id = r.foreign_key;`
+  - **评判标准**：
+    - 必须包含主表查询 + 关联表查询（两条或以上SQL）
+    - 或包含正确的 JOIN 语句连接主表和关联表
+    - 关联查询条件必须基于主查询的结果
+
+  **2. Association**
+  - **核心行为**：操作模型的关联关系
+  - **SQL 表现**：
+    - 查询关联：`SELECT * FROM related_table WHERE foreign_key = ?;`
+    - 添加关联：`INSERT INTO junction_table (main_id, related_id) VALUES (?, ?);`
+    - 删除关联：`DELETE FROM junction_table WHERE main_id = ? AND related_id = ?;`
+  - **评判标准**：必须包含对关联表或中间表的操作SQL
+
+  **3. Pluck**
+  - **核心行为**：只查询指定字段，返回字段值数组
+  - **SQL 表现**：`SELECT specific_field FROM table WHERE conditions;`
+  - **评判标准**：SELECT 子句必须只包含指定字段，不能是 `SELECT *`
+
+  ### 事务和批处理类关键词
+
+  **4. Transaction**
+  - **核心行为**：确保多个操作的原子性
+  - **SQL 表现**：
+    ```sql
+    BEGIN;
+    -- 业务SQL语句
+    COMMIT;
+    ```
+    或
+    ```sql
+    START TRANSACTION;
+    -- 业务SQL语句
+    ROLLBACK; -- 或 COMMIT;
+    ```
+  - **评判标准**：必须包含 BEGIN/START TRANSACTION 和 COMMIT/ROLLBACK 语句
+
+  **5. FindInBatches**
+  - **核心行为**：数据分批处理，避免内存溢出
+  - **SQL 表现**：`SELECT * FROM table LIMIT batch_size OFFSET offset_value;`
+  - **评判标准**：必须包含 LIMIT 和 OFFSET 子句
+
+  ### 数据操作类关键词
+
+  **6. Save**
+  - **核心行为**：智能保存，自动判断是插入还是更新
+  - **SQL 表现**：
+    - 新记录：`INSERT INTO table (fields) VALUES (values);`
+    - 已有记录：`UPDATE table SET field=value WHERE id = ?;`
+  - **评判标准**：应包含INSERT或UPDATE语句，理想情况是根据主键存在性决定
+
+  **7. CreateOrUpdate** (UPSERT)
+  - **核心行为**：如果记录存在则更新，不存在则创建
+  - **SQL 表现**：
+    - MySQL：`INSERT INTO table (fields) VALUES (values) ON DUPLICATE KEY UPDATE field=value;`
+    - PostgreSQL：`INSERT INTO table (fields) VALUES (values) ON CONFLICT (key) DO UPDATE SET field=value;`
+    - 或分离式：先SELECT检查，再INSERT/UPDATE
+  - **评判标准**：必须体现UPSERT逻辑或条件判断插入/更新
+
+  **8. FirstOrInit**
+  - **核心行为**：查找记录，不存在时返回初始化对象（不插入数据库）
+  - **SQL 表现**：`SELECT * FROM table WHERE conditions LIMIT 1;`
+  - **评判标准**：只应包含SELECT语句，不应有INSERT
+
+  ### 查询控制类关键词
+
+  **9. Locking**
+  - **核心行为**：对查询结果加锁，防止并发修改
+  - **SQL 表现**：`SELECT * FROM table WHERE conditions FOR UPDATE;`
+  - **评判标准**：SELECT语句必须包含 `FOR UPDATE` 或 `FOR SHARE` 子句
+
+  **10. Scopes**
+  - **核心行为**：应用预定义的查询范围
+  - **SQL 表现**：在WHERE子句中包含范围条件
+  - **评判标准**：WHERE条件应体现作用域逻辑（如 active=true, deleted_at IS NULL 等）
+
+  ### 结构管理类关键词
+
+  **11. AutoMigrate**
+  - **核心行为**：自动同步数据库表结构
+  - **SQL 表现**：
+    ```sql
+    CREATE TABLE IF NOT EXISTS table_name (
+      column1 TYPE constraints,
+      column2 TYPE constraints
+    );
+    ALTER TABLE table_name ADD COLUMN new_column TYPE;
+    ```
+  - **评判标准**：必须包含 CREATE TABLE 或 ALTER TABLE 语句
+
+  **12. ForeignKey / References**
+  - **核心行为**：定义外键关系
+  - **SQL 表现**：
+    ```sql
+    CREATE TABLE table_name (
+      id INT PRIMARY KEY,
+      foreign_id INT,
+      FOREIGN KEY (foreign_id) REFERENCES parent_table(id)
+    );
+    ```
+  - **评判标准**：CREATE TABLE语句应包含 FOREIGN KEY 约束
+
+  ### 查询优化类关键词
+
+  **13. NamedQuery / NamedParameters**
+  - **核心行为**：使用命名参数提高SQL可读性
+  - **SQL 表现**：`SELECT * FROM table WHERE field = :named_param;`
+  - **评判标准**：参数应使用命名形式（:param）而非位置形式（?）
+
+  **14. Callbacks / Hooks**
+  - **核心行为**：在SQL执行前后触发钩子函数
+  - **SQL 表现**：基础SQL语句不变，但可能包含触发器相关SQL
+  - **评判标准**：主要检查基础SQL是否正确，钩子逻辑在应用层
+
+  ## 输入信息
+
+  **函数名称：** {function_name}
+  **调用者信息：** {caller}
+  **检测到的特殊关键词：** {matched_keywords}
+
+  **原始 GORM 代码：**
+  ```go
+  {orm_code}
+  ```
+
+  **模型生成的 SQL-JSON 结果：**
+  ```json
+  {generated_sql_json}
+  ```
+
+  **代码元数据：**
+  {code_metadata}
+
+  ## 评估流程
+
+  **步骤1：关键词识别确认**
+  - 确认输入的关键词是否在代码中真实存在
+  - 分析关键词在代码中的使用上下文和参数
+
+  **步骤2：预期行为分析**
+  - 根据关键词规范，确定应该生成什么样的SQL结构
+  - 考虑关键词之间的组合效应（如 Transaction + Preload）
+
+  **步骤3：生成结果检查**
+  - 检查SQL语句结构是否包含关键词要求的必要组件
+  - 验证SQL语句的语义是否符合关键词的行为预期
+  - 检查是否有遗漏或多余的SQL操作
+
+  **步骤4：综合评分**
+  - 完全符合：SQL完美体现了所有关键词的行为特征 → 1.0
+  - 大部分符合：主要行为正确，但有细节缺失或轻微偏差 → 0.7-0.9
+  - 部分符合：体现了部分关键词行为，但有明显遗漏 → 0.4-0.6
+  - 基本不符：SQL结构基本正确但几乎未体现关键词特征 → 0.1-0.3
+  - 完全不符：SQL错误或完全未体现关键词行为 → 0.0
+
+  ## 特殊考虑
+
+  **1. 关键词组合**
+  - 多个关键词同时存在时，评估是否都得到了正确体现
+  - 某些关键词可能相互影响（如 Transaction 包装其他操作）
+
+  **2. 上下文理解**
+  - 结合函数名称和调用者信息理解业务意图
+  - 考虑代码元数据中的表结构和字段映射
+
+  **3. SQL变体接受度**
+  - 同一行为可能有多种正确的SQL实现方式
+  - 重点关注行为一致性而非具体语法形式
+
+  ## 输出格式
+
+  请严格按照以下JSON格式输出评估结果，不要包含任何其他文字：
+
+  ```json
+  {{
+    "keyword_score": 分数值（0.0到1.0的浮点数）,
+    "evaluation_details": {{
+      "identified_keywords": ["实际识别到的关键词列表"],
+      "expected_behaviors": ["每个关键词的预期SQL行为描述"],
+      "actual_behaviors": ["生成SQL中体现的实际行为"],
+      "missing_behaviors": ["缺失的关键行为"],
+      "score_breakdown": {{
+        "behavior_consistency": 行为一致性分数,
+        "structure_completeness": 结构完整性分数,
+        "semantic_accuracy": 语义准确性分数
+      }}
+    }},
+    "reasoning": "详细的评分理由，说明为什么给出这个分数"
+  }}
+  ```
+
+  **注意：只输出上述JSON格式，不要包含任何解释性文字或markdown标记。**
+
 # 表名抽取提示词
 table_extraction_prompt: |
   请从以下GORM代码中提取所有涉及的表名。
@@ -171,7 +389,146 @@ consistency_config:
   table_weight: 0.6
   # 字段名权重
   column_weight: 0.4
+  # === 【修改点9】调整权重配置：关键词0.5，一致性:有效性=2:3 ===
   # 综合奖励中一致性评估的权重
-  consistency_weight: 0.4
+  consistency_weight: 0.2
   # 有效性评估的权重
-  validity_weight: 0.6 
+  validity_weight: 0.3
+  # 关键词契合度评估的权重
+  keyword_weight: 0.5
+
+# 预处理配置
+preprocessing:
+  # 是否在预处理阶段丢弃包含LACK INFORMATION的样本
+  drop_lack_info: true
+  # 关键词检测方式
+  keyword_detection_method: "regex"  # 简单正则匹配 
+
+# 控制流惩罚评估提示词
+control_flow_penalty_prompt: |
+  你是一个专业的代码分析专家，需要分析Go语言ORM代码中的控制流语句，并评估生成的SQL变体在控制流合理性方面的惩罚程度。
+
+  请分析以下ORM代码及其上下文：
+
+  **调用者信息：**
+  {caller}
+
+  **代码元数据：**
+  {code_meta_data}
+
+  **ORM代码：**
+  {orm_code}
+
+  **当前生成的SQL变体：**
+  {current_sql_variants}
+
+  **分析要求：**
+
+  1. **控制流识别**：识别代码中的switch、if、else if等控制流语句
+  2. **分支分析**：分析每个分支的执行条件和逻辑
+  3. **可达性分析**：结合调用者信息和代码元数据，分析哪些分支是可能被执行的
+  4. **变体合理性评估**：评估生成的SQL变体数量和内容是否与实际的可达控制流分支匹配
+  5. **惩罚程度判断**：根据偏差程度给出惩罚分数
+
+  **分析标准：**
+
+  - **switch语句**：每个可达的case分支通常对应一个SQL变体（除非多个case执行相同逻辑）
+  - **if-else语句**：每个可达的if分支通常对应一个SQL变体
+  - **嵌套控制流**：需要考虑嵌套的控制流结构
+  - **条件合并**：如果多个条件执行相同的SQL逻辑，应该合并为一个变体
+  - **默认分支**：需要考虑default分支或else分支
+  - **可达性判断**：
+    - 结合调用者信息分析函数调用路径
+    - 根据代码元数据中的参数类型、值范围等判断分支可达性
+    - 排除明显无法到达的分支（如条件永远为false的分支）
+    - 考虑参数约束对分支执行的影响
+
+  **惩罚评分标准：**
+
+  - **0.0（无惩罚）**：
+    - 无明显控制流且生成1-2个合理变体
+    - 有控制流且变体数量与可达分支完美匹配
+    - 变体内容与分支逻辑高度一致
+
+  - **0.2（轻微惩罚）**：
+    - 变体数量偏差±1个
+    - 变体内容基本正确但存在轻微不匹配
+
+  - **0.4（中等惩罚）**：
+    - 变体数量偏差±2-3个
+    - 遗漏1-2个次要分支或包含1-2个多余变体
+    - 变体内容部分不符合分支逻辑
+
+  - **0.6（较重惩罚）**：
+    - 变体数量偏差较大（±4个以上）
+    - 遗漏关键分支或包含大量多余变体
+    - 变体内容与分支逻辑存在明显冲突
+
+  - **0.8（严重惩罚）**：
+    - 完全误解控制流结构
+    - 生成的变体与控制流逻辑严重不符
+    - 遗漏大部分关键分支
+
+  - **1.0（最大惩罚）**：
+    - 生成的SQL变体与控制流完全无关
+    - 对控制流结构完全误解
+    - 生成变体数量极其不合理
+
+  **输出格式：**
+
+  请以JSON格式输出分析结果：
+
+  ```json
+  {{
+      "control_flow_analysis": {{
+          "has_control_flow": true/false,
+          "switch_statements": [
+              {{
+                  "line_range": "行号范围",
+                  "variable": "判断变量", 
+                  "reachable_branches": 数量,
+                  "branch_logic_summary": "分支逻辑概述"
+              }}
+          ],
+          "if_statements": [
+              {{
+                  "line_range": "行号范围",
+                  "condition": "条件描述",
+                  "reachable_branches": 数量,
+                  "branch_logic_summary": "分支逻辑概述"
+              }}
+          ],
+          "total_expected_variants": "期望的SQL变体数量（仅考虑可达分支）"
+      }},
+      "variant_analysis": {{
+          "actual_variant_count": "实际生成的变体数量",
+          "variant_quality_issues": [
+              "发现的变体质量问题"
+          ],
+          "missing_branches": [
+              "遗漏的分支描述"
+          ],
+          "redundant_variants": [
+              "多余的变体描述"
+          ]
+      }},
+      "penalty_evaluation": {{
+          "penalty_severity": 0.0,
+          "penalty_reason": "惩罚理由详述",
+          "main_issues": [
+              "主要问题列表"
+          ]
+      }}
+  }}
+  ```
+
+  请仔细分析代码结构和生成的SQL变体，确保评估结果的准确性。
+
+# 控制流惩罚配置
+control_flow_penalty:
+  # 是否启用控制流惩罚
+  enabled: true
+  # 最大惩罚分数(从总分中减去)
+  penalty_cap: 0.30
+  # LLM调用超时设置(秒)
+  llm_timeout: 8 

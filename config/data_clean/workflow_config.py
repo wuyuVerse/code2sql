@@ -14,7 +14,8 @@ class ConcurrencyConfig(BaseModel):
     sql_completeness_check: int = 50
     sql_correctness_check: int = 50
     redundant_sql_validation: int = 50
-    keyword_data_processing: int = 10  # 新增关键词处理步骤的并发配置
+    keyword_data_processing: int = 50  # 新增关键词处理步骤的并发配置
+    control_flow_validation: int = 20  # 新增控制流验证步骤的并发配置
     default: int = 50
 
 
@@ -26,7 +27,7 @@ class TimeoutConfig(BaseModel):
 
 class RetryConfig(BaseModel):
     """重试配置"""
-    max_retries: int = 5
+    max_retries: int = 1000
     retry_delay: float = 1.0
 
 
@@ -108,7 +109,7 @@ class WorkflowConfigManager:
         获取指定步骤的并发数
         
         Args:
-            step_type: 步骤类型 (sql_completeness_check, sql_correctness_check, redundant_sql_validation)
+            step_type: 步骤类型 (sql_completeness_check, sql_correctness_check, redundant_sql_validation, control_flow_validation)
             
         Returns:
             并发数
@@ -118,6 +119,7 @@ class WorkflowConfigManager:
             'sql_correctness_check': self.config.concurrency.sql_correctness_check,
             'redundant_sql_validation': self.config.concurrency.redundant_sql_validation,
             'keyword_data_processing': self.config.concurrency.keyword_data_processing,
+            'control_flow_validation': self.config.concurrency.control_flow_validation,
         }
         return concurrency_map.get(step_type, self.config.concurrency.default)
     

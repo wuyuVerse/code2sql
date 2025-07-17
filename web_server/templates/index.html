@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据集查看器</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h1 class="text-center">数据集查看器</h1>
+                    </div>
+                    <div class="card-body">
+                        <form action="/dataset_viewer" method="get">
+                            <div class="mb-3">
+                                <label for="dataPath" class="form-label">数据路径</label>
+                                <input type="text" class="form-control" id="dataPath" name="path" 
+                                       value="datasets/claude_output" placeholder="输入数据路径">
+                                <div class="form-text">例如: datasets/claude_output 或 datasets/claude_output/5-22-cos_results.json</div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">查看数据集</button>
+                            </div>
+                        </form>
+                        
+                        <hr>
+                        
+                        <h5>快速访问</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <a href="/dataset_viewer?path=datasets/claude_output" class="btn btn-outline-primary w-100 mb-2">
+                                    <i class="bi bi-folder2-open"></i> Claude输出数据集
+                                </a>
+                            </div>
+                            <div class="col-md-6">
+                                <a href="/dataset_viewer?path=datasets/claude_output/5-22-cos_results.json" class="btn btn-outline-success w-100 mb-2">
+                                    <i class="bi bi-file-earmark-json"></i> 5-22-cos结果
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

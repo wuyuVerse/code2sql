@@ -136,14 +136,12 @@ class ModelEvaluator:
         function_name = sample.get('code_key', '未知函数')
         orm_code = sample.get('code_value', '')
         caller = json.dumps(sample.get('callers', []), ensure_ascii=False) if sample.get('callers') else ""
-        callee = ""  # 验证集中可能没有这个字段
         code_meta_data_str = self.format_code_metadata(sample)
         
         prompt = PROMPT_TEMPLATE.format(
             function_name=function_name,
             orm_code=orm_code,
             caller=caller,
-            callee=callee,
             code_meta_data_str=code_meta_data_str
         )
         return prompt.strip()

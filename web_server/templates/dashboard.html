@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>模型评估报告仪表盘</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         body {
             background-color: #f8f9fa;
@@ -22,6 +23,12 @@
         }
         .report-list .list-group-item:hover {
             background-color: #e9ecef;
+        }
+        .dataset-card .card-title {
+            color: #198754;
+        }
+        .dataset-card .list-group-item {
+            border-left: 4px solid #198754;
         }
     </style>
 </head>
@@ -81,6 +88,75 @@
                 </div>
             </div>
         </div>
+
+        <!-- 数据集查看器 -->
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card shadow-sm dataset-card">
+                    <div class="card-body">
+                        <h2 class="card-title mb-3">数据集查看器</h2>
+                        <p class="card-text text-muted">直观展示和搜索数据集内容，支持多种JSON格式的数据文件。</p>
+                        
+                        <!-- 默认路径查看 -->
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-2">默认路径</h6>
+                            <a href="/dataset_viewer" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                数据集查看器 (默认路径: datasets/claude_output)
+                                <span class="badge bg-success rounded-pill">查看</span>
+                            </a>
+                        </div>
+                        
+                        <!-- 自定义路径输入 -->
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-2">自定义路径</h6>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="customPath" placeholder="输入数据文件夹路径，如: datasets/claude_output" value="datasets/claude_output">
+                                <button class="btn btn-primary" type="button" onclick="openDatasetViewer()">
+                                    <i class="bi bi-search"></i> 查看
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">支持相对路径，将读取该文件夹下的所有JSON文件</small>
+                        </div>
+                        
+                        <!-- 常用路径快捷方式 -->
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-2">常用路径</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="setPath('datasets/claude_output')">datasets/claude_output</button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="setPath('workflow_output')">workflow_output</button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="setPath('model/evaluation')">model/evaluation</button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="setPath('data_processing')">data_processing</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            function setPath(path) {
+                document.getElementById('customPath').value = path;
+            }
+            
+            function openDatasetViewer() {
+                const path = document.getElementById('customPath').value.trim();
+                if (!path) {
+                    alert('请输入路径');
+                    return;
+                }
+                
+                // 构建URL并跳转
+                const url = `/dataset_viewer?path=${encodeURIComponent(path)}`;
+                window.open(url, '_blank');
+            }
+            
+            // 支持回车键提交
+            document.getElementById('customPath').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    openDatasetViewer();
+                }
+            });
+        </script>
     </div>
 </body>
 </html> 

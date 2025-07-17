@@ -462,3 +462,44 @@ CODE_ORM_MYSQL_SQL_FORMAT = \
 ANALYSIS_PROMPT_TEMPLATE = CODE_ORM_MYSQL_SQL_EXTRACT
 VERIFICATION_PROMPT_TEMPLATE = CODE_ORM_MYSQL_SQL_VERIFY
 FORMATTING_PROMPT_TEMPLATE = CODE_ORM_MYSQL_SQL_FORMAT
+
+NO_SQL_GENERATE_PROMPT = """
+请基于以下ORM代码进行分析，判断是否会生成SQL，并提供原因。
+
+**首要判断：SQL生成有效性**
+请根据以下步骤，确认ORM代码是否会生成有效的SQL语句：
+
+1. **SQL生成能力检查**：
+   - **检查数据库执行操作**： 
+     - 检查代码是否包含实际的数据库执行方法，如 `Find`、`Create`、`Update`、`Delete`、`Count`、`First` 等。这些方法会直接生成SQL语句。
+     - 示例：`db.Find(&users)`、`db.Create(&user)`、`db.Delete(&user)` 等。
+   - **查询构建方法检查**：
+     - 如果代码仅包含查询构建方法（如 `Where`、`Select`、`Joins`、`Order`、`GroupBy` 等），但没有执行方法（如 `Find`、`Create`、`Update`、`Delete` 等），这类代码仅构建SQL查询，**不会实际生成SQL**。
+     - 示例：`db.Where("status = ?", "active")`，此类代码只是构建了查询条件，但没有执行查询操作。
+   - **模型定义和工具函数**：
+     - 如果代码仅涉及模型定义、结构体声明、连接设置、工具函数等，不会触发SQL生成。
+     - 示例：`type User struct {...}`，`db.AutoMigrate(&User{})` 等，只是定义模型或执行迁移，不涉及具体的数据库操作。
+   - **被完全注释掉的代码**：
+     - 如果代码被完全注释掉，**不会生成SQL**。
+     - 示例：`// db.Find(&users)`，这行代码被注释掉，不能触发SQL。
+
+2. **判断无法生成SQL的情形**：
+   - 如果代码缺乏数据库执行操作或只包含查询构建方法，请返回 `yes`。
+
+3. **判断能生成SQL的情形**：
+   - 如果代码包含数据库执行方法，如 `Find`、`Create` 等，请返回 `no`，表示会生成SQL。
+
+**分析目标代码：**
+函数名称：{function_name}
+ORM代码：{code_value}
+
+**元数据：**
+元数据信息可能包含表名和字段名的关键信息，请根据实际提供的内容进行分析。
+
+调用者：{caller}
+元数据：{code_meta_data_str}
+
+**最终要求：**
+- 如果代码不会生成SQL，返回 `yes`。
+- 如果代码能生成SQL，返回 `no`。
+"""

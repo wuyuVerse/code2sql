@@ -151,7 +151,7 @@ class SimpleModelEvaluator:
         # 处理callers
         callers = sample.get('callers', [])
         caller = json.dumps(callers[0], ensure_ascii=False) if callers else ""
-        callee = ""
+
         
         # 构建code_meta_data
         code_meta_data = [{
@@ -170,7 +170,6 @@ class SimpleModelEvaluator:
             function_name=function_name,
             orm_code=orm_code,
             caller=caller,
-            callee=callee,
             code_meta_data_str=code_meta_data_str
         )
         return prompt.strip()

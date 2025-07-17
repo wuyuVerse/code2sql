@@ -20,7 +20,7 @@ data:
   val_files: "/home/wuyu/code2sql/model/data/orm2sql_rl_data/orm2sql_rl_20250708_162812_val.parquet"
   
   # 训练参数
-  train_batch_size: 60  # 调整为60，能被6整除
+  train_batch_size: 64  # 调整为64，能被8整除
   max_prompt_length: 8192
   max_response_length: 4096
   filter_overlong_prompts: true
@@ -43,7 +43,7 @@ actor_rollout_ref:
   actor:
     optim:
       lr: 3e-6
-    ppo_mini_batch_size: 60  # 调整为60，与train_batch_size保持一致
+    ppo_mini_batch_size: 64  # 调整为64，与train_batch_size保持一致
     ppo_micro_batch_size_per_gpu: 2
     clip_ratio_low: 0.2
     clip_ratio_high: 0.28
@@ -77,6 +77,8 @@ reward_model:
 custom_reward_function:
   path: "/home/wuyu/code2sql/model/rl/code2sql_reward.py"
   name: "code2sql_reward"
+  # 调试模式开关，true时输出详细日志，false时只输出关键信息
+  debug_mode: true
 
 # 训练器配置
 trainer:
@@ -84,7 +86,7 @@ trainer:
   logger: ["console", "swanlab"]
   project_name: "verl_reinforce_plus_plus_formal"
   experiment_name: "qwen3_32b_rl-0704-reinforce-plus-plus"
-  n_gpus_per_node: 6  # 使用6个GPU (2,3,4,5,6,7号卡)
+  n_gpus_per_node: 8  # 使用8个GPU (0,1,2,3,4,5,6,7号卡)
   nnodes: 1  # 单节点训练
   save_freq: 20
   test_freq: 5
@@ -94,7 +96,7 @@ trainer:
 
 # 环境变量配置（用于脚本设置）
 environment:
-  CUDA_VISIBLE_DEVICES: "2,3,4,5,6,7"  # 指定使用2,3,4,5,6,7号GPU
+  CUDA_VISIBLE_DEVICES: "0,1,2,3,4,5,6,7"  # 指定使用0,1,2,3,4,5,6,7号GPU
   HF_MODULES_CACHE: "/home/wuyu/code2sql/saves/rl/hf_modules_cache"
   TRANSFORMERS_CACHE: "/home/wuyu/code2sql/saves/rl/transformers_cache"
   HF_HOME: "/home/wuyu/code2sql/saves/rl/huggingface"

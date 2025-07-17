@@ -8,6 +8,10 @@ workflow_settings:
     sql_correctness_check: 100
     # 冗余SQL验证并发数
     redundant_sql_validation: 100
+    # 控制流验证并发数
+    control_flow_validation: 50
+    # 关键词数据处理并发数
+    keyword_data_processing: 50
     # 默认并发数（备用）
     default: 50
   

@@ -11,7 +11,13 @@ import yaml
 import subprocess
 import argparse
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
+
+# 添加项目根目录到Python路径
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+from data_processing.rl_data_converter import RLDataConverter
 
 def setup_logging():
     """设置日志"""
@@ -100,7 +106,65 @@ def setup_environment(config: Dict[str, Any]):
     for key, value in env_config.items():
         os.environ[key] = str(value)
 
-def build_verl_command(config: Dict[str, Any], extra_args: Optional[List[str]] = None) -> List[str]:
+def run_data_conversion(config: Dict[str, Any], logger: logging.Logger) -> Optional[Tuple[str, str]]:
+    """
+    运行数据转换步骤
+    
+    Args:
+        config: 训练配置
+        logger: 日志记录器
+        
+    Returns:
+        (训练集路径, 验证集路径) 或 None（如果转换失败）
+    """
+    try:
+        # 检查是否需要数据转换
+        data_config = config.get("data", {})
+        auto_convert = data_config.get("auto_convert", True)
+        
+        if not auto_convert:
+            logger.info("跳过数据转换步骤")
+            return None
+        
+        logger.info("开始运行数据转换...")
+        
+        # 创建数据转换器
+        converter = RLDataConverter()
+        
+        # 获取workflow目录（如果指定）
+        workflow_dir = data_config.get("workflow_dir")
+        if workflow_dir:
+            workflow_dir = Path(workflow_dir)
+            if not workflow_dir.is_absolute():
+                workflow_dir = project_root / workflow_dir
+        
+        # 获取输出名称
+        output_name = data_config.get("output_name")
+        
+        # 获取验证集比例
+        val_ratio = data_config.get("val_ratio", 0.1)
+        
+        # 运行转换
+        train_path, val_path, dataset_info = converter.run_conversion(
+            workflow_dir=workflow_dir,
+            output_name=output_name,
+            val_ratio=val_ratio
+        )
+        
+        logger.info(f"数据转换完成:")
+        logger.info(f"  训练集: {train_path}")
+        logger.info(f"  验证集: {val_path}")
+        logger.info(f"  训练样本数: {dataset_info['train']['num_samples']}")
+        logger.info(f"  验证样本数: {dataset_info['val']['num_samples']}")
+        
+        return str(train_path), str(val_path)
+        
+    except Exception as e:
+        logger.error(f"数据转换失败: {e}")
+        return None
+
+def build_verl_command(config: Dict[str, Any], converted_data_paths: Optional[Tuple[str, str]] = None, 
+                      extra_args: Optional[List[str]] = None) -> List[str]:
     """构建VERL训练命令"""
     # 设置环境变量
     setup_environment(config)
@@ -111,13 +175,19 @@ def build_verl_command(config: Dict[str, Any], extra_args: Optional[List[str]] =
     # 基础命令
     cmd = ["python3", "-m", "verl.trainer.main_ppo"]
     
-    # 构建训练和测试文件列表
-    train_files = build_train_files_list(config)
-    test_files = build_test_files_list(config)
-    
-    # 添加文件路径参数
-    cmd.append(f'data.train_files={train_files}')
-    cmd.append(f'data.val_files={test_files}')
+    # 如果提供了转换后的数据路径，使用它们
+    if converted_data_paths:
+        train_path, val_path = converted_data_paths
+        cmd.append(f'data.train_files=["{train_path}"]')
+        cmd.append(f'data.val_files=["{val_path}"]')
+    else:
+        # 构建训练和测试文件列表
+        train_files = build_train_files_list(config)
+        test_files = build_test_files_list(config)
+        
+        # 添加文件路径参数
+        cmd.append(f'data.train_files={train_files}')
+        cmd.append(f'data.val_files={test_files}')
     
     # 展平配置并添加到命令中
     flat_config = flatten_config(config)
@@ -127,7 +197,8 @@ def build_verl_command(config: Dict[str, Any], extra_args: Optional[List[str]] =
         'data.gsm8k_train_path', 'data.gsm8k_test_path', 
         'data.math_train_path', 'data.math_test_path',
         'data.train_files', 'data.val_files',
-        'environment', 'logging', 'data_conversion', 'trainer.save_dir'
+        'environment', 'logging', 'data_conversion', 'trainer.save_dir',
+        'custom_reward_function.debug_mode'  # 排除自定义调试模式参数
     }
     
     for key, value in flat_config.items():
@@ -189,9 +260,12 @@ def main():
         logger.error(f"加载配置文件失败: {e}")
         return 1
     
+    # 运行数据转换步骤
+    converted_data_paths = run_data_conversion(config, logger)
+    
     # 构建训练命令
     try:
-        cmd = build_verl_command(config, extra_args)
+        cmd = build_verl_command(config, converted_data_paths, extra_args)
         logger.info(f"构建的训练命令:")
         logger.info(f"  {' '.join(cmd)}")
         

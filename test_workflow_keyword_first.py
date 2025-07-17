@@ -26,7 +26,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='运行关键词优先的数据处理工作流')
     
     # 基本参数
-    parser.add_argument('--data-dir', default='datasets/claude_output',
+    parser.add_argument('--data-dir', default='datasets/test_data',
                         help='原始数据目录 (默认: datasets/claude_output)')
     parser.add_argument('--output-dir', default='workflow_output',
                         help='输出基目录 (默认: workflow_output)')

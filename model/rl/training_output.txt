@@ -1,0 +1,7 @@
+nohup: ignoring input
+Traceback (most recent call last):
+  File "/home/wuyu/code2sql/model/rl/run_verl_training.py", line 20, in <module>
+    from data_processing.rl_data_converter import RLDataConverter
+  File "/home/wuyu/code2sql/data_processing/rl_data_converter.py", line 22, in <module>
+    from config.rl.data_conversion.orm2sql_prompt_template import PROMPT_TEMPLATE
+ImportError: cannot import name 'PROMPT_TEMPLATE' from 'config.rl.data_conversion.orm2sql_prompt_template' (/home/wuyu/code2sql/config/rl/data_conversion/orm2sql_prompt_template.py)

@@ -14,7 +14,7 @@ flash_attn: fa2
 use_unsloth: false
 
 # GPU配置
-cuda_visible_devices: "0,1,2,3"  # 指定要使用的GPU设备，用逗号分隔
+cuda_visible_devices: "0,1,2,3,4,5,6,7"  # 指定要使用的GPU设备，用逗号分隔
 
 # 数据集配置 - 使用ORM2SQL数据集（数据集名称和样本数将在训练时自动更新）
 dataset_dir: /home/wuyu/code2sql/model/data/orm2sql_training_data
@@ -31,7 +31,7 @@ learning_rate: 2.0e-5  # 针对代码生成任务稍微提高学习率
 num_train_epochs: 4.0  # 训练轮次，总步数 = (max_samples / 实际batch_size) * num_train_epochs
 # max_steps: 100  # 可选：直接指定最大训练步数，会覆盖num_train_epochs
 max_grad_norm: 1.0
-per_device_train_batch_size: 2  # 每GPU的batch size，考虑到内存限制调整为2
+per_device_train_batch_size: 1  # 每GPU的batch size，考虑到内存限制调整为2
 gradient_accumulation_steps: 8  # 梯度累积，实际batch_size = per_device_batch_size * GPU数 * gradient_accumulation_steps
 lr_scheduler_type: cosine
 warmup_ratio: 0.1
@@ -49,7 +49,7 @@ weight_decay: 0.1
 logging_steps: 10  # 每10步记录一次日志到SwanLab
 save_steps: 278  # 每个epoch保存一次（约278步）
 eval_steps: 278
-save_total_limit: 3
+save_total_limit: 2
 save_safetensors: true
 plot_loss: true
 overwrite_output_dir: true
@@ -60,4 +60,4 @@ report_to: swanlab
 swanlab_project: code2sql  # SwanLab 项目名称
 
 # 输出路径配置（相对于 LLaMA-Factory 目录）
-output_dir: saves/qwen3-14b-orm2sql-ft 
+output_dir: /home/wuyu/code2sql/saves/qwen3-14b-orm2sql-ft-v2

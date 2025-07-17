@@ -1,0 +1,18 @@
+# 数据集对比评估配置文件
+
+# 数据配置
+data_config:
+  # 基准数据集路径（可以是文件或目录）
+  baseline_data_path: "path/to/baseline/dataset.json"
+  # 生成数据集路径（可以是文件或目录）
+  generated_data_path: "path/to/generated/dataset.json"
+
+# 调试配置（仅在test模式下使用）
+debug_config:
+  # 测试模式下处理的样本数量
+  test_samples: 5
+
+# 输出配置
+output_config:
+  # 结果输出目录
+  output_dir: "results/dataset_comparison" 

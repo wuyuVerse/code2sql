@@ -301,7 +301,7 @@ class WorkflowManager:
                 )
                 
                 # 调用LLM
-                response = await llm_client.call_async(session, prompt, max_tokens=100, temperature=0.0, max_retries=5)
+                response = await llm_client.call_async(session, prompt, max_tokens=100, temperature=0.0, max_retries=1000)
                 
                 # 处理响应
                 is_complete = True
@@ -526,7 +526,7 @@ class WorkflowManager:
                     sql_statements=str(record.get('sql_statement_list', []))
                 )
                 
-                response = await llm_client.call_async(session, prompt, max_tokens=100, temperature=0.0, max_retries=5)
+                response = await llm_client.call_async(session, prompt, max_tokens=100, temperature=0.0, max_retries=1000)
                 
                 is_correct = True
                 reason = ""
@@ -722,7 +722,7 @@ class WorkflowManager:
         
         # 3️⃣ 可选：应用修复
         if apply_fix:
-            self._apply_fix_recommendations(validation_result.get('fix_recommendations', {}))
+            await self._apply_fix_recommendations_async(validation_result.get('fix_recommendations', {}))
             logger.info("已根据fix_recommendations应用修复到当前数据集")
         
         # 4️⃣ 记录workflow步骤
@@ -746,9 +746,9 @@ class WorkflowManager:
     # ------------------------------------------------------------------
     # 新增: 根据验证结果中的 fix_recommendations 修改 self.current_data
     # ------------------------------------------------------------------
-    def _apply_fix_recommendations(self, fix_recommendations: Dict[str, Any]):
+    async def _apply_fix_recommendations_async(self, fix_recommendations: Dict[str, Any]):
         """
-        根据fix_recommendations修改当前数据集
+        根据fix_recommendations修改当前数据集（异步版本）
         
         处理三种类型的修复：
         1. remove_redundant: 删除确认冗余的SQL
@@ -786,8 +786,8 @@ class WorkflowManager:
                 if not sql_text:
                     continue
 
-                # LLM 审核删除操作
-                review = self._llm_review_fix_sync(orm_code, caller, 'remove', sql_text)
+                # LLM 审核删除操作（异步）
+                review = await self._llm_review_fix_async(orm_code, caller, 'remove', sql_text)
                 if review.get('accepted', True):
                     remove_redundant_map[key].add(sql_text)
                 else:
@@ -809,7 +809,7 @@ class WorkflowManager:
                 if not sql_text:
                     continue
 
-                review = self._llm_review_fix_sync(orm_code, caller, 'remove', sql_text)
+                review = await self._llm_review_fix_async(orm_code, caller, 'remove', sql_text)
                 if review.get('accepted', True):
                     remove_wrong_new_map[key].add(sql_text)
                 else:
@@ -834,7 +834,7 @@ class WorkflowManager:
                     # 简单SQL文本
                     sql_text = missing_item.get('sql_text', '').strip()
                     if sql_text:
-                        review = self._llm_review_fix_sync(orm_code, caller, 'add', sql_text)
+                        review = await self._llm_review_fix_async(orm_code, caller, 'add', sql_text)
                         if review.get('accepted', True):
                             add_missing_map[key].append(sql_text)
                         else:
@@ -844,7 +844,7 @@ class WorkflowManager:
                 elif isinstance(missing_item, dict) and missing_item.get('type') == 'param_dependent':
                     # param_dependent结构
                     # 将整个结构转为字符串示例进行审核
-                    review = self._llm_review_fix_sync(orm_code, caller, 'add', str(missing_item))
+                    review = await self._llm_review_fix_async(orm_code, caller, 'add', str(missing_item))
                     if review.get('accepted', True):
                         add_missing_map[key].append(missing_item)
                     else:
@@ -855,7 +855,7 @@ class WorkflowManager:
                     # 直接的SQL字符串
                     sql_text = missing_item.strip()
                     if sql_text:
-                        review = self._llm_review_fix_sync(orm_code, caller, 'add', sql_text)
+                        review = await self._llm_review_fix_async(orm_code, caller, 'add', sql_text)
                         if review.get('accepted', True):
                             add_missing_map[key].append(sql_text)
                         else:
@@ -1210,8 +1210,8 @@ class WorkflowManager:
         logger.info(f"关键词提取完成 - 从 {len(self.current_data):,} 条记录中提取了 {len(self.extracted_data):,} 条匹配记录")
         return step_info
 
-    def _llm_review_fix_sync(self, orm_code: str, caller: str, action: str, target_sql: str) -> Dict[str, Any]:
-        """使用LLM对单条修复操作进行审核。
+    async def _llm_review_fix_async(self, orm_code: str, caller: str, action: str, target_sql: str) -> Dict[str, Any]:
+        """使用LLM对单条修复操作进行审核（异步版本）。
 
         Args:
             orm_code: ORM 代码全文或片段
@@ -1226,19 +1226,41 @@ class WorkflowManager:
             # 延迟导入避免循环依赖
             from utils.llm_client import LLMClient
             from config.data_clean.fix_review_prompts import REMOVAL_REVIEW_PROMPT, ADDITION_REVIEW_PROMPT  # type: ignore
+            import aiohttp
+            import json
+            import re
+            
             prompt_tpl = REMOVAL_REVIEW_PROMPT if action == 'remove' else ADDITION_REVIEW_PROMPT
-            prompt = prompt_tpl.format(orm_code=orm_code[:2000], caller=caller, target_sql=target_sql)
+            # 使用安全的字符串替换
+            prompt = prompt_tpl.replace('{orm_code}', str(orm_code))
+            prompt = prompt.replace('{caller}', str(caller))
+            prompt = prompt.replace('{target_sql}', str(target_sql))
+            
             client = LLMClient("v3")
-            response = client.call_sync(prompt, max_tokens=300, temperature=0.0)
-            import json, re
-            # 提取 JSON
-            match = re.search(r"\{[\s\S]*\}", response)
-            if match:
-                resp_json = json.loads(match.group(0))
-                accepted = bool(resp_json.get("accepted", True))
-                replacement = resp_json.get("replacement", "")
-                return {"accepted": accepted, "replacement": replacement}
-        except Exception:
+            
+            # 使用异步调用
+            async with aiohttp.ClientSession() as session:
+                response = await client.call_async(
+                    session, 
+                    prompt, 
+                    max_tokens=300, 
+                    temperature=0.0,
+                    max_retries=5
+                )
+                
+                if response:
+                    # 提取 JSON
+                    match = re.search(r"\{[\s\S]*\}", response)
+                    if match:
+                        resp_json = json.loads(match.group(0))
+                        accepted = bool(resp_json.get("accepted", True))
+                        replacement = resp_json.get("replacement", "")
+                        return {"accepted": accepted, "replacement": replacement}
+        except Exception as e:
+            # 记录错误但不中断流程
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"LLM审查调用失败: {e}")
             pass  # 出错时默认接受
         return {"accepted": True, "replacement": ""}
 
@@ -1314,7 +1336,7 @@ class WorkflowManager:
             return unique_keywords
 
         # 设置并发控制
-        concurrency = 20  # 降低并发数以避免服务器过载
+        concurrency = 50  # 降低并发数以避免服务器过载
         semaphore = asyncio.Semaphore(concurrency)
 
         # 延迟导入避免循环依赖
@@ -1327,14 +1349,13 @@ class WorkflowManager:
             async def process_single_record(record: Dict[str, Any]) -> Dict[str, Any]:
                 """处理单条记录，确保总是返回记录而不是None"""
                 async with semaphore:
-                    try:
-                        # 构造提示
-                        prompt = SPECIAL_KEYWORD_PROMPT.format(
-                            caller=record.get('caller', ''),
-                            code_meta=json.dumps(record.get('code_meta_data', []), ensure_ascii=False, indent=2),
-                            orm_code=record.get('orm_code', ''),
-                            sql_statements=json.dumps(record.get('sql_statement_list', []), ensure_ascii=False, indent=2)
-                        )
+                    try:                        # 构造提示
+                        # 使用安全的字符串替换而不是format
+                        prompt = SPECIAL_KEYWORD_PROMPT.replace('{caller}', str(record.get('caller', '')))
+                        prompt = prompt.replace('{code_meta}', json.dumps(record.get('code_meta_data', []), ensure_ascii=False, indent=2))
+                        prompt = prompt.replace('{orm_code}', str(record.get('orm_code', '')))
+                        prompt = prompt.replace('{sql_statements}', json.dumps(record.get('sql_statement_list', []), ensure_ascii=False, indent=2))
+
                         
                         # 调用LLM
                         response = await llm_client.call_async(
@@ -1342,7 +1363,7 @@ class WorkflowManager:
                             prompt, 
                             max_tokens=200, 
                             temperature=0.0,
-                            max_retries=5
+                            max_retries=1000
                         )
                         
                         if response:
@@ -1395,13 +1416,13 @@ class WorkflowManager:
             logger.info("开始并发调用LLM进行关键词分析...")
             results = await tqdm_asyncio.gather(*tasks, desc="LLM关键词分析")
             
-            # 所有记录都已经被处理并标记
-            self.extracted_data = results
+            # 所有记录都已经被处理并标记，更新当前数据
+            self.current_data = results
             
             # 分离匹配和未匹配的记录
-            matched_records = [record for record in self.extracted_data 
+            matched_records = [record for record in self.current_data 
                              if record.get('llm_keyword_analysis', {}).get('has_special_keywords', False)]
-            unmatched_records = [record for record in self.extracted_data 
+            unmatched_records = [record for record in self.current_data 
                                if not record.get('llm_keyword_analysis', {}).get('has_special_keywords', False)]
             
             # 数据完整性检查
@@ -1414,8 +1435,8 @@ class WorkflowManager:
             extraction_output_dir = self.workflow_dir / "keyword_extraction_llm"
             extraction_output_dir.mkdir(exist_ok=True)
             
-            # 保存匹配的记录
-            self.extracted_data = matched_records  # 只保留匹配的记录
+            # 保存匹配的记录（用于后续处理）
+            self.extracted_data = matched_records  # 只保留匹配的记录用于后续处理
             extracted_data_file = extraction_output_dir / "llm_keyword_matched_records.json"
             with open(extracted_data_file, 'w', encoding='utf-8') as f:
                 json.dump(self.extracted_data, f, ensure_ascii=False, indent=2)
@@ -1572,7 +1593,14 @@ class WorkflowManager:
                 merged_data.append(processed_record)
                 updated_count += 1
             else:
-                # 如果不在提取数据中，保留原始记录
+                # 如果不在提取数据中，保留原始记录并确保有llm_keyword_analysis字段
+                if 'llm_keyword_analysis' not in original_record:
+                    original_record['llm_keyword_analysis'] = {
+                        'matched_keywords': [],
+                        'llm_response': '"No"',
+                        'analysis_timestamp': datetime.now().isoformat(),
+                        'has_special_keywords': False
+                    }
                 merged_data.append(original_record)
         
         self.current_data = merged_data
@@ -1703,6 +1731,15 @@ class WorkflowManager:
                 print(f"     📊 总记录数: {step['total_records']:,}")
                 print(f"     🔄 更新记录: {step['updated_records']:,}")
                 print(f"     📈 更新率: {step['update_rate']:.2f}%")
+        
+            elif step['step_type'] == 'control_flow_validation':
+                print(f"     📊 总记录数: {step['total_records']:,}")
+                print(f"     🔍 控制流记录: {step['control_flow_records']:,}")
+                print(f"     📈 控制流比例: {step['control_flow_rate']:.2f}%")
+                print(f"     ✅ 验证正确: {step['correct_records']:,}")
+                print(f"     ❌ 验证错误: {step['incorrect_records']:,}")
+                print(f"     🔥 验证异常: {step['error_records']:,}")
+                print(f"     🔄 重新生成: {step.get('regenerated_records', 0):,}")
         
         print(f"\n💾 输出文件:")
         for step in self.workflow_steps:
@@ -2022,12 +2059,22 @@ class WorkflowManager:
         
         for record in self.current_data:
             sql_list = record.get('sql_statement_list', [])
-            # 检查是否为 <NO SQL GENERATE>（可能是字符串或包含该字符串的列表）
+            # 检查是否为 NO SQL GENERATE 格式（支持多种格式）
             is_no_sql = False
+            
+            # 检查简单字符串格式
             if isinstance(sql_list, str):
                 is_no_sql = sql_list == '<NO SQL GENERATE>'
             elif isinstance(sql_list, list):
-                is_no_sql = len(sql_list) == 1 and sql_list[0] == '<NO SQL GENERATE>'
+                # 检查列表中的简单字符串格式
+                if len(sql_list) == 1 and sql_list[0] == '<NO SQL GENERATE>':
+                    is_no_sql = True
+                else:
+                    # 检查复杂格式：列表中包含 {"type": "NO_SQL_GENERATE", ...} 的对象
+                    for item in sql_list:
+                        if isinstance(item, dict) and item.get('type') == 'NO_SQL_GENERATE':
+                            is_no_sql = True
+                            break
             
             if is_no_sql:
                 no_sql_records.append(record)
@@ -2211,6 +2258,67 @@ class WorkflowManager:
             logger.info(f"删除完成 - 删除了 {len(removed_records):,} 条记录，保留了 {len(filtered_records):,} 条记录")
         return step_info
 
+    async def validate_control_flow_records(self, step_name: str = "control_flow_validation_step") -> Dict[str, Any]:
+        """
+        验证包含控制流语句的记录
+        
+        Args:
+            step_name: 步骤名称
+            
+        Returns:
+            验证结果信息
+        """
+        if self.current_data is None:
+            raise ValueError("请先加载并处理数据")
+        
+        logger.info(f"开始验证控制流记录: {step_name}")
+        
+        # 动态导入控制流验证器
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+        
+        try:
+            from data_processing.cleaning.control_flow_validator import ControlFlowValidator
+        except ImportError as e:
+            logger.error(f"无法导入控制流验证器: {e}")
+            raise ValueError("控制流验证器不可用，无法执行验证")
+        
+        # 创建控制流验证器
+        validation_output_dir = self.workflow_dir / "control_flow_validation"
+        validator = ControlFlowValidator(str(validation_output_dir), llm_server="v3")
+        
+        # 动态获取并发数
+        from config.data_clean.workflow_config import get_workflow_config
+        workflow_config = get_workflow_config()
+        concurrency = workflow_config.get_concurrency('control_flow_validation')
+        
+        # 执行验证
+        validation_result = await validator.validate_dataset(self.current_data, max_concurrent=concurrency)
+        
+        # 记录工作流步骤
+        step_info = {
+            'step_name': step_name,
+            'step_type': 'control_flow_validation',
+            'timestamp': datetime.now().isoformat(),
+            'total_records': validation_result['total_records'],
+            'control_flow_records': validation_result['control_flow_records'],
+            'control_flow_rate': validation_result['control_flow_rate'],
+            'validated_records': validation_result['validated_records'],
+            'correct_records': validation_result['correct_records'],
+            'incorrect_records': validation_result['incorrect_records'],
+            'error_records': validation_result['error_records'],
+            'regenerated_records': validation_result.get('regenerated_records', 0),
+            'validation_file': validation_result.get('validation_file'),
+            'problematic_file': validation_result.get('problematic_file'),
+            'concurrent_requests': concurrency
+        }
+        
+        self.workflow_steps.append(step_info)
+        
+        logger.info(f"控制流验证完成 - 检测到 {validation_result['control_flow_records']} 条控制流记录，验证正确: {validation_result['correct_records']}, 错误: {validation_result['incorrect_records']}")
+        return step_info
+
     async def process_keyword_data_with_llm(self, step_name: str = "process_keyword_data_step") -> Dict[str, Any]:
         """
         使用LLM处理被识别为包含关键词的数据，根据指定prompt重新生成SQL。
@@ -2258,7 +2366,7 @@ class WorkflowManager:
                 for placeholder, value in replacements.items():
                     prompt = prompt.replace(placeholder, value)
 
-                response = await llm_client.call_async(session, prompt, temperature=0.0)
+                response = await llm_client.call_async(session, prompt, temperature=0.0, max_retries=1000)
 
                 # 使用新的、更健壮的解析器
                 from utils.response_parser import parse_model_response
@@ -2368,375 +2476,6 @@ class WorkflowManager:
         logger.info(f"关键词数据处理完成 - 输入 {input_record_count} 条, 输出 {len(processed_records)} 条, 成功处理 {success_count} 条, 失败 {failure_count} 条.")
         return step_info
 
-    def _apply_fix_recommendations(self, fix_recommendations: Dict[str, Any]):
-        """
-        根据fix_recommendations修改当前数据集
-        
-        处理三种类型的修复：
-        1. remove_redundant: 删除确认冗余的SQL
-        2. remove_wrong_new: 删除错误的新增SQL  
-        3. add_missing: 添加必要的缺失SQL
-        
-        支持的SQL结构：
-        - 单个字符串
-        - SQL列表
-        - param_dependent对象
-        - 嵌套结构
-        
-        修复逻辑：
-        - 冗余SQL直接删除，不置为<NO SQL GENERATE>
-        - 如果删除后SQL列表为空，删除整条记录
-        """
-        if not fix_recommendations or not self.current_data:
-            logger.info("没有修复建议或当前数据为空，跳过修复应用")
-            return
-        
-        # 构建删除映射: (orm_code, caller) -> set(sql_text)
-        remove_redundant_map: Dict[Tuple[str, str], set] = {}
-        remove_wrong_new_map: Dict[Tuple[str, str], set] = {}
-        add_missing_map: Dict[Tuple[str, str], List[Any]] = {}
-        
-        # 处理冗余删除
-        for item in fix_recommendations.get('remove_redundant', []):
-            orm_code = item.get('orm_code', '')
-            caller = item.get('caller', '')
-            key = (orm_code, caller)
-            if key not in remove_redundant_map:
-                remove_redundant_map[key] = set()
-            for sql_rec in item.get('candidate_info', {}).get('redundant_sqls', []):
-                sql_text = sql_rec.get('sql_text', '').replace(' <REDUNDANT SQL>', '').strip()
-                if not sql_text:
-                    continue
-
-                # LLM 审核删除操作
-                review = self._llm_review_fix_sync(orm_code, caller, 'remove', sql_text)
-                if review.get('accepted', True):
-                    remove_redundant_map[key].add(sql_text)
-                else:
-                    replacement = review.get('replacement', '')
-                    if replacement:
-                        if key not in add_missing_map:
-                            add_missing_map[key] = []
-                        add_missing_map[key].append(replacement)
-        
-        # 处理错误新增删除
-        for item in fix_recommendations.get('remove_wrong_new', []):
-            orm_code = item.get('orm_code', '')
-            caller = item.get('caller', '')
-            key = (orm_code, caller)
-            if key not in remove_wrong_new_map:
-                remove_wrong_new_map[key] = set()
-            for sql_rec in item.get('candidate_info', {}).get('new_sqls', []):
-                sql_text = sql_rec.get('sql_text', '').strip()
-                if not sql_text:
-                    continue
-
-                review = self._llm_review_fix_sync(orm_code, caller, 'remove', sql_text)
-                if review.get('accepted', True):
-                    remove_wrong_new_map[key].add(sql_text)
-                else:
-                    replacement = review.get('replacement', '')
-                    if replacement:
-                        if key not in add_missing_map:
-                            add_missing_map[key] = []
-                        add_missing_map[key].append(replacement)
-        
-        # 处理缺失添加
-        for item in fix_recommendations.get('add_missing', []):
-            orm_code = item.get('orm_code', '')
-            caller = item.get('caller', '')
-            key = (orm_code, caller)
-            if key not in add_missing_map:
-                add_missing_map[key] = []
-            
-            # 支持添加字符串SQL和param_dependent结构
-            missing_items = item.get('candidate_info', {}).get('missing_sql_examples', [])
-            for missing_item in missing_items:
-                if isinstance(missing_item, dict) and 'sql_text' in missing_item:
-                    # 简单SQL文本
-                    sql_text = missing_item.get('sql_text', '').strip()
-                    if sql_text:
-                        review = self._llm_review_fix_sync(orm_code, caller, 'add', sql_text)
-                        if review.get('accepted', True):
-                            add_missing_map[key].append(sql_text)
-                        else:
-                            replacement = review.get('replacement', '')
-                            if replacement:
-                                add_missing_map[key].append(replacement)
-                elif isinstance(missing_item, dict) and missing_item.get('type') == 'param_dependent':
-                    # param_dependent结构
-                    # 将整个结构转为字符串示例进行审核
-                    review = self._llm_review_fix_sync(orm_code, caller, 'add', str(missing_item))
-                    if review.get('accepted', True):
-                        add_missing_map[key].append(missing_item)
-                    else:
-                        replacement = review.get('replacement', '')
-                        if replacement:
-                            add_missing_map[key].append(replacement)
-                elif isinstance(missing_item, str):
-                    # 直接的SQL字符串
-                    sql_text = missing_item.strip()
-                    if sql_text:
-                        review = self._llm_review_fix_sync(orm_code, caller, 'add', sql_text)
-                        if review.get('accepted', True):
-                            add_missing_map[key].append(sql_text)
-                        else:
-                            replacement = review.get('replacement', '')
-                            if replacement:
-                                add_missing_map[key].append(replacement)
-        
-        # 合并所有删除映射
-        all_remove_map: Dict[Tuple[str, str], set] = {}
-        for key in set(remove_redundant_map.keys()) | set(remove_wrong_new_map.keys()):
-            all_remove_map[key] = remove_redundant_map.get(key, set()) | remove_wrong_new_map.get(key, set())
-        
-        def _process_sql_list(sql_list, key):
-            """处理SQL列表：删除指定SQL，添加缺失SQL
-            
-            Returns:
-                - None: 表示SQL列表为空，应该删除整条记录
-                - 其他值: 处理后的SQL列表
-            """
-            try:
-                remove_set = all_remove_map.get(key, set())
-                add_list = add_missing_map.get(key, [])
-                
-                if isinstance(sql_list, str):
-                    return self._process_string_sql(sql_list, remove_set, add_list)
-                elif isinstance(sql_list, list):
-                    return self._process_list_sql(sql_list, remove_set, add_list)
-                elif isinstance(sql_list, dict):
-                    return self._process_dict_sql(sql_list, remove_set, add_list)
-                else:
-                    # 未知类型，记录警告但保留原值
-                    logger.warning(f"遇到未知SQL类型: {type(sql_list)}, 保留原值")
-                    return sql_list
-            except Exception as e:
-                logger.error(f"处理SQL列表时出错: {e}, 保留原值")
-                return sql_list
-        
-        # 应用修复 - 需要在迭代时安全地删除记录
-        original_count = len(self.current_data)
-        filtered_records = []
-        modifications_count = 0
-        deleted_records_count = 0
-        error_count = 0
-        
-        for record in self.current_data:
-            try:
-                key = (record.get('orm_code', ''), record.get('caller', ''))
-                
-                # 检查是否需要处理此记录
-                if key in all_remove_map or key in add_missing_map:
-                    original_sql_list = record.get('sql_statement_list')
-                    processed_sql_list = _process_sql_list(original_sql_list, key)
-                    
-                    # 如果处理结果为None，表示应该删除整条记录
-                    if processed_sql_list is None:
-                        deleted_records_count += 1
-                        logger.debug(f"删除记录: orm_code={record.get('orm_code', 'unknown')[:50]}..., caller={record.get('caller', 'unknown')}")
-                        continue  # 不添加到filtered_records中
-                    
-                    # 如果有变化，更新记录
-                    if processed_sql_list != original_sql_list:
-                        record['sql_statement_list'] = processed_sql_list
-                        modifications_count += 1
-                    
-                    # 保留这条记录
-                    filtered_records.append(record)
-                else:
-                    # 不需要处理的记录，直接保留
-                    filtered_records.append(record)
-            except Exception as e:
-                logger.error(f"处理记录时出错 (orm_code={record.get('orm_code', 'unknown')}, caller={record.get('caller', 'unknown')}): {e}")
-                error_count += 1
-                # 出错时仍然保留原记录
-                filtered_records.append(record)
-        
-        # 更新当前数据为过滤后的记录
-        self.current_data = filtered_records
-        
-        # 记录修复统计
-        logger.info(f"修复应用完成:")
-        logger.info(f"  - 删除冗余SQL: {sum(len(sqls) for sqls in remove_redundant_map.values())} 个")
-        logger.info(f"  - 删除错误新增SQL: {sum(len(sqls) for sqls in remove_wrong_new_map.values())} 个")
-        logger.info(f"  - 添加缺失SQL: {sum(len(items) for items in add_missing_map.values())} 个")
-        logger.info(f"  - 修改记录数: {modifications_count}")
-        logger.info(f"  - 删除记录数: {deleted_records_count}")
-        logger.info(f"  - 记录总数变化: {original_count} -> {len(filtered_records)}")
-        if error_count > 0:
-            logger.warning(f"  - 处理错误数: {error_count}")
-    
-    def _process_string_sql(self, sql_string: str, remove_set: set, add_list: List) -> Any:
-        """处理单个SQL字符串
-        
-        Returns:
-            - None: 表示SQL为空，应该删除整条记录
-            - 其他值: 处理后的SQL内容
-        """
-        if sql_string == '<NO SQL GENERATE>':
-            # 如果原本就是空，只添加缺失的SQL
-            if add_list:
-                return add_list if len(add_list) > 1 else add_list[0]
-            else:
-                return None  # 返回None表示应该删除记录
-        
-        # 检查是否需要删除
-        clean_sql = sql_string.replace(' <REDUNDANT SQL>', '').strip()
-        if clean_sql in remove_set:
-            # 删除后，如果有缺失SQL需要添加，则添加；否则返回None表示删除记录
-            if add_list:
-                return add_list if len(add_list) > 1 else add_list[0]
-            else:
-                return None  # 返回None表示应该删除记录
-        else:
-            # 保留原SQL，并添加缺失SQL
-            if add_list:
-                result = [clean_sql] if clean_sql else []
-                result.extend(add_list)
-                return result if len(result) > 1 else (result[0] if result else None)
-            else:
-                return clean_sql if clean_sql else None
-    
-    def _process_list_sql(self, sql_list: List, remove_set: set, add_list: List) -> Any:
-        """处理SQL列表
-        
-        Returns:
-            - None: 表示SQL列表为空，应该删除整条记录
-            - 其他值: 处理后的SQL列表
-        """
-        cleaned = []
-        
-        for item in sql_list:
-            if isinstance(item, str):
-                clean_sql = item.replace(' <REDUNDANT SQL>', '').strip()
-                if clean_sql and clean_sql not in remove_set:
-                    cleaned.append(clean_sql)
-            elif isinstance(item, dict):
-                processed_item = self._process_dict_sql(item, remove_set, [])
-                if processed_item is not None:
-                    cleaned.append(processed_item)
-            elif isinstance(item, list):
-                # 处理嵌套列表
-                processed_nested = self._process_list_sql(item, remove_set, [])
-                if processed_nested is not None:
-                    cleaned.append(processed_nested)
-            else:
-                # 其他类型，保留
-                cleaned.append(item)
-        
-        # 添加缺失的SQL
-        cleaned.extend(add_list)
-        
-        # 如果清洗后没有内容，返回None表示删除记录
-        if not cleaned:
-            return None
-        else:
-            return cleaned
-    
-    def _process_dict_sql(self, sql_dict: Dict, remove_set: set, add_list: List) -> Optional[Dict]:
-        """处理字典类型的SQL（如param_dependent）"""
-        if sql_dict.get("type") == "param_dependent":
-            return self._process_param_dependent_sql(sql_dict, remove_set, add_list)
-        else:
-            # 其他类型的字典，检查是否包含SQL字段
-            if 'sql' in sql_dict:
-                sql_content = sql_dict['sql']
-                processed_dict = sql_dict.copy()
-                
-                if isinstance(sql_content, str):
-                    clean_sql = sql_content.replace(' <REDUNDANT SQL>', '').strip()
-                    if clean_sql not in remove_set:
-                        processed_dict['sql'] = clean_sql
-                        return processed_dict
-                elif isinstance(sql_content, list):
-                    processed_sql_list = self._process_list_sql(sql_content, remove_set, [])
-                    if processed_sql_list is not None:
-                        processed_dict['sql'] = processed_sql_list
-                        return processed_dict
-            
-            # 如果没有SQL字段或者SQL被删除了，检查是否有其他重要字段
-            important_fields = ['scenario', 'description', 'condition', 'when']
-            if any(field in sql_dict for field in important_fields):
-                return sql_dict  # 保留元数据信息
-            
-            return None  # 没有重要内容，删除
-    
-    def _process_param_dependent_sql(self, param_dependent_item: Dict, remove_set: set, add_list: Optional[List] = None) -> Optional[Dict]:
-        """
-        处理param_dependent类型的SQL项，删除其中的冗余/错误SQL，添加缺失SQL
-        
-        Args:
-            param_dependent_item: param_dependent SQL项
-            remove_set: 需要删除的SQL文本集合
-            add_list: 需要添加的SQL项列表
-            
-        Returns:
-            处理后的param_dependent项，如果所有变体都被删除则返回None
-        """
-        if not isinstance(param_dependent_item, dict) or param_dependent_item.get("type") != "param_dependent":
-            return param_dependent_item
-        
-        cleaned_item = param_dependent_item.copy()
-        cleaned_variants = []
-        
-        # 处理现有变体
-        variants = param_dependent_item.get("variants", [])
-        for variant in variants:
-            if isinstance(variant, dict) and "sql" in variant:
-                variant_sql = variant["sql"]
-                cleaned_variant = variant.copy()
-                
-                if isinstance(variant_sql, str):
-                    clean_sql = variant_sql.replace(' <REDUNDANT SQL>', '').strip()
-                    if clean_sql not in remove_set:
-                        cleaned_variant["sql"] = clean_sql
-                        cleaned_variants.append(cleaned_variant)
-                elif isinstance(variant_sql, list):
-                    # 处理SQL列表
-                    cleaned_sql_list = []
-                    for sql in variant_sql:
-                        if isinstance(sql, str):
-                            clean_sql = sql.replace(' <REDUNDANT SQL>', '').strip()
-                            if clean_sql and clean_sql not in remove_set:
-                                cleaned_sql_list.append(clean_sql)
-                    
-                    if cleaned_sql_list:
-                        cleaned_variant["sql"] = cleaned_sql_list
-                        cleaned_variants.append(cleaned_variant)
-                else:
-                    # 其他类型，保留
-                    cleaned_variants.append(cleaned_variant)
-            else:
-                # 非SQL变体或没有SQL字段，保留
-                cleaned_variants.append(variant)
-        
-        # 添加缺失的SQL变体
-        if add_list:
-            for add_item in add_list:
-                if isinstance(add_item, str):
-                    # 添加简单SQL变体
-                    new_variant = {
-                        "scenario": "补充的必要SQL",
-                        "sql": add_item
-                    }
-                    cleaned_variants.append(new_variant)
-                elif isinstance(add_item, dict) and add_item.get("type") == "param_dependent":
-                    # 如果要添加的也是param_dependent，合并其变体
-                    for variant in add_item.get("variants", []):
-                        cleaned_variants.append(variant)
-                elif isinstance(add_item, dict) and "sql" in add_item:
-                    # 添加结构化变体
-                    cleaned_variants.append(add_item)
-        
-        if cleaned_variants:
-            cleaned_item["variants"] = cleaned_variants
-            return cleaned_item
-        else:
-            # 所有变体都被删除，返回None
-            return None
-
-
 
 def run_complete_workflow_from_raw_data(data_dir: str, keywords: Optional[List[str]] = None, base_output_dir: str = "workflow_output") -> Dict[str, Any]:
     """
@@ -2808,8 +2547,6 @@ def run_complete_workflow_from_raw_data(data_dir: str, keywords: Optional[List[s
     except Exception as e:
         logger.error(f"工作流执行失败: {e}")
         raise
-
-
 
 
 
@@ -2886,8 +2623,11 @@ def run_new_workflow(args):
         
         # 使用更可靠的方式来标识记录
         def get_record_id(record):
-            """生成记录的唯一标识"""
-            return f"{record.get('function_name', '')}:{record.get('caller', '')}:{record.get('source_file', '')}"
+            """生成记录的唯一标识 - 使用function_name:orm_code:caller三元组"""
+            orm_code = record.get('orm_code', '')
+            # 如果orm_code太长，取前100个字符作为标识的一部分
+            orm_code_short = orm_code[:100] if len(orm_code) > 100 else orm_code
+            return f"{record.get('function_name', '')}:{orm_code_short}:{record.get('caller', '')}"
         
         # 创建已匹配记录的ID集合
         matched_record_ids = {get_record_id(rec) for rec in keyword_data_after_extraction}
@@ -2930,8 +2670,21 @@ def run_new_workflow(args):
         }
         workflow.workflow_steps.append(separation_step)
         
-        # 步骤 4: 对非关键词数据进行清洗
-        workflow.current_data = non_keyword_data  # 设置工作流数据为非关键词数据
+        # 步骤 4: 对非关键词数据进行清洗（保留llm_keyword_analysis字段）
+        # 保存非关键词数据的llm_keyword_analysis字段
+        non_keyword_data_with_analysis = []
+        for rec in non_keyword_data:
+            # 确保保留llm_keyword_analysis字段
+            if 'llm_keyword_analysis' not in rec:
+                rec['llm_keyword_analysis'] = {
+                    'matched_keywords': [],
+                    'llm_response': '"No"',
+                    'analysis_timestamp': datetime.now().isoformat(),
+                    'has_special_keywords': False
+                }
+            non_keyword_data_with_analysis.append(rec)
+        
+        workflow.current_data = non_keyword_data_with_analysis  # 设置工作流数据为非关键词数据
         cleaning_result = workflow.run_sql_cleaning("sql_cleaning_after_extraction")
         no_sql_removal_result = asyncio.run(workflow.remove_no_sql_records("remove_no_sql_records_step", reanalyze_no_sql=True))
         fix_result = asyncio.run(workflow.run_redundant_sql_validation(
@@ -2947,14 +2700,12 @@ def run_new_workflow(args):
         final_data = keyword_data_after_processing + cleaned_non_keyword_data
         workflow.current_data = final_data
         
+        # 步骤 6: 控制流验证 - 检测包含switch、if等控制流语句的ORM代码
+        logger.info("开始执行控制流验证步骤...")
+        control_flow_validation_result = asyncio.run(workflow.validate_control_flow_records("control_flow_validation_step"))
+        
         # 最终数据完整性检查
         total_after_processing = len(final_data)
-        # if total_after_processing != original_dataset_count:
-        #     logger.error(f"❌ 最终数据不完整！原始: {original_dataset_count}, 最终: {total_after_processing}")
-        #     logger.error(f"关键词数据: {len(keyword_data_after_processing)}, 非关键词数据: {len(cleaned_non_keyword_data)}")
-        #     raise ValueError(f"数据完整性检查失败：{original_dataset_count} != {total_after_processing}")
-        # else:
-        #     logger.info(f"✅ 最终数据完整性验证通过：{total_after_processing} = {len(keyword_data_after_processing)} + {len(cleaned_non_keyword_data)}")
         
         # 记录数据处理步骤
         data_processing_step = {
@@ -2990,6 +2741,7 @@ def run_new_workflow(args):
             "cleaning_result": cleaning_result,
             "no_sql_removal_result": no_sql_removal_result,
             "fix_result": fix_result,
+            "control_flow_validation_result": control_flow_validation_result,
             "data_processing_summary": data_processing_step
         }
 
@@ -3027,8 +2779,8 @@ def run_resume_workflow(args):
         if args.test:
             print("🧪 测试模式开启，随机抽取20条数据进行处理。")
             logging.info("🧪 测试模式开启，随机抽取20条数据进行处理。")
-            if workflow.current_data and len(workflow.current_data) > 20:
-                workflow.current_data = random.sample(workflow.current_data, 20)
+            if workflow.current_data and len(workflow.current_data) > 6000:
+                workflow.current_data = random.sample(workflow.current_data, 6000)
                 logging.info(f"数据已采样，剩余 {len(workflow.current_data)} 条记录。")
 
         # 如果指定了步骤，从该步骤开始执行

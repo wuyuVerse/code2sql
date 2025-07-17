@@ -13,6 +13,14 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 import glob
+import sys
+
+# 添加项目根目录到Python路径
+project_root = Path(__file__).parents[1]
+sys.path.insert(0, str(project_root))
+
+from config.rl.data_conversion.orm2sql_prompt_template import PROMPT_TEMPLATE
+from utils.preprocess import preprocess_record
 
 # 设置日志
 logging.basicConfig(
@@ -133,30 +141,13 @@ class RLDataConverter:
         callee = record.get("callee", "")
         code_meta_data_str = self.format_code_metadata(record.get("code_meta_data", []))
         
-        # 构建用户提示内容
-        user_content = f"""请基于以下分析要求，直接输出GORM代码对应的SQL语句JSON格式结果：
-
-**函数名称：** {function_name}
-
-**ORM代码：**
-```go
-{orm_code}
-```
-
-**调用上下文：**
-- 调用者: {caller}
-- 被调用者: {callee}
-
-**代码元数据：**
-{code_meta_data_str}
-
-**要求：**
-1. 仅输出有效的SQL语句，如果代码不会生成SQL则返回空数组[]
-2. 输出格式为JSON数组，每个SQL语句为一个字符串
-3. 确保SQL语句语法正确，表名和字段名准确
-4. 保持原始代码中的表名和字段名，不要自动复数化
-
-请直接输出SQL语句的JSON数组："""
+        # 使用orm2sql_prompt_template.py中的完整模板
+        user_content = PROMPT_TEMPLATE.format(
+            function_name=function_name,
+            orm_code=orm_code,
+            caller=caller,
+            code_meta_data_str=code_meta_data_str
+        )
         
         return [{"role": "user", "content": user_content}]
     
@@ -193,11 +184,27 @@ class RLDataConverter:
         
         logger.info("开始转换RL训练数据...")
         
+        # 统计信息
+        total_records = len(data)
+        filtered_count = 0
+        has_keywords_count = 0
+        
         for i, record in enumerate(data):
             if i % 1000 == 0:
                 logger.info(f"已处理 {i}/{len(data)} 条记录")
             
             try:
+                # === 新增：预处理步骤（仅表名字段名抽取） ===
+                ok, pre_tables, pre_columns = preprocess_record(record)
+                if not ok:
+                    filtered_count += 1
+                    logger.debug(f"记录 {i} 被过滤：抽取失败或包含LACK INFORMATION")
+                    continue
+                
+                # 统计关键词样本数（使用原始数据）
+                if record.get("llm_keyword_analysis", {}).get("has_special_keywords", False):
+                    has_keywords_count += 1
+                
                 # 创建聊天格式的提示词
                 prompt = self.create_rl_prompt(record)
                 
@@ -210,14 +217,24 @@ class RLDataConverter:
                     "ground_truth": ground_truth
                 }
                 
-                # 构建extra_info
+                # 构建extra_info，包含所有ORM相关信息
                 extra_info = {
                     "index": i,
                     "split": "train",  # 默认为训练集
                     "function_name": record.get('function_name', ''),
                     "source_file": record.get('source_file', ''),
                     "sql_pattern_cnt": record.get('sql_pattern_cnt', 0),
-                    "sql_types": record.get('sql_types', [])
+                    "sql_types": record.get('sql_types', []),
+                    # 保持原有ORM信息
+                    "orm_code": record.get('orm_code', ''),
+                    "caller": record.get('caller', ''),
+                    "callee": record.get('callee', ''),
+                    "code_meta_data": record.get('code_meta_data', []),
+                    # === 新增：预处理的表名字段名结果 ===
+                    "pre_tables": list(pre_tables),
+                    "pre_columns": list(pre_columns),
+                    # === 保持原有关键词信息不变 ===
+                    "llm_keyword_analysis": record.get("llm_keyword_analysis", {})
                 }
                 
                 # 添加到数据集
@@ -231,7 +248,17 @@ class RLDataConverter:
                 logger.error(f"处理第 {i} 条记录时出错: {e}")
                 continue
         
-        logger.info(f"转换完成，共生成 {len(rl_data['data_source'])} 条RL训练样本")
+        # 输出统计信息
+        final_count = len(rl_data['data_source'])
+        logger.info(f"=== 预处理统计信息 ===")
+        logger.info(f"原始样本数: {total_records}")
+        logger.info(f"过滤样本数: {filtered_count}")
+        logger.info(f"保留样本数: {final_count}")
+        logger.info(f"保留率: {final_count/total_records*100:.1f}%")
+        logger.info(f"有关键词样本数: {has_keywords_count}")
+        logger.info(f"关键词样本占比: {has_keywords_count/final_count*100:.1f}%")
+        
+        logger.info(f"转换完成，共生成 {final_count} 条RL训练样本")
         return pd.DataFrame(rl_data)
     
     def split_train_val(self, df: pd.DataFrame, val_ratio: float = 0.1) -> Tuple[pd.DataFrame, pd.DataFrame]:

@@ -110,7 +110,7 @@ class LLMClient:
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
-        
+        max_retries = 20
         for attempt in range(max_retries):
             try:
                 async with session.post(

@@ -16,6 +16,7 @@ from config.validation.validation_prompts import (
     ANALYSIS_PROMPT_TEMPLATE,
     VERIFICATION_PROMPT_TEMPLATE,
     FORMATTING_PROMPT_TEMPLATE,
+    NO_SQL_GENERATE_PROMPT,
 )
 
 logger = logging.getLogger(__name__)
@@ -96,7 +97,7 @@ class RerunValidator:
                     prompt, 
                     max_tokens=4096, 
                     temperature=0.0,
-                    max_retries=5,
+                    max_retries=1000,
                     retry_delay=1.0
                 )
                 
@@ -172,6 +173,90 @@ class RerunValidator:
             "sql_pattern_cnt": record.get('sql_pattern_cnt', 0)
         }
 
+    def _format_no_sql_check_prompt(self, record: dict) -> str:
+        """格式化用于SQL生成预检查的提示词"""
+        try:
+            code_value = record.get('orm_code', '')
+            if not code_value and record.get('code_meta_data'):
+                 if isinstance(record['code_meta_data'], list) and record['code_meta_data']:
+                    code_value = record['code_meta_data'][0].get('code_value', '')
+
+            # 使用replace方式替换占位符
+            prompt = NO_SQL_GENERATE_PROMPT.replace('{function_name}', str(record.get('function_name', 'N/A')))
+            prompt = prompt.replace('{code_value}', str(code_value))
+            prompt = prompt.replace('{caller}', str(record.get('caller', 'N/A')))
+            prompt = prompt.replace('{code_meta_data_str}', json.dumps(record.get('code_meta_data', []), ensure_ascii=False, indent=2))
+            
+            # 调试信息
+            logger.debug(f"格式化参数: function_name={record.get('function_name', 'N/A')}, code_value={code_value}, caller={record.get('caller', 'N/A')}")
+            
+            return prompt
+        except Exception as e:
+            logger.error(f"格式化预检查提示词失败: {e}")
+            logger.error(f"记录内容: {record}")
+            raise
+
+    async def _precheck_sql_generation(self, record: dict, session) -> dict:
+        """
+        预检查代码是否会生成SQL
+        
+        Args:
+            record: 需要分析的数据记录
+            session: aiohttp会话
+            
+        Returns:
+            包含预检查结果的字典
+        """
+        try:
+            client = self.client_manager.get_client(self.config['server'])
+            prompt = self._format_no_sql_check_prompt(record)
+            
+            result_content = await client.call_async(
+                session,
+                prompt,
+                max_tokens=1024,  # 预检查不需要太多token
+                temperature=0.0,
+                max_retries=1000,
+                retry_delay=1.0
+            )
+            
+            if not result_content:
+                logger.error("❌ 预检查返回空结果")
+                return {
+                    "will_generate_sql": None,
+                    "precheck_result": "",
+                    "success": False,
+                    "error": "预检查LLM调用失败"
+                }
+            
+            # 解析返回结果
+            result_content = result_content.strip().lower()
+            will_generate_sql = None
+            
+            if "yes" in result_content:
+                will_generate_sql = False  # 不会生成SQL
+            elif "no" in result_content:
+                will_generate_sql = True   # 会生成SQL
+            else:
+                logger.warning(f"⚠️ 预检查结果无法解析: {result_content}")
+                will_generate_sql = None
+            
+            return {
+                "will_generate_sql": will_generate_sql,
+                "precheck_result": result_content,
+                "success": True,
+                "error": None
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ 预检查异常: {e}")
+            return {
+                "will_generate_sql": None,
+                "precheck_result": "",
+                "success": False,
+                "error": f"预检查异常: {str(e)}"
+            }
+
     def generate_precheck_prompts(self, record: dict, analysis_result: str = "") -> dict:
         """
         为给定的记录生成三阶段的预检查提示词。
@@ -221,6 +306,40 @@ class RerunValidator:
             client = self.client_manager.get_client(self.config['server'])
             
             async with aiohttp.ClientSession() as session:
+                # 预检查步骤：判断是否会生成SQL
+                logger.info(f"🔍 开始预检查: {record.get('function_name', 'N/A')}")
+                precheck_result = await self._precheck_sql_generation(record, session)
+                
+                if not precheck_result["success"]:
+                    logger.error(f"❌ 预检查失败: {precheck_result['error']}")
+                    return {
+                        "analysis_result": "",
+                        "verification_result": "",
+                        "final_result": "",
+                        "parsed_json": None,
+                        "success": False,
+                        "error": f"预检查失败: {precheck_result['error']}",
+                        "precheck_result": precheck_result
+                    }
+                
+                # 根据预检查结果决定是否进行三段式分析
+                if precheck_result["will_generate_sql"] is False:
+                    logger.info(f"✅ 预检查结果：不会生成SQL，跳过三段式分析")
+                    return {
+                        "analysis_result": "",
+                        "verification_result": "",
+                        "final_result": "",
+                        "parsed_json": None,
+                        "success": True,
+                        "skipped_three_stage": True,
+                        "precheck_result": precheck_result,
+                        "skip_reason": "预检查确认不会生成SQL"
+                    }
+                elif precheck_result["will_generate_sql"] is None:
+                    logger.warning(f"⚠️ 预检查结果无法确定，继续三段式分析")
+                else:
+                    logger.info(f"✅ 预检查结果：会生成SQL，继续三段式分析")
+                
                 # 第一阶段：分析
                 stage_prompts = self.generate_precheck_prompts(record)
                 analysis_result = await client.call_async(
@@ -228,7 +347,7 @@ class RerunValidator:
                     stage_prompts['analysis_prompt'], 
                     max_tokens=4096, 
                     temperature=0.0,
-                    max_retries=5,
+                    max_retries=1000,
                     retry_delay=1.0
                 )
                 
@@ -240,7 +359,8 @@ class RerunValidator:
                         "final_result": "",
                         "parsed_json": None,
                         "success": False,
-                        "error": "第一阶段LLM调用失败"
+                        "error": "第一阶段LLM调用失败",
+                        "precheck_result": precheck_result
                     }
                 
                 # 第二阶段：验证
@@ -250,7 +370,7 @@ class RerunValidator:
                     verification_prompts['verification_prompt'],
                     max_tokens=4096,
                     temperature=0.0,
-                    max_retries=5,
+                    max_retries=1000,
                     retry_delay=1.0
                 )
                 
@@ -262,7 +382,8 @@ class RerunValidator:
                         "final_result": "",
                         "parsed_json": None,
                         "success": False,
-                        "error": "第二阶段LLM调用失败"
+                        "error": "第二阶段LLM调用失败",
+                        "precheck_result": precheck_result
                     }
                 
                 # 第三阶段：格式化
@@ -272,7 +393,7 @@ class RerunValidator:
                     format_prompt,
                     max_tokens=4096,
                     temperature=0.0,
-                    max_retries=5,
+                    max_retries=1000,
                     retry_delay=1.0
                 )
                 
@@ -284,7 +405,8 @@ class RerunValidator:
                         "final_result": "",
                         "parsed_json": None,
                         "success": False,
-                        "error": "第三阶段LLM调用失败"
+                        "error": "第三阶段LLM调用失败",
+                        "precheck_result": precheck_result
                     }
                 
                 # 尝试解析JSON
@@ -316,8 +438,18 @@ class RerunValidator:
                     "parsed_json": parsed_json,
                     "success": True,
                     
+                    # 新增：预检查结果
+                    "precheck_result": precheck_result,
+                    
                     # 新增：详细的阶段信息
                     "stage_details": {
+                        "precheck": {
+                            "prompt": self._format_no_sql_check_prompt(record),
+                            "prompt_length": len(self._format_no_sql_check_prompt(record)),
+                            "raw_response": precheck_result.get("precheck_result", ""),
+                            "response_length": len(precheck_result.get("precheck_result", "")),
+                            "stage_type": "SQL生成预检查"
+                        },
                         "stage1_analysis": {
                             "prompt": stage_prompts['analysis_prompt'],
                             "prompt_length": len(stage_prompts['analysis_prompt']),
@@ -356,9 +488,9 @@ class RerunValidator:
                         "server": self.config.get('server', 'unknown'),
                         "max_tokens": 4096,
                         "temperature": 0.0,
-                                    "retry_config": {
-                "max_retries": 5,
-                "retry_delay": 1.0
+                        "retry_config": {
+                            "max_retries": 5,
+                            "retry_delay": 1.0
                         },
                         "json_parsing": {
                             "final_parse_success": parsed_json is not None,
@@ -472,8 +604,12 @@ class RerunValidator:
         successful_results = [r for r in results if "error" not in r]
         failed_results = [r for r in results if "error" in r]
         
+        # 统计预检查跳过的情况
+        skipped_by_precheck = [r for r in successful_results if r.get("skipped_three_stage", False)]
+        completed_three_stage = [r for r in successful_results if not r.get("skipped_three_stage", False)]
+        
         newly_generated_count = 0
-        for r in successful_results:
+        for r in completed_three_stage:
             analysis = r.get("new_sql_analysis_result")
             if isinstance(analysis, list) and analysis:
                 first_item = analysis[0]
@@ -489,10 +625,17 @@ class RerunValidator:
         print(f"成功分析数: {len(successful_results)}")
         print(f"失败分析数: {len(failed_results)}")
         print("-" * 50)
+        print(f"🔍 预检查跳过数: {len(skipped_by_precheck)}")
+        print(f"✅ 完成三段式分析数: {len(completed_three_stage)}")
         print(f"🎉 新生成SQL的记录数: {newly_generated_count}")
-        print(f"仍未生成SQL的记录数: {len(successful_results) - newly_generated_count}")
+        print(f"仍未生成SQL的记录数: {len(completed_three_stage) - newly_generated_count}")
         print("="*50)
         if failed_results:
             print("\n失败的记录 (前5条):")
             for failed in failed_results[:5]:
-                print(f"  - {failed['function_name']}: {failed['error']}") 
+                print(f"  - {failed['function_name']}: {failed['error']}")
+        
+        if skipped_by_precheck:
+            print(f"\n预检查跳过的记录 (前3条):")
+            for skipped in skipped_by_precheck[:3]:
+                print(f"  - {skipped.get('input_record', {}).get('function_name', 'N/A')}: {skipped.get('skip_reason', '预检查跳过')}") 

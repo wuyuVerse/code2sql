@@ -1,0 +1,1654 @@
+nohup: ignoring input
+🚀 开始运行全新的关键词优先数据处理工作流
+INFO:data_processing.workflow.workflow_manager:工作流管理器初始化完成，输出目录: workflow_output/workflow_20250716_211133
+INFO:data_processing.workflow.workflow_manager:开始从原始数据集加载所有数据: datasets/test_data
+INFO:data_processing.data_reader:找到 1 个JSON文件
+INFO:data_processing.data_reader:成功读取文件 datasets/test_data/IVC__ivc-urs_results.json: 112 条记录
+INFO:data_processing.data_reader:总共读取了 112 条记录
+INFO:data_processing.workflow.workflow_manager:原始数据集加载完成，共 112 条记录
+INFO:data_processing.workflow.workflow_manager:原始数据集已保存，共 112 条记录
+INFO:data_processing.workflow.workflow_manager:开始从清洗后的数据中提取关键词: keyword_extraction_step1 (use_llm=True)
+INFO:data_processing.workflow.workflow_manager:开始并发调用LLM进行关键词分析...
+LLM关键词分析:   0%|          | 0/112 [00:00<?, ?it/s]LLM关键词分析:   1%|          | 1/112 [00:06<12:12,  6.60s/it]LLM关键词分析:   2%|▏         | 2/112 [00:07<05:36,  3.06s/it]LLM关键词分析:   3%|▎         | 3/112 [00:20<14:26,  7.95s/it]LLM关键词分析:   4%|▎         | 4/112 [00:21<09:05,  5.05s/it]LLM关键词分析:   5%|▌         | 6/112 [00:22<04:40,  2.64s/it]LLM关键词分析:   6%|▋         | 7/112 [00:23<03:34,  2.04s/it]LLM关键词分析:   8%|▊         | 9/112 [00:23<02:09,  1.26s/it]LLM关键词分析:   9%|▉         | 10/112 [00:23<01:42,  1.01s/it]LLM关键词分析:  10%|▉         | 11/112 [00:24<01:39,  1.02it/s]LLM关键词分析:  12%|█▏        | 13/112 [00:25<01:10,  1.41it/s]LLM关键词分析:  12%|█▎        | 14/112 [00:25<00:58,  1.66it/s]LLM关键词分析:  13%|█▎        | 15/112 [00:26<01:01,  1.57it/s]LLM关键词分析:  16%|█▌        | 18/112 [00:27<00:42,  2.21it/s]LLM关键词分析:  17%|█▋        | 19/112 [00:27<00:37,  2.50it/s]LLM关键词分析:  18%|█▊        | 20/112 [00:27<00:39,  2.30it/s]LLM关键词分析:  19%|█▉        | 21/112 [00:28<00:34,  2.66it/s]LLM关键词分析:  20%|█▉        | 22/112 [00:28<00:32,  2.79it/s]LLM关键词分析:  21%|██        | 23/112 [00:28<00:29,  2.99it/s]LLM关键词分析:  21%|██▏       | 24/112 [00:29<00:34,  2.56it/s]LLM关键词分析:  22%|██▏       | 25/112 [00:30<00:54,  1.58it/s]LLM关键词分析:  24%|██▍       | 27/112 [00:31<00:42,  2.01it/s]LLM关键词分析:  26%|██▌       | 29/112 [00:31<00:28,  2.93it/s]LLM关键词分析:  27%|██▋       | 30/112 [00:32<00:35,  2.32it/s]LLM关键词分析:  28%|██▊       | 31/112 [00:32<00:28,  2.83it/s]LLM关键词分析:  29%|██▉       | 33/112 [00:33<00:30,  2.59it/s]LLM关键词分析:  30%|███       | 34/112 [00:33<00:34,  2.26it/s]LLM关键词分析:  31%|███▏      | 35/112 [00:37<01:32,  1.20s/it]LLM关键词分析:  53%|█████▎    | 59/112 [00:40<00:13,  4.00it/s]LLM关键词分析:  54%|█████▍    | 61/112 [00:40<00:12,  4.23it/s]LLM关键词分析:  55%|█████▌    | 62/112 [00:41<00:12,  4.09it/s]LLM关键词分析:  57%|█████▋    | 64/112 [00:41<00:10,  4.42it/s]LLM关键词分析:  58%|█████▊    | 65/112 [00:41<00:11,  4.04it/s]LLM关键词分析:  59%|█████▉    | 66/112 [00:44<00:25,  1.77it/s]LLM关键词分析:  60%|█████▉    | 67/112 [00:46<00:32,  1.40it/s]LLM关键词分析:  61%|██████    | 68/112 [00:47<00:33,  1.31it/s]LLM关键词分析:  62%|██████▏   | 69/112 [00:47<00:27,  1.58it/s]LLM关键词分析:  62%|██████▎   | 70/112 [00:49<00:39,  1.05it/s]LLM关键词分析:  63%|██████▎   | 71/112 [00:50<00:43,  1.07s/it]LLM关键词分析:  64%|██████▍   | 72/112 [00:51<00:36,  1.09it/s]LLM关键词分析:  65%|██████▌   | 73/112 [00:53<00:50,  1.29s/it]LLM关键词分析:  66%|██████▌   | 74/112 [00:54<00:43,  1.15s/it]LLM关键词分析:  68%|██████▊   | 76/112 [00:54<00:24,  1.48it/s]LLM关键词分析:  69%|██████▉   | 77/112 [00:55<00:24,  1.44it/s]LLM关键词分析:  70%|██████▉   | 78/112 [00:55<00:24,  1.40it/s]LLM关键词分析:  71%|███████▏  | 80/112 [00:56<00:14,  2.19it/s]LLM关键词分析:  72%|███████▏  | 81/112 [00:56<00:13,  2.29it/s]LLM关键词分析:  73%|███████▎  | 82/112 [00:57<00:14,  2.09it/s]LLM关键词分析:  74%|███████▍  | 83/112 [00:57<00:12,  2.38it/s]LLM关键词分析:  75%|███████▌  | 84/112 [00:57<00:10,  2.55it/s]LLM关键词分析:  76%|███████▌  | 85/112 [00:58<00:11,  2.36it/s]LLM关键词分析:  79%|███████▊  | 88/112 [00:58<00:06,  3.74it/s]LLM关键词分析:  79%|███████▉  | 89/112 [00:59<00:07,  3.07it/s]LLM关键词分析:  81%|████████▏ | 91/112 [01:00<00:07,  2.64it/s]LLM关键词分析:  82%|████████▏ | 92/112 [01:00<00:08,  2.24it/s]LLM关键词分析:  84%|████████▍ | 94/112 [01:01<00:07,  2.35it/s]LLM关键词分析:  85%|████████▍ | 95/112 [01:01<00:06,  2.46it/s]LLM关键词分析:  86%|████████▌ | 96/112 [01:03<00:11,  1.40it/s]LLM关键词分析:  87%|████████▋ | 97/112 [01:04<00:09,  1.54it/s]LLM关键词分析:  88%|████████▊ | 98/112 [01:05<00:10,  1.36it/s]LLM关键词分析:  97%|█████████▋| 109/112 [01:05<00:00,  5.33it/s]LLM关键词分析:  99%|█████████▉| 111/112 [01:06<00:00,  5.42it/s]LLM关键词分析: 100%|██████████| 112/112 [01:06<00:00,  1.69it/s]
+INFO:data_processing.workflow.workflow_manager:LLM关键词提取完成 - 从 112 条记录中提取了 97 条匹配记录
+INFO:data_processing.workflow.workflow_manager:匹配关键词统计: {'Hooks': 20, 'Callbacks': 29, 'Preload': 63, 'Transaction': 62, 'Scopes': 75, 'FindInBatches': 44, 'FirstOrInit': 41, 'Association': 43, 'Locking': 34, 'Pluck': 30, 'AutoMigrate': 21, 'ForeignKey': 17, 'References': 13, 'NamedQuery': 20, 'NamedParameters': 23, 'save': 11, 'createorupdate': 9}
+INFO:data_processing.workflow.workflow_manager:开始使用LLM处理 97 条关键词数据: process_keyword_data_step2
+Processing keyword data with LLM:   0%|          | 0/97 [00:00<?, ?it/s]Processing keyword data with LLM:   1%|          | 1/97 [00:08<13:44,  8.59s/it]Processing keyword data with LLM:   3%|▎         | 3/97 [00:09<03:53,  2.48s/it]Processing keyword data with LLM:   4%|▍         | 4/97 [00:09<02:44,  1.77s/it]Processing keyword data with LLM:   5%|▌         | 5/97 [00:10<02:06,  1.37s/it]Processing keyword data with LLM:   7%|▋         | 7/97 [00:13<02:08,  1.42s/it]Processing keyword data with LLM:   8%|▊         | 8/97 [00:13<01:38,  1.11s/it]Processing keyword data with LLM:   9%|▉         | 9/97 [00:14<01:44,  1.18s/it]Processing keyword data with LLM:  10%|█         | 10/97 [00:15<01:33,  1.07s/it]Processing keyword data with LLM:  11%|█▏        | 11/97 [00:16<01:18,  1.10it/s]Processing keyword data with LLM:  13%|█▎        | 13/97 [00:16<00:45,  1.84it/s]Processing keyword data with LLM:  14%|█▍        | 14/97 [00:16<00:47,  1.74it/s]Processing keyword data with LLM:  15%|█▌        | 15/97 [00:17<00:44,  1.83it/s]Processing keyword data with LLM:  16%|█▋        | 16/97 [00:18<00:49,  1.64it/s]Processing keyword data with LLM:  18%|█▊        | 17/97 [00:18<00:49,  1.62it/s]Processing keyword data with LLM:  20%|█▉        | 19/97 [00:19<00:30,  2.59it/s]Processing keyword data with LLM:  21%|██        | 20/97 [00:19<00:38,  1.98it/s]Processing keyword data with LLM:  23%|██▎       | 22/97 [00:20<00:32,  2.34it/s]Processing keyword data with LLM:  25%|██▍       | 24/97 [00:21<00:30,  2.39it/s]Processing keyword data with LLM:  27%|██▋       | 26/97 [00:22<00:28,  2.48it/s]Processing keyword data with LLM:  28%|██▊       | 27/97 [00:22<00:24,  2.91it/s]Processing keyword data with LLM:  29%|██▉       | 28/97 [00:22<00:27,  2.49it/s]Processing keyword data with LLM:  32%|███▏      | 31/97 [00:23<00:24,  2.65it/s]Processing keyword data with LLM:  34%|███▍      | 33/97 [00:24<00:24,  2.64it/s]Processing keyword data with LLM:  36%|███▌      | 35/97 [00:25<00:21,  2.85it/s]Processing keyword data with LLM:  38%|███▊      | 37/97 [00:25<00:21,  2.84it/s]Processing keyword data with LLM:  39%|███▉      | 38/97 [00:26<00:22,  2.68it/s]Processing keyword data with LLM:  40%|████      | 39/97 [00:27<00:25,  2.32it/s]Processing keyword data with LLM:  41%|████      | 40/97 [00:27<00:28,  2.02it/s]Processing keyword data with LLM:  43%|████▎     | 42/97 [00:28<00:25,  2.14it/s]Processing keyword data with LLM:  44%|████▍     | 43/97 [00:29<00:32,  1.65it/s]Processing keyword data with LLM:  45%|████▌     | 44/97 [00:30<00:35,  1.50it/s]Processing keyword data with LLM:  47%|████▋     | 46/97 [00:31<00:32,  1.55it/s]Processing keyword data with LLM:  48%|████▊     | 47/97 [00:32<00:30,  1.66it/s]Processing keyword data with LLM:  49%|████▉     | 48/97 [00:33<00:31,  1.54it/s]Processing keyword data with LLM:  51%|█████     | 49/97 [00:33<00:27,  1.73it/s]Processing keyword data with LLM:  53%|█████▎    | 51/97 [00:33<00:17,  2.69it/s]Processing keyword data with LLM:  54%|█████▎    | 52/97 [00:33<00:16,  2.69it/s]Processing keyword data with LLM:  55%|█████▍    | 53/97 [00:34<00:18,  2.38it/s]Processing keyword data with LLM:  56%|█████▌    | 54/97 [00:34<00:17,  2.40it/s]Processing keyword data with LLM:  57%|█████▋    | 55/97 [00:35<00:15,  2.66it/s]Processing keyword data with LLM:  59%|█████▉    | 57/97 [00:35<00:13,  2.92it/s]Processing keyword data with LLM:  62%|██████▏   | 60/97 [00:36<00:10,  3.47it/s]Processing keyword data with LLM:  63%|██████▎   | 61/97 [00:37<00:13,  2.62it/s]Processing keyword data with LLM:  64%|██████▍   | 62/97 [00:37<00:11,  2.98it/s]Processing keyword data with LLM:  65%|██████▍   | 63/97 [00:37<00:12,  2.68it/s]Processing keyword data with LLM:  67%|██████▋   | 65/97 [00:38<00:09,  3.43it/s]Processing keyword data with LLM:  69%|██████▉   | 67/97 [00:38<00:08,  3.50it/s]Processing keyword data with LLM:  70%|███████   | 68/97 [00:39<00:08,  3.58it/s]Processing keyword data with LLM:  72%|███████▏  | 70/97 [00:40<00:10,  2.61it/s]Processing keyword data with LLM:  73%|███████▎  | 71/97 [00:40<00:09,  2.68it/s]Processing keyword data with LLM:  74%|███████▍  | 72/97 [00:41<00:09,  2.54it/s]Processing keyword data with LLM:  75%|███████▌  | 73/97 [00:41<00:08,  2.78it/s]Processing keyword data with LLM:  76%|███████▋  | 74/97 [00:42<00:15,  1.44it/s]Processing keyword data with LLM:  77%|███████▋  | 75/97 [00:43<00:14,  1.56it/s]Processing keyword data with LLM:  78%|███████▊  | 76/97 [00:43<00:10,  2.03it/s]Processing keyword data with LLM:  80%|████████  | 78/97 [00:45<00:11,  1.59it/s]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+Processing keyword data with LLM:  81%|████████▏ | 79/97 [00:46<00:12,  1.41it/s]Processing keyword data with LLM:  82%|████████▏ | 80/97 [00:47<00:13,  1.27it/s]Processing keyword data with LLM:  84%|████████▎ | 81/97 [00:47<00:10,  1.46it/s]Processing keyword data with LLM:  85%|████████▍ | 82/97 [00:48<00:11,  1.34it/s]Processing keyword data with LLM:  86%|████████▌ | 83/97 [00:48<00:08,  1.66it/s]Processing keyword data with LLM:  87%|████████▋ | 84/97 [00:50<00:11,  1.15it/s]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+Processing keyword data with LLM:  89%|████████▊ | 86/97 [01:02<00:36,  3.29s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+Processing keyword data with LLM:  90%|████████▉ | 87/97 [01:33<01:39,  9.91s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+Processing keyword data with LLM:  91%|█████████ | 88/97 [02:16<02:48, 18.69s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+Processing keyword data with LLM:  92%|█████████▏| 89/97 [03:24<04:14, 31.82s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+Processing keyword data with LLM:  93%|█████████▎| 90/97 [06:25<08:34, 73.47s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+Processing keyword data with LLM:  94%|█████████▍| 91/97 [06:55<06:05, 60.88s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+Processing keyword data with LLM:  95%|█████████▍| 92/97 [14:17<14:14, 170.97s/it]Processing keyword data with LLM:  96%|█████████▌| 93/97 [14:19<08:06, 121.65s/it]Processing keyword data with LLM:  97%|█████████▋| 94/97 [14:29<04:26, 88.96s/it] WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+Processing keyword data with LLM:  98%|█████████▊| 95/97 [15:12<02:30, 75.35s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 17/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 17.0 秒...
+Processing keyword data with LLM:  99%|█████████▉| 96/97 [15:18<00:54, 54.46s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 18/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 18.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 19/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 19.0 秒...
+ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
+ERROR:utils.llm_client:   错误详情: 异步操作超时: 
+ERROR:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+Processing keyword data with LLM: 100%|██████████| 97/97 [18:29<00:00, 95.31s/it]Processing keyword data with LLM: 100%|██████████| 97/97 [18:29<00:00, 11.44s/it]
+INFO:data_processing.workflow.workflow_manager:关键词数据处理完成 - 输入 97 条, 输出 97 条, 成功处理 97 条, 失败 0 条.
+INFO:data_processing.workflow.workflow_manager:关键词数据处理前后变化：提取 97 → 处理后 97
+INFO:data_processing.workflow.workflow_manager:开始对全体数据集进行SQL清洗: sql_cleaning_after_extraction
+INFO:data_processing.cleaning.sql_cleaner:SQL清洗器初始化完成
+INFO:data_processing.cleaning.sql_cleaner:开始SQL清洗，数据集大小: 15 条记录
+INFO:data_processing.cleaning.sql_cleaner:清洗进度: 0/15 (0.0%)
+INFO:data_processing.cleaning.sql_cleaner:SQL清洗完成，开始保存结果...
+INFO:data_processing.cleaning.sql_cleaner:已跳过 ORM SQL 指纹分析（交由后续工作流步骤处理）
+INFO:data_processing.cleaning.sql_cleaner:清洗结果已保存到: workflow_output/workflow_20250716_211133/cleaning_steps/sql_cleaning_after_extraction_20250716_213108
+INFO:data_processing.cleaning.sql_cleaner:清洗统计 - 总记录: 15, 修改记录: 0, 移除无效SQL: 0
+INFO:data_processing.workflow.workflow_manager:未检测到ORM指纹分析结果，加载清洗后的数据...
+INFO:data_processing.workflow.workflow_manager:ORM指纹分析未执行或执行失败
+INFO:data_processing.workflow.workflow_manager:全体数据集SQL清洗完成 - 移除了 0 个无效SQL，修改了 0 条记录
+INFO:data_processing.workflow.workflow_manager:开始重新分析包含 <NO SQL GENERATE> 的记录: remove_no_sql_records_step
+INFO:data_processing.validation.validator:使用自定义输出目录: workflow_output/workflow_20250716_211133/remove_no_sql_records_step/reanalysis_details
+INFO:data_processing.workflow.workflow_manager:✅ 成功初始化 RerunValidator
+INFO:data_processing.workflow.workflow_manager:📁 详细分析结果将保存到: workflow_output/workflow_20250716_211133/remove_no_sql_records_step/reanalysis_details
+INFO:data_processing.workflow.workflow_manager:从 15 条记录中处理了 0 条 '<NO SQL GENERATE>' 记录:
+INFO:data_processing.workflow.workflow_manager:  - 重新分析并更新成功: 0 条
+INFO:data_processing.workflow.workflow_manager:  - 重新分析后仍无SQL（已保留）: 0 条
+INFO:data_processing.workflow.workflow_manager:  - 最终记录总数: 15 条 (无记录被删除)
+INFO:data_processing.workflow.workflow_manager:处理完成 - 重新分析并更新 0 条，保留 0 条无SQL记录，最终记录数 15
+INFO:data_processing.workflow.workflow_manager:开始冗余SQL验证(新版接口): redundant_sql_validation_with_fix
+INFO:data_processing.workflow.workflow_manager:未找到可用的候选项文件，将执行 ORM SQL 指纹分析以动态生成。
+INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:开始执行指纹差异分析...
+INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:开始分析 14 个ORM代码的指纹差异...
+分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s]分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s, ORM=func (m *Media) DeleteMediaWhi]分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s, ORM=func (b *Bucket) QueryBucketRe]分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s, ORM=func (ae *ApprovalEvent) FindA]分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s, ORM=func (d *Device) FindTotalDevi]分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s, ORM=func (d *Device) FindTotalChan]分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s, ORM=func (d *Device) FindChannelSt]分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s, ORM=func (d *Device) FindDeviceCou]分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s, ORM=func (d *Device) FindDeviceCha]分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s, ORM=func (c *GBinvite) QueryGBinvi]分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s, ORM=func (c *GBinvite) CountGBinvi]分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s, ORM=func (o *Overview) FindRegiste]分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s, ORM=func (o *Overview) FindUserApp]分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s, ORM=func (o *Overview) FindBilling]分析ORM指纹差异:   0%|          | 0/14 [00:00<?, ?it/s, ORM=func (o *Overview) FindUserAct]分析ORM指纹差异: 100%|██████████| 14/14 [00:00<00:00, 31003.30it/s, ORM=func (o *Overview) FindUserAct]
+INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:指纹差异分析报告已保存到: workflow_output/workflow_20250716_211133/redundant_sql_validation/fingerprint_analysis/orm_fingerprint_analysis.json
+INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:参考集合报告已保存到: workflow_output/workflow_20250716_211133/redundant_sql_validation/fingerprint_analysis/reference_sets.json
+INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:生成全量LLM验证候选项...
+INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:生成全量LLM验证候选项: 冗余=0, 新增指纹=1, 缺漏=1, 总计=2
+INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:全量LLM验证候选项已保存到: workflow_output/workflow_20250716_211133/redundant_sql_validation/fingerprint_analysis/llm_validation_candidates.json
+INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:分析摘要已保存到: workflow_output/workflow_20250716_211133/redundant_sql_validation/fingerprint_analysis/analysis_summary.json
+INFO:data_processing.workflow.workflow_manager:读取到 2 个LLM验证候选项
+INFO:data_processing.cleaning.redundant_sql_validator:冗余SQL验证器（重构版）初始化完成，输出目录: workflow_output/workflow_20250716_211133/redundant_sql_validation
+INFO:data_processing.cleaning.redundant_sql_validator:开始验证 2 个候选项...
+验证候选项:   0%|          | 0/2 [00:00<?, ?it/s]验证候选项:  50%|█████     | 1/2 [00:05<00:05,  5.69s/it]验证候选项: 100%|██████████| 2/2 [00:20<00:00, 11.22s/it]验证候选项: 100%|██████████| 2/2 [00:20<00:00, 10.39s/it]
+INFO:data_processing.cleaning.redundant_sql_validator:验证报告已生成:
+INFO:data_processing.cleaning.redundant_sql_validator:  - 详细结果: workflow_output/workflow_20250716_211133/redundant_sql_validation/llm_validation_results.json
+INFO:data_processing.cleaning.redundant_sql_validator:  - CSV汇总: workflow_output/workflow_20250716_211133/redundant_sql_validation/validation_summary.csv
+INFO:data_processing.cleaning.redundant_sql_validator:  - 统计摘要: workflow_output/workflow_20250716_211133/redundant_sql_validation/validation_statistics.json
+INFO:data_processing.cleaning.redundant_sql_validator:修复建议已保存到: workflow_output/workflow_20250716_211133/redundant_sql_validation/fix_recommendations.json
+INFO:data_processing.workflow.workflow_manager:修复应用完成:
+INFO:data_processing.workflow.workflow_manager:  - 删除冗余SQL: 0 个
+INFO:data_processing.workflow.workflow_manager:  - 删除错误新增SQL: 0 个
+INFO:data_processing.workflow.workflow_manager:  - 添加缺失SQL: 2 个
+INFO:data_processing.workflow.workflow_manager:  - 修改记录数: 1
+INFO:data_processing.workflow.workflow_manager:  - 删除记录数: 0
+INFO:data_processing.workflow.workflow_manager:  - 记录总数变化: 15 -> 15
+INFO:data_processing.workflow.workflow_manager:已根据fix_recommendations应用修复到当前数据集
+INFO:data_processing.workflow.workflow_manager:冗余SQL验证(新版接口)完成
+INFO:data_processing.workflow.workflow_manager:非关键词数据清洗前后变化：原始 15 → 清洗后 15
+INFO:data_processing.workflow.workflow_manager:开始执行控制流验证步骤...
+INFO:data_processing.workflow.workflow_manager:开始验证控制流记录: control_flow_validation_step
+INFO:data_processing.cleaning.control_flow_validator:控制流验证器初始化完成，输出目录: workflow_output/workflow_20250716_211133/control_flow_validation
+INFO:data_processing.cleaning.control_flow_validator:开始验证数据集的控制流，共 112 条记录
+INFO:data_processing.cleaning.control_flow_validator:检测到 101 条包含控制流语句的记录
+INFO:data_processing.cleaning.control_flow_validator:开始验证 101 条控制流记录
+验证控制流记录:   0%|          | 0/101 [00:00<?, ?it/s]验证控制流记录:   1%|          | 1/101 [00:29<49:11, 29.51s/it]验证控制流记录:   2%|▏         | 2/101 [00:30<20:42, 12.55s/it]验证控制流记录:   3%|▎         | 3/101 [00:32<13:03,  7.99s/it]验证控制流记录:   5%|▍         | 5/101 [00:32<05:38,  3.52s/it]验证控制流记录:   6%|▌         | 6/101 [00:33<04:07,  2.60s/it]验证控制流记录:   7%|▋         | 7/101 [00:33<03:09,  2.01s/it]验证控制流记录:   8%|▊         | 8/101 [00:34<02:16,  1.47s/it]验证控制流记录:  10%|▉         | 10/101 [00:34<01:26,  1.06it/s]验证控制流记录:  13%|█▎        | 13/101 [00:34<00:44,  1.98it/s]验证控制流记录:  15%|█▍        | 15/101 [00:35<00:42,  2.02it/s]验证控制流记录:  17%|█▋        | 17/101 [00:36<00:34,  2.43it/s]验证控制流记录:  19%|█▉        | 19/101 [00:36<00:26,  3.04it/s]验证控制流记录:  20%|█▉        | 20/101 [00:36<00:28,  2.85it/s]验证控制流记录:  21%|██        | 21/101 [00:37<00:34,  2.30it/s]验证控制流记录:  22%|██▏       | 22/101 [00:37<00:29,  2.67it/s]验证控制流记录:  23%|██▎       | 23/101 [00:38<00:26,  2.90it/s]验证控制流记录:  24%|██▍       | 24/101 [00:38<00:24,  3.17it/s]验证控制流记录:  25%|██▍       | 25/101 [00:39<00:40,  1.89it/s]验证控制流记录:  26%|██▌       | 26/101 [00:40<00:45,  1.64it/s]验证控制流记录:  27%|██▋       | 27/101 [00:40<00:41,  1.80it/s]验证控制流记录:  28%|██▊       | 28/101 [00:42<01:00,  1.20it/s]验证控制流记录:  29%|██▊       | 29/101 [00:42<00:50,  1.41it/s]验证控制流记录:  30%|██▉       | 30/101 [00:42<00:38,  1.82it/s]验证控制流记录:  31%|███       | 31/101 [00:45<01:12,  1.04s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+验证控制流记录:  32%|███▏      | 32/101 [01:00<06:16,  5.46s/it]验证控制流记录:  33%|███▎      | 33/101 [01:03<05:13,  4.62s/it]验证控制流记录:  34%|███▎      | 34/101 [01:05<04:09,  3.73s/it]验证控制流记录:  36%|███▌      | 36/101 [01:06<02:29,  2.30s/it]验证控制流记录:  37%|███▋      | 37/101 [01:07<02:02,  1.92s/it]验证控制流记录:  38%|███▊      | 38/101 [01:08<01:44,  1.65s/it]验证控制流记录:  40%|███▉      | 40/101 [01:08<01:00,  1.01it/s]验证控制流记录:  41%|████      | 41/101 [01:10<01:10,  1.17s/it]验证控制流记录:  42%|████▏     | 42/101 [01:10<00:56,  1.04it/s]验证控制流记录:  43%|████▎     | 43/101 [01:12<01:10,  1.22s/it]验证控制流记录:  44%|████▎     | 44/101 [01:12<00:57,  1.00s/it]验证控制流记录:  45%|████▍     | 45/101 [01:13<00:46,  1.20it/s]验证控制流记录:  46%|████▌     | 46/101 [01:13<00:38,  1.43it/s]验证控制流记录:  47%|████▋     | 47/101 [01:13<00:29,  1.83it/s]验证控制流记录:  48%|████▊     | 48/101 [01:14<00:29,  1.78it/s]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+验证控制流记录:  50%|█████     | 51/101 [01:16<00:34,  1.46it/s]验证控制流记录:  51%|█████▏    | 52/101 [01:17<00:30,  1.58it/s]验证控制流记录:  52%|█████▏    | 53/101 [01:18<00:33,  1.41it/s]验证控制流记录:  53%|█████▎    | 54/101 [01:18<00:33,  1.39it/s]验证控制流记录:  54%|█████▍    | 55/101 [01:19<00:37,  1.24it/s]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+验证控制流记录:  55%|█████▌    | 56/101 [01:20<00:35,  1.28it/s]验证控制流记录:  57%|█████▋    | 58/101 [01:20<00:20,  2.06it/s]验证控制流记录:  59%|█████▉    | 60/101 [01:21<00:15,  2.65it/s]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+验证控制流记录:  61%|██████▏   | 62/101 [01:22<00:15,  2.57it/s]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+验证控制流记录:  62%|██████▏   | 63/101 [01:22<00:17,  2.17it/s]验证控制流记录:  63%|██████▎   | 64/101 [01:23<00:22,  1.61it/s]验证控制流记录:  64%|██████▍   | 65/101 [01:25<00:26,  1.35it/s]验证控制流记录:  65%|██████▌   | 66/101 [01:25<00:20,  1.71it/s]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+验证控制流记录:  66%|██████▋   | 67/101 [01:26<00:23,  1.47it/s]验证控制流记录:  67%|██████▋   | 68/101 [01:26<00:19,  1.72it/s]验证控制流记录:  68%|██████▊   | 69/101 [01:27<00:24,  1.29it/s]验证控制流记录:  69%|██████▉   | 70/101 [01:29<00:32,  1.06s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+验证控制流记录:  70%|███████   | 71/101 [01:34<01:03,  2.11s/it]验证控制流记录:  71%|███████▏  | 72/101 [01:35<00:57,  1.99s/it]验证控制流记录:  72%|███████▏  | 73/101 [01:36<00:44,  1.58s/it]验证控制流记录:  73%|███████▎  | 74/101 [01:37<00:38,  1.44s/it]验证控制流记录:  74%|███████▍  | 75/101 [01:37<00:27,  1.05s/it]验证控制流记录:  75%|███████▌  | 76/101 [01:39<00:28,  1.14s/it]验证控制流记录:  76%|███████▌  | 77/101 [01:40<00:26,  1.10s/it]验证控制流记录:  78%|███████▊  | 79/101 [01:40<00:13,  1.61it/s]验证控制流记录:  79%|███████▉  | 80/101 [01:40<00:10,  1.95it/s]验证控制流记录:  80%|████████  | 81/101 [01:41<00:11,  1.75it/s]验证控制流记录:  81%|████████  | 82/101 [01:41<00:11,  1.62it/s]验证控制流记录:  82%|████████▏ | 83/101 [01:44<00:23,  1.28s/it]验证控制流记录:  83%|████████▎ | 84/101 [01:46<00:24,  1.44s/it]验证控制流记录:  84%|████████▍ | 85/101 [01:48<00:23,  1.45s/it]验证控制流记录:  85%|████████▌ | 86/101 [01:51<00:31,  2.11s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
+验证控制流记录:  86%|████████▌ | 87/101 [02:01<01:00,  4.29s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+验证控制流记录:  87%|████████▋ | 88/101 [02:45<03:28, 16.03s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 3.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 4.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 5.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+验证控制流记录:  88%|████████▊ | 89/101 [05:26<11:48, 59.08s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 6.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 7.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 8.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 9.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 10/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 10.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 11/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 11.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 12/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 12.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 13/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 13.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 14/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 14.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 15/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 15.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 17/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 17.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 17/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 17.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 17/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 17.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 17/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 17.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 16/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 16.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 17/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 17.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 17/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 17.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 17/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 17.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 17/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 17.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 17/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 17.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 17/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 17.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 18/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 18.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 18/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 18.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 18/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 18.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 18/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 18.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 17/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 17.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 17/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 17.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 18/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 18.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 18/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 18.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 18/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 18.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 18/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 18.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 18/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 18.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 18/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 18.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 19/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 19.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 19/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 19.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 19/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 19.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 19/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 19.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 18/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 18.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 18/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 18.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 19/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 19.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 19/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 19.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 19/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 19.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 19/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 19.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 19/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 19.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 19/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 19.0 秒...
+ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
+ERROR:utils.llm_client:   错误详情: 异步操作超时: 
+ERROR:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
+ERROR:utils.llm_client:   错误详情: 异步操作超时: 
+ERROR:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
+ERROR:utils.llm_client:   错误详情: 异步操作超时: 
+ERROR:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
+ERROR:utils.llm_client:   错误详情: 异步操作超时: 
+ERROR:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+验证控制流记录:  89%|████████▉ | 90/101 [18:29<50:25, 275.09s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 19/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 19.0 秒...
+WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 19/20)
+WARNING:utils.llm_client:   错误详情: 异步操作超时: 
+WARNING:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+WARNING:utils.llm_client:   即将重试，等待 19.0 秒...
+ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
+ERROR:utils.llm_client:   错误详情: 异步操作超时: 
+ERROR:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+验证控制流记录:  93%|█████████▎| 94/101 [18:59<12:25, 106.45s/it]ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
+ERROR:utils.llm_client:   错误详情: 异步操作超时: 
+ERROR:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+验证控制流记录:  94%|█████████▍| 95/101 [19:05<08:47, 88.00s/it] ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
+ERROR:utils.llm_client:   错误详情: 异步操作超时: 
+ERROR:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
+ERROR:utils.llm_client:   错误详情: 异步操作超时: 
+ERROR:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+验证控制流记录:  95%|█████████▌| 96/101 [19:06<05:49, 69.91s/it]ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
+ERROR:utils.llm_client:   错误详情: 异步操作超时: 
+ERROR:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
+ERROR:utils.llm_client:   错误详情: 异步操作超时: 
+ERROR:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+验证控制流记录:  97%|█████████▋| 98/101 [19:09<02:13, 44.42s/it]ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
+ERROR:utils.llm_client:   错误详情: 异步操作超时: 
+ERROR:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
+ERROR:utils.llm_client:   错误详情: 异步操作超时: 
+ERROR:utils.llm_client:   请求URL: http://212.64.90.3:8081/v1/chat/completions
+验证控制流记录:  99%|█████████▉| 100/101 [19:43<00:34, 34.90s/it]验证控制流记录: 100%|██████████| 101/101 [19:43<00:00, 11.72s/it]
+INFO:data_processing.cleaning.control_flow_validator:开始重新生成 5 条记录的SQL...
+重新生成SQL:   0%|          | 0/5 [00:00<?, ?it/s]重新生成SQL:  20%|██        | 1/5 [00:04<00:17,  4.29s/it]重新生成SQL:  40%|████      | 2/5 [00:14<00:22,  7.63s/it]重新生成SQL:  60%|██████    | 3/5 [00:23<00:16,  8.26s/it]重新生成SQL:  80%|████████  | 4/5 [00:31<00:08,  8.12s/it]重新生成SQL: 100%|██████████| 5/5 [00:36<00:00,  7.20s/it]重新生成SQL: 100%|██████████| 5/5 [00:36<00:00,  7.35s/it]
+INFO:data_processing.cleaning.control_flow_validator:发现 5 条有问题的控制流记录，已保存到: workflow_output/workflow_20250716_211133/control_flow_validation/problematic_control_flow_records.json
+INFO:data_processing.cleaning.control_flow_validator:控制流验证完成 - 正确: 84, 错误: 5, 异常: 12, 重新生成: 5
+INFO:data_processing.cleaning.control_flow_validator:数据集控制流验证完成:
+INFO:data_processing.cleaning.control_flow_validator:  - 总记录数: 112
+INFO:data_processing.cleaning.control_flow_validator:  - 控制流记录: 101 (90.18%)
+INFO:data_processing.cleaning.control_flow_validator:  - 验证正确: 84
+INFO:data_processing.cleaning.control_flow_validator:  - 验证错误: 5
+INFO:data_processing.cleaning.control_flow_validator:  - 验证异常: 12
+INFO:data_processing.workflow.workflow_manager:控制流验证完成 - 检测到 101 条控制流记录，验证正确: 84, 错误: 5
+INFO:data_processing.workflow.workflow_manager:最终数据已导出: workflow_output/workflow_20250716_211133/final_processed_dataset.json
+INFO:data_processing.workflow.workflow_manager:工作流摘要已保存: workflow_output/workflow_20250716_211133/workflow_summary.json
+
+================================================================================
+📋 工作流执行摘要
+================================================================================
+🆔 工作流ID: workflow_20250716_211133
+📁 输出目录: workflow_output/workflow_20250716_211133
+⏱️  总步骤数: 9
+📊 最终数据量: 112 条记录
+🎯 提取数据量: 97 条记录
+
+📝 执行步骤:
+
+  1. load_raw_dataset (data_loading)
+     ⏰ 时间: 2025-07-16T21:11:33.134106
+     📊 加载记录: 112
+     💾 数据大小: 0.53 MB
+
+  2. keyword_extraction_step1 (llm_keyword_extraction)
+     ⏰ 时间: 2025-07-16T21:12:39.251759
+
+  3. process_keyword_data_step2 (keyword_data_processing)
+     ⏰ 时间: 2025-07-16T21:31:08.788964
+
+  4. data_separation_and_processing (data_separation)
+     ⏰ 时间: 2025-07-16T21:31:08.789200
+
+  5. sql_cleaning_after_extraction (sql_cleaning)
+     ⏰ 时间: 2025-07-16T21:31:08.792921
+     📊 输入记录: 15
+     📊 输出记录: 15
+     🗑️  无效SQL删除: 0
+     ✏️  记录修改: 0
+     📈 修改率: 0.00%
+
+  6. remove_no_sql_records_step (remove_no_sql_records)
+     ⏰ 时间: 2025-07-16T21:31:08.795531
+
+  7. redundant_sql_validation_with_fix (redundant_sql_validation)
+     ⏰ 时间: 2025-07-16T21:31:46.309749
+
+  8. control_flow_validation_step (control_flow_validation)
+     ⏰ 时间: 2025-07-16T21:52:06.521916
+     📊 总记录数: 112
+     🔍 控制流记录: 101
+     📈 控制流比例: 90.18%
+     ✅ 验证正确: 84
+     ❌ 验证错误: 5
+     🔥 验证异常: 12
+     🔄 重新生成: 5
+
+  9. data_processing_summary (data_processing)
+     ⏰ 时间: 2025-07-16T21:52:06.522202
+
+💾 输出文件:
+   📁 keyword_extraction_step1: workflow_output/workflow_20250716_211133/keyword_extraction_llm
+   📄 process_keyword_data_step2: workflow_output/workflow_20250716_211133/keyword_data_processing/process_keyword_data_step2.json
+   📁 sql_cleaning_after_extraction: workflow_output/workflow_20250716_211133/cleaning_steps/sql_cleaning_after_extraction_20250716_213108
+   📄 remove_no_sql_records_step: workflow_output/workflow_20250716_211133/remove_no_sql_records/remove_no_sql_records_step.json
+
+✅ 工作流执行成功!
+📁 输出目录: workflow_output/workflow_20250716_211133
+📄 最终数据: workflow_output/workflow_20250716_211133/final_processed_dataset.json
+📋 摘要文件: workflow_output/workflow_20250716_211133/workflow_summary.json
