@@ -12,12 +12,13 @@ import subprocess
 import argparse
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
+import asyncio
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from data_processing.rl_data_converter import RLDataConverter
+from data_processing.converter.rl_data_converter import RLDataConverter
 
 def setup_logging():
     """设置日志"""
@@ -106,7 +107,7 @@ def setup_environment(config: Dict[str, Any]):
     for key, value in env_config.items():
         os.environ[key] = str(value)
 
-def run_data_conversion(config: Dict[str, Any], logger: logging.Logger) -> Optional[Tuple[str, str]]:
+async def run_data_conversion_async(config: Dict[str, Any], logger: logging.Logger):
     """
     运行数据转换步骤
     
@@ -119,8 +120,8 @@ def run_data_conversion(config: Dict[str, Any], logger: logging.Logger) -> Optio
     """
     try:
         # 检查是否需要数据转换
-        data_config = config.get("data", {})
-        auto_convert = data_config.get("auto_convert", True)
+        data_conversion_config = config.get("data_conversion", {})
+        auto_convert = data_conversion_config.get("auto_convert", True)
         
         if not auto_convert:
             logger.info("跳过数据转换步骤")
@@ -132,20 +133,20 @@ def run_data_conversion(config: Dict[str, Any], logger: logging.Logger) -> Optio
         converter = RLDataConverter()
         
         # 获取workflow目录（如果指定）
-        workflow_dir = data_config.get("workflow_dir")
+        workflow_dir = data_conversion_config.get("workflow_dir")
         if workflow_dir:
             workflow_dir = Path(workflow_dir)
             if not workflow_dir.is_absolute():
                 workflow_dir = project_root / workflow_dir
         
         # 获取输出名称
-        output_name = data_config.get("output_name")
+        output_name = data_conversion_config.get("output_name")
         
         # 获取验证集比例
-        val_ratio = data_config.get("val_ratio", 0.1)
+        val_ratio = data_conversion_config.get("val_ratio", 0.1)
         
         # 运行转换
-        train_path, val_path, dataset_info = converter.run_conversion(
+        train_path, val_path, dataset_info = await converter.run_conversion(
             workflow_dir=workflow_dir,
             output_name=output_name,
             val_ratio=val_ratio
@@ -261,30 +262,31 @@ def main():
         return 1
     
     # 运行数据转换步骤
-    converted_data_paths = run_data_conversion(config, logger)
-    
-    # 构建训练命令
-    try:
-        cmd = build_verl_command(config, converted_data_paths, extra_args)
-        logger.info(f"构建的训练命令:")
-        logger.info(f"  {' '.join(cmd)}")
-        
-        if args.debug:
-            logger.info("调试模式：仅显示命令，不执行训练")
-            return 0
-        
-        # 执行训练
-        logger.info("开始VERL强化学习训练...")
-        result = subprocess.run(cmd, check=True)
-        logger.info("训练完成！")
-        return result.returncode
-        
-    except subprocess.CalledProcessError as e:
-        logger.error(f"训练过程中出现错误，退出码: {e.returncode}")
-        return e.returncode
-    except Exception as e:
-        logger.error(f"训练过程中出现错误: {e}")
-        return 1
+    async def async_main():
+        converted_data_paths = await run_data_conversion_async(config, logger)
+        # 构建训练命令
+        try:
+            cmd = build_verl_command(config, converted_data_paths, extra_args)
+            logger.info(f"构建的训练命令:")
+            logger.info(f"  {' '.join(cmd)}")
+            
+            if args.debug:
+                logger.info("调试模式：仅显示命令，不执行训练")
+                return 0
+            
+            # 执行训练
+            logger.info("开始VERL强化学习训练...")
+            result = subprocess.run(cmd, check=True)
+            logger.info("训练完成！")
+            return result.returncode
+            
+        except subprocess.CalledProcessError as e:
+            logger.error(f"训练过程中出现错误，退出码: {e.returncode}")
+            return e.returncode
+        except Exception as e:
+            logger.error(f"训练过程中出现错误: {e}")
+            return 1
+    return asyncio.run(async_main())
 
 if __name__ == "__main__":
     sys.exit(main()) 

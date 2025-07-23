@@ -5,11 +5,11 @@ input:
   # workflow输出目录
   workflow_output_dir: "workflow_output"
   # 最终处理数据文件名
-  final_data_filename: "final_processed_dataset.json"
+  final_data_filename: "final_processed_data.json"
   # 是否使用最新的workflow输出（如果为false需要指定specific_workflow_dir）
-  use_latest_workflow: true
+  use_latest_workflow: false
   # 指定的workflow目录名（当use_latest_workflow为false时使用）
-  specific_workflow_dir: ""
+  specific_workflow_dir: "/home/wuyu/code2sql/workflow_output/workflow_v4_rl"
 
 # 输出数据配置
 output:

@@ -3,6 +3,10 @@ import os
 import json
 import re
 import yaml
+import time
+import asyncio  # 新增：异步支持
+import openai   # 新增：OpenAI AsyncClient
+from threading import Lock
 from typing import Dict, Any, Optional, Set, List
 
 # 添加项目根目录到Python路径，以便导入sql_feature_extractor
@@ -10,66 +14,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from utils.sql_feature_extractor import SQLFeatureExtractor
 from utils.response_parser import parse_model_response, recursively_extract_sql
-from utils.llm_client import LLMClientManager
 
-# === 【修改点3】新增导入，从配置文件中获取关键词评估提示词 ===
-# 注意：不再从独立文件导入，而是从配置文件中读取
 
-# ============================= 控制流惩罚评估 =============================
+# === 【修改点1】新增全局变量与锁，用于保存评估结果 ===
 
-# ============================= 调试模式支持 =============================
-
-import logging
-
-def debug_print(message: str, debug_mode: bool = False):
-    """调试打印函数，只有在调试模式下才输出"""
-    if debug_mode:
-        print(message)
-
-# ============================= 配置加载函数 =============================
-
-def load_llm_prompts_config(config_path: Optional[str] = None) -> Dict[str, Any]:
-    """
-    加载LLM提示词配置文件
-    
-    Args:
-        config_path: 配置文件路径，如果为None则使用默认路径
-        
-    Returns:
-        配置字典
-    """
-    if config_path is None:
-        # 使用默认配置文件路径
-        config_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            "config", "rl", "qwen", "llm_prompts.yaml"
-        )
-    
-    try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config = yaml.safe_load(f)
-        debug_print(f"[配置] 成功加载LLM提示词配置: {config_path}")
-        return config
-    except Exception as e:
-        debug_print(f"[配置] 加载LLM提示词配置失败: {e}")
-        # 返回默认配置
-        return {
-            "table_extraction_prompt": "请从以下GORM代码中提取所有涉及的表名。\n\n**函数名称：** {function_name}\n**调用者：** {caller}\n\n**ORM代码：**\n```go\n{orm_code}\n```\n\n**代码元数据：**\n{meta_data_str}\n\n请以JSON格式输出，格式如下：\n```json\n{{\n    \"tables\": [\"表名1\", \"表名2\", ...]\n}}\n```\n\n只输出JSON格式，不要其他内容：",
-            "column_extraction_prompt": "请从以下GORM代码中提取所有涉及的字段名。\n\n**函数名称：** {function_name}\n**调用者：** {caller}\n\n**ORM代码：**\n```go\n{orm_code}\n```\n\n**代码元数据：**\n{meta_data_str}\n\n请以JSON格式输出，格式如下：\n```json\n{{\n    \"columns\": [\"字段名1\", \"字段名2\", ...]\n}}\n```\n\n只输出JSON格式，不要其他内容：",
-            "llm_config": {
-                "server_name": "v3",
-                "max_tokens": 1024,
-                "temperature": 0.0,
-                "max_retries": 3,
-                "retry_delay": 1.0
-            },
-            "consistency_config": {
-                "table_weight": 0.6,
-                "column_weight": 0.4,
-                "consistency_weight": 0.4,
-                "validity_weight": 0.6
-            }
-        }
 
 def load_rl_config() -> Dict[str, Any]:
     """
@@ -441,6 +389,213 @@ def compare_with_pre_extraction(pre_tables: Set[str], pre_columns: Set[str],
         debug_print(f"[预处理一致性对比] 比较失败: {e}", debug_mode)
         return 0.0
 
+# === 【修改点2】新增函数，用于将评估结果保存到JSONL文件 ===
+def save_reward_result(solution_str: str,
+                      ground_truth: str,
+                      final_score: float,
+                      details: dict,
+                      extra_info: Optional[dict] = None,
+                      dump_path: str = DEBUG_DUMP_FILE):
+    """将评分详情追加写入 JSONL 文件"""
+    record = {
+        "timestamp": int(time.time()),
+        "index": (extra_info or {}).get("index", -1),
+        "function_name": (extra_info or {}).get("function_name", ""),
+        "score": final_score,
+        "details": details,
+        "solution_preview": solution_str[:300],  # 截断以避免日志过大
+        "ground_truth_preview": ground_truth[:300],
+    }
+    with _dump_lock:
+        try:
+            with open(dump_path, "a", encoding="utf-8") as fp:
+                fp.write(json.dumps(record, ensure_ascii=False) + "\n")
+        except Exception as e:
+            # 在无法写入文件时，打印错误但程序不中断
+            print(f"Error saving reward result: {e}")
+
+
+# =============================  异步辅助函数  =============================
+
+async def _async_extract_tables_and_columns(client: openai.AsyncClient, orm_code: str, code_meta_data: List[Dict],
+                                           function_name: str, caller: str, debug_mode: bool = False) -> Dict[str, Set[str]]:
+    """使用 AsyncClient 并发抽取表名/字段名"""
+    config = get_llm_prompts_config()
+
+    # 格式化元数据
+    meta_data_str = ""
+    for meta in code_meta_data or []:
+        if 'code_key' in meta and 'code_value' in meta:
+            meta_data_str += f"\n**{meta['code_key']}**:\n{meta['code_value']}"
+            if 'code_file' in meta:
+                meta_data_str += f"\n(文件: {meta['code_file']})"
+
+    table_prompt = config.get("table_extraction_prompt", "").format(
+        function_name=function_name, caller=caller, orm_code=orm_code, meta_data_str=meta_data_str
+    )
+    column_prompt = config.get("column_extraction_prompt", "").format(
+        function_name=function_name, caller=caller, orm_code=orm_code, meta_data_str=meta_data_str
+    )
+
+    llm_cfg = config.get("llm_config", {})
+    model = llm_cfg.get("server_name", "v3")
+    max_tokens = llm_cfg.get("max_tokens", 1024)
+    temperature = llm_cfg.get("temperature", 0.0)
+
+    async def call(prompt: str):
+        resp = await client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return resp.choices[0].message.content if resp.choices else ""
+
+    # 并发发起两次请求
+    table_task = asyncio.create_task(call(table_prompt))
+    column_task = asyncio.create_task(call(column_prompt))
+    table_resp, column_resp = await asyncio.gather(table_task, column_task)
+
+    def _parse(resp_text: str, key: str) -> Set[str]:
+        items: Set[str] = set()
+        try:
+            m = re.search(r"\{.*\}", resp_text, re.DOTALL)
+            if m:
+                data = json.loads(m.group())
+                items = set(data.get(key, []))
+            else:
+                parsed = parse_model_response(resp_text)
+                if parsed and isinstance(parsed, list):
+                    items = {str(p).strip() for p in parsed if p}
+        except Exception as e:
+            debug_print(f"[解析错误] {key}: {e}", debug_mode)
+        return items
+
+    return {"tables": _parse(table_resp, "tables"), "columns": _parse(column_resp, "columns")}
+
+
+async def _async_get_consistency_score(client: openai.AsyncClient, data_source: dict, solution_str: str,
+                                      ground_truth: str, extra_info: Optional[dict], debug_mode: bool = False) -> float:
+    """异步一致性得分计算，复用现有 compare_extraction_results 逻辑"""
+    if not extra_info:
+        return 0.0
+
+    orm_code = extra_info.get("orm_code", "")
+    code_meta = extra_info.get("code_meta_data", [])
+    fn_name = extra_info.get("function_name", "")
+    caller = extra_info.get("caller", "")
+
+    # LLM 抽取
+    llm_res = await _async_extract_tables_and_columns(client, orm_code, code_meta, fn_name, caller, debug_mode)
+
+    # 提取 SQL 并比对
+    sql_list = recursively_extract_sql(solution_str)
+    if not sql_list:
+        return 0.0
+
+    extractor = SQLFeatureExtractor()
+    total, valid = 0.0, 0
+    for sql in sql_list:
+        try:
+            sql_feat = extractor.extract_tables_and_columns(sql)
+            total += compare_extraction_results(llm_res, sql_feat, debug_mode)
+            valid += 1
+        except Exception as e:
+            debug_print(f"[一致性] SQL解析失败: {e}", debug_mode)
+
+    return round(total / valid, 2) if valid else 0.0
+
+
+async def _async_get_keyword_reward(client: openai.AsyncClient, extra_info: Optional[dict], solution_str: str,
+                                    debug_mode: bool = False) -> Optional[float]:
+    """异步关键词奖励"""
+    if not extra_info:
+        return None
+    kw_analysis = extra_info.get("llm_keyword_analysis", {})
+    if not kw_analysis.get("has_special_keywords"):
+        return None
+
+    matched_keywords = kw_analysis.get("matched_keywords", [])
+    if not matched_keywords:
+        return None
+
+    # 直接利用现有同步 evaluate_keyword_reward_with_llm 逻辑在线程池运行，避免重写 prompt 解析
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, evaluate_keyword_reward_with_llm,
+                                      extra_info.get("orm_code", ""), matched_keywords,
+                                      extra_info.get("function_name", ""), extra_info.get("caller", ""),
+                                      solution_str,
+                                      str(extra_info.get("code_meta_data", [])), debug_mode)
+
+
+async def _async_main_evaluation_logic(data_source: dict, solution_str: str, ground_truth: str,
+                                      extra_info: Optional[dict], debug_mode: bool = False) -> float:
+    """核心异步编排函数，模式与 composite_reward.py 保持一致"""
+    # --- 1. SQL 有效性（同步） ---
+    sqls = recursively_extract_sql(solution_str)
+    validity_scores = [evaluate_sql_validity(s, debug_mode) for s in sqls] if sqls else [0.0]
+    avg_validity = sum(validity_scores) / len(validity_scores)
+
+    # --- 2. 并发执行 LLM 相关任务 ---
+    cfg = get_llm_prompts_config()
+    api_base = os.getenv("V3_API_URL", "http://localhost:8081/v1")
+    llm_api_key = "EMPTY"  # 现网接口无需真实 key
+
+    consistency_score, keyword_reward = 0.0, None
+
+    async with openai.AsyncClient(base_url=api_base, api_key=llm_api_key) as client:
+        tasks = [
+            asyncio.create_task(_async_get_consistency_score(client, data_source, solution_str, ground_truth, extra_info, debug_mode))
+        ]
+
+        kw_task = asyncio.create_task(_async_get_keyword_reward(client, extra_info, solution_str, debug_mode))
+        tasks.append(kw_task)
+
+        res_consistency, res_keyword = await asyncio.gather(*tasks, return_exceptions=True)
+
+        consistency_score = res_consistency if not isinstance(res_consistency, Exception) else 0.0
+        keyword_reward = None if isinstance(res_keyword, Exception) else res_keyword
+
+    # --- 3. 组合分数 ---
+    cons_cfg = cfg.get("consistency_config", {})
+    v_w = cons_cfg.get("validity_weight", 0.6)
+    c_w = cons_cfg.get("consistency_weight", 0.4)
+    k_w = cons_cfg.get("keyword_weight", 0.1)
+
+    if keyword_reward is None:
+        total_w = v_w + c_w
+        final = (avg_validity * v_w + consistency_score * c_w) / total_w if total_w else 0.0
+    else:
+        final = avg_validity * v_w + consistency_score * c_w + keyword_reward * k_w
+
+    final = round(max(0.0, min(1.0, final)), 2)
+
+    # --- 4. 控制流惩罚（同步、沿用旧实现） ---
+    penalty_cfg = cfg.get('control_flow_penalty', {})
+    penalty_amount = 0.0
+    if penalty_cfg.get('enabled', False):
+        severity = evaluate_control_flow_penalty(
+            orm_code=extra_info.get('orm_code', '') if extra_info else '',
+            generated_sql_variants=sqls,
+            caller=extra_info.get('caller', '') if extra_info else '',
+            code_meta_data=str(extra_info.get('code_meta_data', [])) if extra_info else '',
+            debug_mode=debug_mode)
+        penalty_amount = penalty_cfg.get('penalty_cap', 0.3) * severity
+        final = max(final - penalty_amount, 0.0)
+
+    # --- 5. 落盘 ---
+    if debug_mode:
+        save_reward_result(solution_str, ground_truth, final, {
+            "avg_validity": avg_validity,
+            "consistency": consistency_score,
+            "keyword": keyword_reward,
+            "penalty": penalty_amount
+        }, extra_info)
+
+    return final
+
+# ============================= LLM抽取表/字段奖励函数 =============================
+
 def evaluate_llm_extraction_reward(data_source: dict, solution_str: str, 
                                  ground_truth: str, extra_info: Optional[dict] = None, debug_mode: bool = False) -> float:
     """
@@ -680,172 +835,9 @@ def evaluate_keyword_reward_with_llm(orm_code: str, matched_keywords: List[str],
 # ============================= 框架适配的主奖励函数 =============================
 
 def format_and_llm_reward(data_source: dict, solution_str: str, ground_truth: str, extra_info: Optional[dict] = None, debug_mode: bool = False) -> float:
-    """
-    综合奖励函数：评估生成的SQL语句的有效性和一致性
-    
-    Args:
-        data_source: 数据源信息（包含ORM代码和元数据）
-        solution_str: 模型响应文本（包含SQL语句）
-        ground_truth: 期望的排查步骤文本（框架要求，但此处不使用）
-        extra_info: 额外信息（包含ORM代码、调用者、元数据等）
-        debug_mode: 调试模式开关
-        
-    Returns:
-        最终奖励分数 (0.0-1.0)
-    """
-    
+    """统一同步外壳：内部调用异步主逻辑"""
     try:
-        
-        # 获取配置
-        config = get_llm_prompts_config()
-        consistency_config = config.get("consistency_config", {})
-        validity_weight = consistency_config.get("validity_weight", 0.6)
-        consistency_weight = consistency_config.get("consistency_weight", 0.4)
-        
-        # === 【修改点5】新增关键词权重配置 ===
-        keyword_weight = consistency_config.get("keyword_weight", 0.1)
-        
-        # 使用标准解析器提取SQL
-        parsed = parse_model_response(solution_str)
-        extracted_sqls = recursively_extract_sql(parsed)
-        
-        if not extracted_sqls:
-            debug_print("[评估] 未找到SQL语句，得分: 0.0", debug_mode)
-            return 0.0
-        
-        # 评估SQL有效性
-        validity_score = 0.0
-        valid_sql_count = 0
-        
-        for i, sql in enumerate(extracted_sqls):
-            score = evaluate_sql_validity(sql, debug_mode)
-            validity_score += score
-            if score > 0:
-                valid_sql_count += 1
-            debug_print(f"SQL: {sql[:100]}... 有效性: {score:.2f}", debug_mode)
-        
-        # 计算有效性平均分数
-        avg_validity_score = validity_score / len(extracted_sqls) if extracted_sqls else 0.0
-        
-        # 使用预处理结果进行一致性评估
-        if extra_info and isinstance(extra_info, dict) and extra_info.get("pre_tables") is not None:
-            # 使用预处理结果进行一致性评估
-            pre_tables = set(extra_info.get("pre_tables", []))
-            pre_columns = set(extra_info.get("pre_columns", []))
-            
-            # 对每个SQL语句进行对比评估
-            total_score = 0.0
-            valid_sql_count = 0
-            
-            for i, sql in enumerate(extracted_sqls):
-                try:
-                    # 使用sqlglot解析SQL（复用现有逻辑）
-                    extractor = SQLFeatureExtractor()
-                    sqlglot_result = extractor.extract_tables_and_columns(sql)
-                    
-                    # 使用预处理结果比较一致性
-                    consistency_score_single = compare_with_pre_extraction(pre_tables, pre_columns, sqlglot_result, debug_mode)
-                    total_score += consistency_score_single
-                    valid_sql_count += 1
-                    debug_print(f"SQL: {sql[:100]}... 得分: {consistency_score_single:.2f}", debug_mode)
-                    
-                except Exception as e:
-                    debug_print(f"SQL解析失败: {sql[:100]}... 错误: {e}", debug_mode)
-                    continue
-            
-            # 计算平均分数
-            consistency_score = total_score / valid_sql_count if valid_sql_count > 0 else 0.0
-            consistency_score = round(consistency_score, 2)
-            
-            debug_print(f"[一致性评估] 最终得分: {consistency_score:.2f} (有效SQL: {valid_sql_count})", debug_mode)
-        else:
-            # 理论上不应该到这里，因为预处理已过滤掉无效样本
-            debug_print("[一致性评估] 未找到预处理结果，得分: 0.0", debug_mode)
-            consistency_score = 0.0
-        
-        # === 【修改点6】新增关键词契合度评估逻辑 ===
-        # 评估关键词契合度
-        keyword_reward = None
-        if extra_info and isinstance(extra_info, dict):
-            # 获取关键词分析结果
-            llm_keyword_analysis = extra_info.get("llm_keyword_analysis", {})
-            has_special_keywords = llm_keyword_analysis.get("has_special_keywords", False)
-            matched_keywords = llm_keyword_analysis.get("matched_keywords", [])
-            
-            # 如果有特殊关键词，则进行关键词契合度评估
-            if has_special_keywords and matched_keywords:
-                # 获取必要的信息
-                orm_code = extra_info.get("orm_code", "")
-                function_name = extra_info.get("function_name", "")
-                caller = extra_info.get("caller", "")
-                
-                # 格式化代码元数据
-                code_meta_data = extra_info.get("code_meta_data", [])
-                formatted_metadata = ""
-                if code_meta_data:
-                    for meta in code_meta_data:
-                        if 'code_key' in meta and 'code_value' in meta:
-                            formatted_metadata += f"\n**{meta['code_key']}**:\n{meta['code_value']}"
-                            if 'code_file' in meta:
-                                formatted_metadata += f"\n(文件: {meta['code_file']})"
-                
-                # 调用关键词评估函数
-                keyword_reward = evaluate_keyword_reward_with_llm(
-                    orm_code=orm_code,
-                    matched_keywords=matched_keywords,
-                    function_name=function_name,
-                    caller=caller,
-                    generated_sql_json=solution_str,
-                    code_metadata=formatted_metadata,
-                    debug_mode=debug_mode
-                )
-                
-                debug_print(f"[关键词评估] 关键词: {matched_keywords}, 得分: {keyword_reward}", debug_mode)
-        
-        # === 【修改点7】修改综合分数计算，实现动态权重归一化 ===
-        # 综合分数计算（动态权重归一化）
-        if keyword_reward is None:
-            # 没有关键词奖励，只使用有效性和一致性，需要权重归一化
-            total_weight = validity_weight + consistency_weight
-            final_score = (avg_validity_score * validity_weight + 
-                          consistency_score * consistency_weight) / total_weight
-        else:
-            # 有关键词奖励，使用三个维度完整计算
-            final_score = (avg_validity_score * validity_weight + 
-                          consistency_score * consistency_weight + 
-                          keyword_reward * keyword_weight)
-        
-        final_score = round(final_score, 2)
-        
-        # 确保分数在有效范围内
-        final_score = max(0.0, min(1.0, final_score))
-        
-        # === 控制流惩罚评估 ===
-        # 应用控制流惩罚
-        config = get_llm_prompts_config()
-        if config and config.get('control_flow_penalty', {}).get('enabled', False):
-            penalty_severity = evaluate_control_flow_penalty(
-                orm_code=extra_info.get('orm_code', '') if extra_info else '',
-                generated_sql_variants=extracted_sqls,
-                caller=extra_info.get('caller', '') if extra_info else '',
-                code_meta_data=str(extra_info.get('code_meta_data', [])) if extra_info else '',
-                debug_mode=debug_mode
-            )
-            penalty_cap = config['control_flow_penalty']['penalty_cap']
-            penalty_amount = penalty_cap * penalty_severity
-            final_score = max(final_score - penalty_amount, 0.0)
-            
-            debug_print(f"控制流惩罚: severity={penalty_severity}, amount={penalty_amount:.3f}, final={final_score:.3f}", debug_mode)
-        
-        # === 【修改点8】更新评估结果输出，包含关键词信息 ===
-        # 输出评估结果
-        if keyword_reward is not None:
-            debug_print(f"[综合评估] 最终得分: {final_score:.2f} (有效性:{avg_validity_score:.2f}, 一致性:{consistency_score:.2f}, 关键词:{keyword_reward:.2f})", debug_mode)
-        else:
-            debug_print(f"[综合评估] 最终得分: {final_score:.2f} (有效性:{avg_validity_score:.2f}, 一致性:{consistency_score:.2f})", debug_mode)
-        
-        return final_score
-        
+        return asyncio.run(_async_main_evaluation_logic(data_source, solution_str, ground_truth, extra_info, debug_mode))
     except Exception as e:
         debug_print(f"[错误] 综合评估失败: {e}", debug_mode)
         import traceback
@@ -937,6 +929,11 @@ def code2sql_reward(data_source=None, solution_str=None, ground_truth=None, extr
             debug_print("[错误] 单个样本调用时，data_source、solution_str、ground_truth参数不能为None", debug_mode)
             return 0.0
         return format_and_llm_reward(data_source, solution_str, ground_truth, extra_info, debug_mode)
+
+# 已弃用的早期异步实现占位，为防止 BatchRewardManager 调用到 coroutine 触发 TypeError，
+# 直接注释掉，不再导出。
+# async def code2sql_reward(...):
+#     pass
 
 # ============================= 测试函数 =============================
 

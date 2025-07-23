@@ -6,12 +6,10 @@
 
 from .workflow_manager import (
     WorkflowManager,
-    run_complete_workflow_from_raw_data,
     run_complete_sql_cleaning_workflow
 )
 
 __all__ = [
     'WorkflowManager',
-    'run_complete_workflow_from_raw_data', 
     'run_complete_sql_cleaning_workflow'
 ] 

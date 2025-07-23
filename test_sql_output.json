@@ -1,0 +1,24 @@
+[
+  {
+    "function_name": "TestFunction1",
+    "orm_code": "func (p *Payment) ProcessPayment() error {\n\tswitch p.Status {\n\tcase Pending:\n\t\treturn p.processPending()\n\tcase Approved:\n\t\treturn p.processApproved()\n\tdefault:\n\t\treturn errors.New(\"invalid status\")\n\t}\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "NO_SQL_GENERATE",
+        "variants": [
+          {
+            "scenario": "代码只包含状态判断逻辑，没有实际的数据库操作方法，且缺少关键子方法实现",
+            "sql": ""
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "OTHER"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [],
+    "sql_pattern_cnt": 1
+  }
+]

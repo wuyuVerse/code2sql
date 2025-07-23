@@ -35,7 +35,7 @@ def get_workflow_manager():
 def get_training_data_converter():
     """按需导入训练数据转换器"""
     try:
-        from .training_data_converter import TrainingDataConverter
+        from .converter.training_data_converter import TrainingDataConverter
         return TrainingDataConverter
     except ImportError as e:
         raise ImportError(f"训练数据转换器导入失败: {e}")

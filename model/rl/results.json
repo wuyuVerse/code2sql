@@ -1,0 +1,3254 @@
+[
+  {
+    "func_name": "CountBlockerUsers",
+    "code_line": "65",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM ivc_blocker_user WHERE name LIKE '%?%';",
+      "SELECT COUNT(*) FROM ivc_blocker_user;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_blocker_user WHERE name like ?;",
+      "SELECT count(*) FROM ivc_blocker_user;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM ivc_blocker_user WHERE name LIKE '%?%';",
+      "SELECT COUNT(*) FROM ivc_blocker_user;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "CountCloudRecordTimelineWhitelists",
+    "code_line": "88",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM ivc_cloudrecord_timeline_whitelist WHERE app_id = 123 AND uin = 'user123';",
+      "SELECT COUNT(*) FROM ivc_cloudrecord_timeline_whitelist WHERE app_id = 456;",
+      "SELECT COUNT(*) FROM ivc_cloudrecord_timeline_whitelist WHERE name LIKE '%test%';"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_cloudrecord_timeline_whitelist WHERE app_id = ? AND uin = ?;",
+      "SELECT count(*) FROM ivc_cloudrecord_timeline_whitelist WHERE name like ?;",
+      "SELECT count(*) FROM ivc_cloudrecord_timeline_whitelist;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM ivc_cloudrecord_timeline_whitelist WHERE app_id = 123 AND uin = 'user123';",
+      "SELECT COUNT(*) FROM ivc_cloudrecord_timeline_whitelist WHERE name LIKE '%test%';"
+    ],
+    "missing": [
+      "SELECT COUNT(*) FROM ivc_cloudrecord_timeline_whitelist WHERE app_id = 456;"
+    ],
+    "extra": [
+      "SELECT count(*) FROM ivc_cloudrecord_timeline_whitelist;"
+    ],
+    "metrics": {
+      "baseline": 3,
+      "candidate": 3,
+      "common": 2,
+      "missing": 1,
+      "extra": 1
+    },
+    "human_review": "不同变体sql"
+  },
+  {
+    "func_name": "CountDailyReportWhitelists",
+    "code_line": "88",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_dailyreport_whitelist` WHERE ?;",
+      "SELECT COUNT(*) FROM `ivc_dailyreport_whitelist` WHERE name like '%?%';"
+    ],
+    "candidate_sql": [
+      "/* [QueryDailyReportWhitelistFlow] */ SELECT count(*) FROM ivc_dailyreport_whitelist WHERE app_id = ? AND uin = ? AND name = ?;",
+      "/* [QueryDailyReportWhitelistFlow] */ SELECT count(*) FROM ivc_dailyreport_whitelist WHERE name like ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_dailyreport_whitelist` WHERE name like '%?%';"
+    ],
+    "missing": [
+      "SELECT COUNT(*) FROM `ivc_dailyreport_whitelist` WHERE ?;"
+    ],
+    "extra": [
+      "/* [QueryDailyReportWhitelistFlow] */ SELECT count(*) FROM ivc_dailyreport_whitelist WHERE app_id = ? AND uin = ? AND name = ?;"
+    ],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 1,
+      "missing": 1,
+      "extra": 1
+    },
+    "human_review": "缺caller"
+  },
+  {
+    "func_name": "CountGBinviteWhitelists",
+    "code_line": "85",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_gb_invite_whitelist` WHERE `app_id` = 123 AND `uin` = 'user123';",
+      "SELECT COUNT(*) FROM `ivc_gb_invite_whitelist` WHERE `app_id` = 123;",
+      "SELECT COUNT(*) FROM `ivc_gb_invite_whitelist` WHERE name LIKE '%test%';",
+      "SELECT COUNT(*) FROM `ivc_gb_invite_whitelist`;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_gb_invite_whitelist WHERE app_id = ? AND uin = ? AND name = ?;",
+      "SELECT count(*) FROM ivc_gb_invite_whitelist WHERE name like ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_gb_invite_whitelist` WHERE name LIKE '%test%';"
+    ],
+    "missing": [
+      "SELECT COUNT(*) FROM `ivc_gb_invite_whitelist` WHERE `app_id` = 123;",
+      "SELECT COUNT(*) FROM `ivc_gb_invite_whitelist`;",
+      "SELECT COUNT(*) FROM `ivc_gb_invite_whitelist` WHERE `app_id` = 123 AND `uin` = 'user123';"
+    ],
+    "extra": [
+      "SELECT count(*) FROM ivc_gb_invite_whitelist WHERE app_id = ? AND uin = ? AND name = ?;"
+    ],
+    "metrics": {
+      "baseline": 4,
+      "candidate": 2,
+      "common": 1,
+      "missing": 3,
+      "extra": 1
+    },
+    "human_review": "两个结果都有问题"
+  },
+  {
+    "func_name": "CountLicenses",
+    "code_line": "291",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_player_license` WHERE delete_time is null AND `disable_domain_restrictions` = ?;",
+      "SELECT COUNT(*) FROM `ivc_player_license` WHERE delete_time is null;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_player_license WHERE delete_time is null;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_player_license` WHERE delete_time is null;"
+    ],
+    "missing": [
+      "SELECT COUNT(*) FROM `ivc_player_license` WHERE delete_time is null AND `disable_domain_restrictions` = ?;"
+    ],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 1,
+      "common": 1,
+      "missing": 1,
+      "extra": 0
+    },
+    "human_review": "c1变体sql更少"
+  },
+  {
+    "func_name": "CreateBlockerUser",
+    "code_line": "53",
+    "baseline_sql": [
+      "INSERT INTO `ivc_blocker_user` (`app_id`,`uin`,`name`,`describe`,`created_at`) VALUES (?,?,?,?,?);"
+    ],
+    "candidate_sql": [
+      "INSERT INTO ivc_blocker_user (id, app_id, uin, name, describe, created_at) VALUES (?, ?, ?, ?, ?, ?);"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "INSERT INTO `ivc_blocker_user` (`app_id`,`uin`,`name`,`describe`,`created_at`) VALUES (?,?,?,?,?);"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "CreateCloudRecordTimelineWhitelist",
+    "code_line": "43",
+    "baseline_sql": [
+      "INSERT INTO `ivc_cloudrecord_timeline_whitelist` (`id`, `name`, `uin`, `app_id`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?);"
+    ],
+    "candidate_sql": [
+      "INSERT INTO ivc_cloud_record_timeline_whitelist (id, name, email, phone, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?);"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "INSERT INTO `ivc_cloudrecord_timeline_whitelist` (`id`, `name`, `uin`, `app_id`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?);"
+    ],
+    "extra": [
+      "INSERT INTO ivc_cloud_record_timeline_whitelist (id, name, email, phone, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?);"
+    ],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 0,
+      "missing": 1,
+      "extra": 1
+    },
+    "human_review": "无code_meta信息"
+  },
+  {
+    "func_name": "CreateDailyReportWhitelist",
+    "code_line": "43",
+    "baseline_sql": [
+      "INSERT INTO `ivc_dailyreport_whitelist` (`id`, `name`, `uin`, `app_id`, `altername`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?, ?);"
+    ],
+    "candidate_sql": [],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "INSERT INTO `ivc_dailyreport_whitelist` (`id`, `name`, `uin`, `app_id`, `altername`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?, ?);"
+    ],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 0,
+      "common": 0,
+      "missing": 1,
+      "extra": 0
+    },
+    "human_review": "元信息不包含表结构映射数据，小模型不适配re-extract问题"
+  },
+  {
+    "func_name": "CreateGBinviteWhitelist",
+    "code_line": "67",
+    "baseline_sql": [
+      "INSERT INTO ivc_gb_invite_whitelist (id, name, uin, app_id, created_at) VALUES (?, ?, ?, ?, ?);"
+    ],
+    "candidate_sql": [],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "INSERT INTO ivc_gb_invite_whitelist (id, name, uin, app_id, created_at) VALUES (?, ?, ?, ?, ?);"
+    ],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 0,
+      "common": 0,
+      "missing": 1,
+      "extra": 0
+    },
+    "human_review": "元信息不包含表结构映射数据，小模型不适配re-extract问题"
+  },
+  {
+    "func_name": "DeleteApprovalEvent",
+    "code_line": "270",
+    "baseline_sql": [
+      "DELETE FROM ivc_approval_event WHERE id = ?;"
+    ],
+    "candidate_sql": [
+      "/* DELETE */ DELETE FROM ivc_approval_event WHERE id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "DELETE FROM ivc_approval_event WHERE id = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "DeleteBlockerUser",
+    "code_line": "59",
+    "baseline_sql": [
+      "DELETE FROM `ivc_blocker_user` WHERE `id` = ?;"
+    ],
+    "candidate_sql": [
+      "/* DELETE: [UUID-COMMENT-STRING] */ DELETE FROM ivc_blocker_user WHERE id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "DELETE FROM `ivc_blocker_user` WHERE `id` = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "DeleteBucketWhitelist",
+    "code_line": "91",
+    "baseline_sql": [
+      "DELETE FROM `ivc_bucket_whitelist` WHERE `id` = ?;"
+    ],
+    "candidate_sql": [
+      "/* DELETE */ DELETE FROM ivc_bucket_whitelist WHERE id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "DELETE FROM `ivc_bucket_whitelist` WHERE `id` = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "DeleteCloudRecordTimelineWhitelist",
+    "code_line": "49",
+    "baseline_sql": [
+      "DELETE FROM ivc_cloudrecord_timeline_whitelist WHERE id = ?;"
+    ],
+    "candidate_sql": [
+      "/* DELETE ivc_cloudrecord_timeline_whitelist */ DELETE FROM ivc_cloudrecord_timeline_whitelist WHERE id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "DELETE FROM ivc_cloudrecord_timeline_whitelist WHERE id = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "DeleteDailyReportWhitelist",
+    "code_line": "49",
+    "baseline_sql": [
+      "DELETE FROM ivc_dailyreport_whitelist WHERE id = ?;"
+    ],
+    "candidate_sql": [
+      "/* DELETE: uuid_string */ DELETE FROM ivc_dailyreport_whitelist WHERE id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "DELETE FROM ivc_dailyreport_whitelist WHERE id = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "DeleteGBinviteWhitelist",
+    "code_line": "73",
+    "baseline_sql": [
+      "DELETE FROM ivc_gb_invite_whitelist WHERE id = ?;"
+    ],
+    "candidate_sql": [
+      "/* DELETE: [comment_value] */ DELETE FROM ivc_gb_invite_whitelist WHERE id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "DELETE FROM ivc_gb_invite_whitelist WHERE id = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "DeleteIntranetWhitelist",
+    "code_line": "71",
+    "baseline_sql": [
+      "DELETE FROM ivc_intranet_whitelist WHERE id = ?;"
+    ],
+    "candidate_sql": [
+      "/* DELETE */ DELETE FROM ivc_intranet_whitelist WHERE id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "DELETE FROM ivc_intranet_whitelist WHERE id = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "DeleteMediaWhitelist",
+    "code_line": "85",
+    "baseline_sql": [
+      "DELETE FROM ivc_media_whitelist WHERE id = ?;"
+    ],
+    "candidate_sql": [
+      "/* DELETE */ DELETE FROM ivc_media_whitelist WHERE id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "DELETE FROM ivc_media_whitelist WHERE id = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindAppIdByUin",
+    "code_line": "77",
+    "baseline_sql": [
+      "SELECT * FROM `ivc_device` WHERE `owner_uin` = ? LIMIT 1;"
+    ],
+    "candidate_sql": [],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "SELECT * FROM `ivc_device` WHERE `owner_uin` = ? LIMIT 1;"
+    ],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 0,
+      "common": 0,
+      "missing": 1,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindApprovalEventList",
+    "code_line": "308",
+    "baseline_sql": [
+      "SELECT * FROM ivc_approval_event ORDER BY update_at DESC LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_approval_event WHERE creator = ? ORDER BY update_at DESC LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_approval_event WHERE order_id = ? AND creator = ? ORDER BY update_at DESC LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_approval_event WHERE order_id = ? ORDER BY update_at DESC LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_approval_event WHERE total_approve_res = ? AND action = ? ORDER BY update_at DESC LIMIT ? OFFSET ?;"
+    ],
+    "candidate_sql": [
+      "SELECT id, order_id, creator, operator, approver, approve_msg, step_type, approve_res, total_approve_res, approve_time, approve_content, action, create_at, update_at FROM ivc_approval_event ORDER BY update_at DESC LIMIT ? OFFSET ?;",
+      "SELECT id, order_id, creator, operator, approver, approve_msg, step_type, approve_res, total_approve_res, approve_time, approve_content, action, create_at, update_at FROM ivc_approval_event WHERE id = ? AND creator = ? AND action = ? ORDER BY update_at DESC LIMIT ? OFFSET ?;",
+      "SELECT id, order_id, creator, operator, approver, approve_msg, step_type, approve_res, total_approve_res, approve_time, approve_content, action, create_at, update_at FROM ivc_approval_event WHERE id = ? ORDER BY update_at DESC LIMIT ? OFFSET ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT * FROM ivc_approval_event ORDER BY update_at DESC LIMIT ? OFFSET ?;"
+    ],
+    "missing": [
+      "SELECT * FROM ivc_approval_event WHERE total_approve_res = ? AND action = ? ORDER BY update_at DESC LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_approval_event WHERE creator = ? ORDER BY update_at DESC LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_approval_event WHERE order_id = ? ORDER BY update_at DESC LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_approval_event WHERE order_id = ? AND creator = ? ORDER BY update_at DESC LIMIT ? OFFSET ?;"
+    ],
+    "extra": [
+      "SELECT id, order_id, creator, operator, approver, approve_msg, step_type, approve_res, total_approve_res, approve_time, approve_content, action, create_at, update_at FROM ivc_approval_event WHERE id = ? AND creator = ? AND action = ? ORDER BY update_at DESC LIMIT ? OFFSET ?;",
+      "SELECT id, order_id, creator, operator, approver, approve_msg, step_type, approve_res, total_approve_res, approve_time, approve_content, action, create_at, update_at FROM ivc_approval_event WHERE id = ? ORDER BY update_at DESC LIMIT ? OFFSET ?;"
+    ],
+    "metrics": {
+      "baseline": 5,
+      "candidate": 3,
+      "common": 1,
+      "missing": 4,
+      "extra": 2
+    },
+    "human_review": "不同变体导致的"
+  },
+  {
+    "func_name": "FindApprovalEventListCount",
+    "code_line": "323",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_approval_event` WHERE `creator` = ? AND `action` = ? AND `approve_res` IN (?, ?);",
+      "SELECT COUNT(*) FROM `ivc_approval_event` WHERE `creator` = ?;",
+      "SELECT COUNT(*) FROM `ivc_approval_event` WHERE `order_id` = ? AND `total_approve_res` = ?;",
+      "SELECT COUNT(*) FROM `ivc_approval_event`;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_approval_event WHERE id = ? AND creator = ? AND action = ? AND total_approve_res = ? AND order_id = ?;",
+      "SELECT count(*) FROM ivc_approval_event WHERE id = ?;",
+      "SELECT count(*) FROM ivc_approval_event;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_approval_event`;"
+    ],
+    "missing": [
+      "SELECT COUNT(*) FROM `ivc_approval_event` WHERE `creator` = ?;",
+      "SELECT COUNT(*) FROM `ivc_approval_event` WHERE `creator` = ? AND `action` = ? AND `approve_res` IN (?, ?);",
+      "SELECT COUNT(*) FROM `ivc_approval_event` WHERE `order_id` = ? AND `total_approve_res` = ?;"
+    ],
+    "extra": [
+      "SELECT count(*) FROM ivc_approval_event WHERE id = ?;",
+      "SELECT count(*) FROM ivc_approval_event WHERE id = ? AND creator = ? AND action = ? AND total_approve_res = ? AND order_id = ?;"
+    ],
+    "metrics": {
+      "baseline": 4,
+      "candidate": 3,
+      "common": 1,
+      "missing": 3,
+      "extra": 2
+    },
+    "human_review": "不同变体导致的"
+  },
+  {
+    "func_name": "FindBillingUserCount",
+    "code_line": "145",
+    "baseline_sql": [
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.date BETWEEN ? AND ?;",
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND B.big_customer = 0 AND A.date BETWEEN ? AND ?;",
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND B.big_customer = 1 AND A.date BETWEEN ? AND ?;",
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND B.corporate = 0 AND A.date BETWEEN ? AND ?;",
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND B.corporate = 1 AND A.date BETWEEN ? AND ?;",
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND B.internal = 0 AND A.date BETWEEN ? AND ?;",
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND B.internal = 1 AND A.date BETWEEN ? AND ?;"
+    ],
+    "candidate_sql": [
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.date BETWEEN ? AND ?;",
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND B.big_customer=? AND A.date BETWEEN ? AND ?;",
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND B.corporate=? AND A.date BETWEEN ? AND ?;",
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND B.internal=? AND A.date BETWEEN ? AND ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND B.corporate = 0 AND A.date BETWEEN ? AND ?;",
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.date BETWEEN ? AND ?;",
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND B.big_customer = 1 AND A.date BETWEEN ? AND ?;",
+      "SELECT DISTINCT A.app_id as app_id FROM iss_postpay_bill as A JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND B.internal = 1 AND A.date BETWEEN ? AND ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 4,
+      "candidate": 4,
+      "common": 4,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindBlockerUsers",
+    "code_line": "33",
+    "baseline_sql": [
+      "SELECT id, app_id, uin, name, describe, created_at FROM ivc_blocker_user ORDER BY id LIMIT 10 OFFSET 0;",
+      "SELECT id, app_id, uin, name, describe, created_at FROM ivc_blocker_user WHERE app_id = 123 ORDER BY id LIMIT 10 OFFSET 0;",
+      "SELECT id, app_id, uin, name, describe, created_at FROM ivc_blocker_user WHERE name LIKE '%test%' ORDER BY id LIMIT 10 OFFSET 0;",
+      "SELECT id, app_id, uin, name, describe, created_at FROM ivc_blocker_user WHERE uin = 'U123456' ORDER BY id LIMIT 10 OFFSET 0;"
+    ],
+    "candidate_sql": [
+      "SELECT id, app_id, uin, name, describe, created_at FROM ivc_blocker_user ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT id, app_id, uin, name, describe, created_at FROM ivc_blocker_user WHERE app_id = ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT id, app_id, uin, name, describe, created_at FROM ivc_blocker_user WHERE name LIKE ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT id, app_id, uin, name, describe, created_at FROM ivc_blocker_user WHERE uin = ? ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT id, app_id, uin, name, describe, created_at FROM ivc_blocker_user WHERE app_id = 123 ORDER BY id LIMIT 10 OFFSET 0;",
+      "SELECT id, app_id, uin, name, describe, created_at FROM ivc_blocker_user WHERE name LIKE '%test%' ORDER BY id LIMIT 10 OFFSET 0;",
+      "SELECT id, app_id, uin, name, describe, created_at FROM ivc_blocker_user WHERE uin = 'U123456' ORDER BY id LIMIT 10 OFFSET 0;",
+      "SELECT id, app_id, uin, name, describe, created_at FROM ivc_blocker_user ORDER BY id LIMIT 10 OFFSET 0;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 4,
+      "candidate": 4,
+      "common": 4,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindBucketWhitelistCount",
+    "code_line": "66",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_bucket_whitelist` WHERE `region` = ? AND `app_id` = ? AND `name` LIKE ?;",
+      "SELECT COUNT(*) FROM `ivc_bucket_whitelist` WHERE `region` = ? AND `app_id` = ?;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_bucket_whitelist WHERE app_id = ? AND bucket_id = ? AND region = ? AND name LIKE ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "SELECT COUNT(*) FROM `ivc_bucket_whitelist` WHERE `region` = ? AND `app_id` = ?;",
+      "SELECT COUNT(*) FROM `ivc_bucket_whitelist` WHERE `region` = ? AND `app_id` = ? AND `name` LIKE ?;"
+    ],
+    "extra": [
+      "SELECT count(*) FROM ivc_bucket_whitelist WHERE app_id = ? AND bucket_id = ? AND region = ? AND name LIKE ?;"
+    ],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 1,
+      "common": 0,
+      "missing": 2,
+      "extra": 1
+    },
+    "human_review": "变体sql导致的"
+  },
+  {
+    "func_name": "FindBucketWhitelists",
+    "code_line": "38",
+    "baseline_sql": [
+      "SELECT * FROM `ivc_bucket_whitelist` WHERE `bucket_id` = ? AND `region` = ? AND `name` LIKE ? ORDER BY `id` LIMIT ? OFFSET ?;",
+      "SELECT * FROM `ivc_bucket_whitelist` WHERE `bucket_id` = ? AND `region` = ? ORDER BY `id` LIMIT ? OFFSET ?;"
+    ],
+    "candidate_sql": [
+      "SELECT id, name, uin, app_id, region, bucket_id, seg_duration, seg_size, describe, create_at, update_at FROM ivc_bucket_whitelist WHERE uin = ? AND app_id = ? AND name LIKE ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT id, name, uin, app_id, region, bucket_id, seg_duration, seg_size, describe, create_at, update_at FROM ivc_bucket_whitelist WHERE uin = ? AND app_id = ? AND region = ? AND bucket_id = ? ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "SELECT * FROM `ivc_bucket_whitelist` WHERE `bucket_id` = ? AND `region` = ? AND `name` LIKE ? ORDER BY `id` LIMIT ? OFFSET ?;",
+      "SELECT * FROM `ivc_bucket_whitelist` WHERE `bucket_id` = ? AND `region` = ? ORDER BY `id` LIMIT ? OFFSET ?;"
+    ],
+    "extra": [
+      "SELECT id, name, uin, app_id, region, bucket_id, seg_duration, seg_size, describe, create_at, update_at FROM ivc_bucket_whitelist WHERE uin = ? AND app_id = ? AND region = ? AND bucket_id = ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT id, name, uin, app_id, region, bucket_id, seg_duration, seg_size, describe, create_at, update_at FROM ivc_bucket_whitelist WHERE uin = ? AND app_id = ? AND name LIKE ? ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 0,
+      "missing": 2,
+      "extra": 2
+    },
+    "human_review": "app_id,name和uin都是互斥条件"
+  },
+  {
+    "func_name": "FindChannelCountByAppId",
+    "code_line": "573",
+    "baseline_sql": [
+      "SELECT COUNT(*) AS counts FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND c.name LIKE ?;",
+      "SELECT COUNT(*) AS counts FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND d.id = ? AND d.access_protocol = ? AND c.state = ? AND c.name LIKE ?;",
+      "SELECT COUNT(*) AS counts FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND d.id = ?;",
+      "SELECT COUNT(*) AS counts FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ?;",
+      "SELECT COUNT(*) AS counts FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.id = ?;",
+      "SELECT COUNT(*) AS counts FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL;"
+    ],
+    "candidate_sql": [
+      "select count(*) as counts from ivc_channel as c inner join ivc_device as d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null and d.app_id=? and d.id=? and d.access_protocol=? and d.status=? and c.state=? and c.id=? and c.name like ?;",
+      "select count(*) as counts from ivc_channel as c inner join ivc_device as d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null and d.app_id=?;",
+      "select count(*) as counts from ivc_channel as c inner join ivc_device as d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null and d.id=?;",
+      "select count(*) as counts from ivc_channel as c inner join ivc_device as d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) AS counts FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ?;",
+      "SELECT COUNT(*) AS counts FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL;"
+    ],
+    "missing": [
+      "SELECT COUNT(*) AS counts FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND c.name LIKE ?;",
+      "SELECT COUNT(*) AS counts FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND d.id = ? AND d.access_protocol = ? AND c.state = ? AND c.name LIKE ?;"
+    ],
+    "extra": [
+      "select count(*) as counts from ivc_channel as c inner join ivc_device as d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null and d.app_id=? and d.id=? and d.access_protocol=? and d.status=? and c.state=? and c.id=? and c.name like ?;"
+    ],
+    "metrics": {
+      "baseline": 4,
+      "candidate": 3,
+      "common": 2,
+      "missing": 2,
+      "extra": 1
+    },
+    "human_review": "变体sql导致的"
+  },
+  {
+    "func_name": "FindChannelStatsByAppId",
+    "code_line": "319",
+    "baseline_sql": [
+      "SELECT d.access_protocol, d.status AS device_status, SUM(c.state = 0) AS offline_channel_num, SUM(c.state = 1) AS online_channel_num FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? GROUP BY d.access_protocol, d.status;",
+      "SELECT d.access_protocol, d.status AS device_status, SUM(c.state = 0) AS offline_channel_num, SUM(c.state = 1) AS online_channel_num FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL GROUP BY d.access_protocol, d.status;"
+    ],
+    "candidate_sql": [
+      "select d.access_protocol, d.status as device_status, SUM(c.state = 0) as offline_channel_num, SUM(c.state = 1) as online_channel_num from ivc_channel as c inner join ivc_device as d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null and d.app_id = ? group by d.access_protocol,d.status;",
+      "select d.access_protocol, d.status as device_status, SUM(c.state = 0) as offline_channel_num, SUM(c.state = 1) as online_channel_num from ivc_channel as c inner join ivc_device as d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null group by d.access_protocol,d.status;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT d.access_protocol, d.status AS device_status, SUM(c.state = 0) AS offline_channel_num, SUM(c.state = 1) AS online_channel_num FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? GROUP BY d.access_protocol, d.status;",
+      "SELECT d.access_protocol, d.status AS device_status, SUM(c.state = 0) AS offline_channel_num, SUM(c.state = 1) AS online_channel_num FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL GROUP BY d.access_protocol, d.status;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindChannelsByAppId",
+    "code_line": "537",
+    "baseline_sql": [
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at is null and c.deleted_at is null AND d.app_id = ? AND c.id = ? ORDER BY c.id LIMIT ? OFFSET ?;",
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at is null and c.deleted_at is null AND d.app_id = ? AND c.name LIKE ? ORDER BY c.id LIMIT ? OFFSET ?;",
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at is null and c.deleted_at is null AND d.app_id = ? AND c.state = ? ORDER BY c.id LIMIT ? OFFSET ?;",
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at is null and c.deleted_at is null AND d.app_id = ? AND d.access_protocol = ? ORDER BY c.id LIMIT ? OFFSET ?;",
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at is null and c.deleted_at is null AND d.app_id = ? AND d.id = ? AND d.access_protocol = ? AND d.status = ? ORDER BY c.id LIMIT ? OFFSET ?;",
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at is null and c.deleted_at is null AND d.app_id = ? AND d.id = ? ORDER BY c.id LIMIT ? OFFSET ?;",
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at is null and c.deleted_at is null AND d.app_id = ? AND d.status = ? ORDER BY c.id LIMIT ? OFFSET ?;",
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at is null and c.deleted_at is null AND d.app_id = ? ORDER BY c.id LIMIT ? OFFSET ?;"
+    ],
+    "candidate_sql": [
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND d.id = ? AND d.access_protocol = ? AND d.status = ? AND c.state = ? AND c.id = ? AND c.name LIKE ? ORDER BY c.id LIMIT ? OFFSET ?;",
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.id = ? AND d.access_protocol = ? AND d.status = ? AND c.state = ? AND c.id = ? AND c.name LIKE ? ORDER BY c.id LIMIT ? OFFSET ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at is null and c.deleted_at is null AND d.app_id = ? AND d.id = ? ORDER BY c.id LIMIT ? OFFSET ?;",
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at is null and c.deleted_at is null AND d.app_id = ? AND d.access_protocol = ? ORDER BY c.id LIMIT ? OFFSET ?;",
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at is null and c.deleted_at is null AND d.app_id = ? AND c.name LIKE ? ORDER BY c.id LIMIT ? OFFSET ?;",
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at is null and c.deleted_at is null AND d.app_id = ? AND d.status = ? ORDER BY c.id LIMIT ? OFFSET ?;",
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at is null and c.deleted_at is null AND d.app_id = ? AND c.state = ? ORDER BY c.id LIMIT ? OFFSET ?;",
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at is null and c.deleted_at is null AND d.app_id = ? AND d.id = ? AND d.access_protocol = ? AND d.status = ? ORDER BY c.id LIMIT ? OFFSET ?;"
+    ],
+    "extra": [
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.id = ? AND d.access_protocol = ? AND d.status = ? AND c.state = ? AND c.id = ? AND c.name LIKE ? ORDER BY c.id LIMIT ? OFFSET ?;",
+      "SELECT c.id, c.code, c.name, c.state, c.device_id, c.ptz_type, d.name as device_name, d.code as device_code, d.access_protocol, d.status, c.created_at, c.updated_at FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND d.id = ? AND d.access_protocol = ? AND d.status = ? AND c.state = ? AND c.id = ? AND c.name LIKE ? ORDER BY c.id LIMIT ? OFFSET ?;"
+    ],
+    "metrics": {
+      "baseline": 6,
+      "candidate": 2,
+      "common": 0,
+      "missing": 6,
+      "extra": 2
+    },
+    "human_review": "变体sql导致的"
+  },
+  {
+    "func_name": "FindCloudRecordTimelineWhitelists",
+    "code_line": "61",
+    "baseline_sql": [
+      "SELECT * FROM `ivc_cloudrecord_timeline_whitelist` WHERE `app_id` = ? AND `uin` = ? AND `name` LIKE ? ORDER BY `id` LIMIT 10 OFFSET 0;",
+      "SELECT * FROM `ivc_cloudrecord_timeline_whitelist` WHERE `app_id` = ? AND `uin` = ? ORDER BY `id` LIMIT 10 OFFSET 0;"
+    ],
+    "candidate_sql": [
+      "SELECT id, name, uin, app_id, created_at, updated_at FROM ivc_cloudrecord_timeline_whitelist WHERE uin = ? AND app_id = ? AND name LIKE ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT id, name, uin, app_id, created_at, updated_at FROM ivc_cloudrecord_timeline_whitelist WHERE uin = ? AND app_id = ? ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT * FROM `ivc_cloudrecord_timeline_whitelist` WHERE `app_id` = ? AND `uin` = ? ORDER BY `id` LIMIT 10 OFFSET 0;",
+      "SELECT * FROM `ivc_cloudrecord_timeline_whitelist` WHERE `app_id` = ? AND `uin` = ? AND `name` LIKE ? ORDER BY `id` LIMIT 10 OFFSET 0;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindDailyReportWhitelists",
+    "code_line": "61",
+    "baseline_sql": [
+      "SELECT * FROM ivc_dailyreport_whitelist WHERE app_id = 123 AND uin = 'user123' ORDER BY id LIMIT 10 OFFSET 0;",
+      "SELECT * FROM ivc_dailyreport_whitelist WHERE name LIKE '%test%' AND app_id = 123 AND uin = 'user123' ORDER BY id LIMIT 10 OFFSET 0;"
+    ],
+    "candidate_sql": [],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "SELECT * FROM ivc_dailyreport_whitelist WHERE app_id = 123 AND uin = 'user123' ORDER BY id LIMIT 10 OFFSET 0;",
+      "SELECT * FROM ivc_dailyreport_whitelist WHERE name LIKE '%test%' AND app_id = 123 AND uin = 'user123' ORDER BY id LIMIT 10 OFFSET 0;"
+    ],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 0,
+      "common": 0,
+      "missing": 2,
+      "extra": 0
+    },
+    "human_review": "元信息不包含表结构映射数据，小模型不适配re-extract问题"
+  },
+  {
+    "func_name": "FindDeviceChannelsByAppId",
+    "code_line": "462",
+    "baseline_sql": [
+      "SELECT c.device_id, count(*) as counts FROM ivc_channel c INNER JOIN ivc_device d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? GROUP BY c.device_id;",
+      "SELECT c.device_id, count(*) as counts FROM ivc_channel c INNER JOIN ivc_device d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL GROUP BY c.device_id;"
+    ],
+    "candidate_sql": [
+      "select c.device_id, count(*) as counts from ivc_channel c inner join ivc_device d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null and d.app_id = ? group by c.device_id;",
+      "select c.device_id, count(*) as counts from ivc_channel c inner join ivc_device d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null group by c.device_id;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT c.device_id, count(*) as counts FROM ivc_channel c INNER JOIN ivc_device d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? GROUP BY c.device_id;",
+      "SELECT c.device_id, count(*) as counts FROM ivc_channel c INNER JOIN ivc_device d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL GROUP BY c.device_id;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindDeviceCountByAppId",
+    "code_line": "451",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM ivc_device WHERE app_id = '123' AND deleted_at IS NULL;",
+      "SELECT COUNT(*) FROM ivc_device WHERE app_id = '123' AND status = 1 AND type = 'camera' AND deleted_at IS NULL;",
+      "SELECT COUNT(*) FROM ivc_device WHERE created_at > '2023-01-01' AND deleted_at IS NULL;",
+      "SELECT COUNT(*) FROM ivc_device WHERE deleted_at IS NULL;",
+      "SELECT COUNT(*) FROM ivc_device WHERE status = 1 AND deleted_at IS NULL;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_device WHERE deleted_at is null;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM ivc_device WHERE deleted_at IS NULL;"
+    ],
+    "missing": [
+      "SELECT COUNT(*) FROM ivc_device WHERE status = 1 AND deleted_at IS NULL;",
+      "SELECT COUNT(*) FROM ivc_device WHERE app_id = '123' AND deleted_at IS NULL;",
+      "SELECT COUNT(*) FROM ivc_device WHERE app_id = '123' AND status = 1 AND type = 'camera' AND deleted_at IS NULL;",
+      "SELECT COUNT(*) FROM ivc_device WHERE created_at > '2023-01-01' AND deleted_at IS NULL;"
+    ],
+    "extra": [],
+    "metrics": {
+      "baseline": 5,
+      "candidate": 1,
+      "common": 1,
+      "missing": 4,
+      "extra": 0
+    },
+    "human_review": "变体sql较少"
+  },
+  {
+    "func_name": "FindDeviceCountByFilter",
+    "code_line": "409",
+    "baseline_sql": [
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND access_protocol=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND app_id=? AND id=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND app_id=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND cluster_id in (?) AND status=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND cluster_id in (?);",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND cluster_id=? AND access_protocol=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND cluster_id=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND code=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND id=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND name like ? AND status=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND name like ?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND status=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND app_id=? AND cluster_id=? AND status=? AND name like ?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND app_id=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND cluster_id in (?);",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND name like ?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND name like ?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND cluster_id=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND app_id=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL;"
+    ],
+    "missing": [
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND id=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND code=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND status=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND cluster_id in (?) AND status=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND cluster_id=? AND access_protocol=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND name like ? AND status=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND access_protocol=?;",
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND app_id=? AND id=?;"
+    ],
+    "extra": [
+      "SELECT count(*) as counts FROM ivc_device WHERE deleted_at is NULL AND app_id=? AND cluster_id=? AND status=? AND name like ?;"
+    ],
+    "metrics": {
+      "baseline": 12,
+      "candidate": 5,
+      "common": 4,
+      "missing": 8,
+      "extra": 1
+    },
+    "human_review": "变体sql导致的"
+  },
+  {
+    "func_name": "FindDevicesByAppIdBak",
+    "code_line": "347",
+    "baseline_sql": [
+      "SELECT * FROM ivc_device WHERE app_id = '123' AND deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE app_id = '123' AND status = 1 AND deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE id IN (1, 2, 3) AND deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "candidate_sql": [
+      "SELECT id, name, code, access_protocol, type, status, cluster_id, cluster_name, region, created_at, updated_at FROM ivc_device WHERE cluster_id = ? AND deleted_at is null ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT id, name, code, access_protocol, type, status, cluster_id, cluster_name, region, created_at, updated_at FROM ivc_device WHERE deleted_at is null ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT * FROM ivc_device WHERE deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "missing": [
+      "SELECT * FROM ivc_device WHERE id IN (1, 2, 3) AND deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE app_id = '123' AND status = 1 AND deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE app_id = '123' AND deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "extra": [
+      "SELECT id, name, code, access_protocol, type, status, cluster_id, cluster_name, region, created_at, updated_at FROM ivc_device WHERE cluster_id = ? AND deleted_at is null ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "metrics": {
+      "baseline": 4,
+      "candidate": 2,
+      "common": 1,
+      "missing": 3,
+      "extra": 1
+    },
+    "human_review": "死代码，没有caller"
+  },
+  {
+    "func_name": "FindDevicesByFilter",
+    "code_line": "362",
+    "baseline_sql": [
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND access_protocol=? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND app_id=? AND name like ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND app_id=? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND cluster_id in (?, ?) ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND cluster_id=? AND status=? AND access_protocol=? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND cluster_id=? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND code=? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND id=? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND name like ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND status=? ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "candidate_sql": [
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND app_id=? AND cluster_id=? AND status=? AND name like ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND app_id=? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND cluster_id in (?) ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND name like ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND name like ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND cluster_id in (?, ?) ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND app_id=? ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "missing": [
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND app_id=? AND name like ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND id=? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND code=? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND status=? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND cluster_id=? AND status=? AND access_protocol=? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND access_protocol=? ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "extra": [
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL AND app_id=? AND cluster_id=? AND status=? AND name like ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_device WHERE deleted_at is NULL ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "metrics": {
+      "baseline": 9,
+      "candidate": 5,
+      "common": 3,
+      "missing": 6,
+      "extra": 2
+    },
+    "human_review": "变体sql导致的"
+  },
+  {
+    "func_name": "FindFlowControlConfList",
+    "code_line": "288",
+    "baseline_sql": [
+      "SELECT * FROM `ivc_down_bandwidth_conf` WHERE `appid` = ?;",
+      "SELECT * FROM `ivc_down_bandwidth_conf` WHERE `cluster_id` = ? AND `appid` = ?;",
+      "SELECT * FROM `ivc_down_bandwidth_conf` WHERE `cluster_id` = ?;",
+      "SELECT * FROM `ivc_down_bandwidth_conf` WHERE `down_bandwidth_limit` = ? AND `download_bandwidth_limit` = ?;",
+      "SELECT * FROM `ivc_down_bandwidth_conf`;"
+    ],
+    "candidate_sql": [
+      "SELECT id, cluster_id, appid, down_bandwidth_limit, download_bandwidth_limit, download_connect_count_limit, download_speed_limit FROM ivc_down_bandwidth_conf WHERE appid = ? AND cluster_id = ?;",
+      "SELECT id, cluster_id, appid, down_bandwidth_limit, download_bandwidth_limit, download_connect_count_limit, download_speed_limit FROM ivc_down_bandwidth_conf WHERE appid = ?;",
+      "SELECT id, cluster_id, appid, down_bandwidth_limit, download_bandwidth_limit, download_connect_count_limit, download_speed_limit FROM ivc_down_bandwidth_conf WHERE cluster_id = ?;",
+      "SELECT id, cluster_id, appid, down_bandwidth_limit, download_bandwidth_limit, download_connect_count_limit, download_speed_limit FROM ivc_down_bandwidth_conf;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT * FROM `ivc_down_bandwidth_conf`;",
+      "SELECT * FROM `ivc_down_bandwidth_conf` WHERE `cluster_id` = ?;",
+      "SELECT * FROM `ivc_down_bandwidth_conf` WHERE `cluster_id` = ? AND `appid` = ?;",
+      "SELECT * FROM `ivc_down_bandwidth_conf` WHERE `appid` = ?;"
+    ],
+    "missing": [
+      "SELECT * FROM `ivc_down_bandwidth_conf` WHERE `down_bandwidth_limit` = ? AND `download_bandwidth_limit` = ?;"
+    ],
+    "extra": [],
+    "metrics": {
+      "baseline": 5,
+      "candidate": 4,
+      "common": 4,
+      "missing": 1,
+      "extra": 0
+    },
+    "human_review": "变体sql导致的"
+  },
+  {
+    "func_name": "FindGBinviteWhitelists",
+    "code_line": "40",
+    "baseline_sql": [
+      "SELECT * FROM ivc_gb_invite_whitelist WHERE app_id = 123 AND uin = 'user123' ORDER BY id LIMIT 10 OFFSET 0;",
+      "SELECT * FROM ivc_gb_invite_whitelist WHERE name LIKE '%test%' AND app_id = 123 ORDER BY id LIMIT 10 OFFSET 0;"
+    ],
+    "candidate_sql": [
+      "SELECT id, name, uin, app_id, created_at FROM ivc_gb_invite_whitelist ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT id, name, uin, app_id, created_at FROM ivc_gb_invite_whitelist WHERE name LIKE ? AND uin = ? AND app_id = ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT id, name, uin, app_id, created_at FROM ivc_gb_invite_whitelist WHERE uin = ? AND app_id = ? ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT * FROM ivc_gb_invite_whitelist WHERE app_id = 123 AND uin = 'user123' ORDER BY id LIMIT 10 OFFSET 0;"
+    ],
+    "missing": [
+      "SELECT * FROM ivc_gb_invite_whitelist WHERE name LIKE '%test%' AND app_id = 123 ORDER BY id LIMIT 10 OFFSET 0;"
+    ],
+    "extra": [
+      "SELECT id, name, uin, app_id, created_at FROM ivc_gb_invite_whitelist WHERE name LIKE ? AND uin = ? AND app_id = ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT id, name, uin, app_id, created_at FROM ivc_gb_invite_whitelist ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 3,
+      "common": 1,
+      "missing": 1,
+      "extra": 2
+    },
+    "human_review": "app_id,name和uin都是互斥条件"
+  },
+  {
+    "func_name": "FindIntranetWhitelistCount",
+    "code_line": "49",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_intranet_whitelist` WHERE `app_id` = ? AND `cluster_id` = ? AND `name` LIKE ?;",
+      "SELECT COUNT(*) FROM `ivc_intranet_whitelist` WHERE `app_id` = ? AND `cluster_id` = ?;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_intranet_whitelist WHERE app_id = ? AND cluster_id = ? AND name like ?;",
+      "SELECT count(*) FROM ivc_intranet_whitelist WHERE app_id = ? AND cluster_id = ? AND uin = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_intranet_whitelist` WHERE `app_id` = ? AND `cluster_id` = ? AND `name` LIKE ?;"
+    ],
+    "missing": [
+      "SELECT COUNT(*) FROM `ivc_intranet_whitelist` WHERE `app_id` = ? AND `cluster_id` = ?;"
+    ],
+    "extra": [
+      "SELECT count(*) FROM ivc_intranet_whitelist WHERE app_id = ? AND cluster_id = ? AND uin = ?;"
+    ],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 1,
+      "missing": 1,
+      "extra": 1
+    },
+    "human_review": "app_id,name和uin都是互斥条件"
+  },
+  {
+    "func_name": "FindIntranetWhitelists",
+    "code_line": "21",
+    "baseline_sql": [
+      "SELECT * FROM `ivc_intranet_whitelist` WHERE `app_id` = ? AND `cluster_id` = ? AND `name` LIKE ? ORDER BY `id` LIMIT ? OFFSET ?;",
+      "SELECT * FROM `ivc_intranet_whitelist` WHERE `app_id` = ? AND `uin` = ? ORDER BY `id` LIMIT ? OFFSET ?;"
+    ],
+    "candidate_sql": [
+      "SELECT id, name, uin, app_id, cluster_id, intranet_addr, describe, create_at, update_at FROM ivc_intranet_whitelist WHERE uin = ? AND cluster_id = ? AND app_id = ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT id, name, uin, app_id, cluster_id, intranet_addr, describe, create_at, update_at FROM ivc_intranet_whitelist WHERE uin = ? AND cluster_id = ? AND name LIKE ? ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "SELECT * FROM `ivc_intranet_whitelist` WHERE `app_id` = ? AND `uin` = ? ORDER BY `id` LIMIT ? OFFSET ?;",
+      "SELECT * FROM `ivc_intranet_whitelist` WHERE `app_id` = ? AND `cluster_id` = ? AND `name` LIKE ? ORDER BY `id` LIMIT ? OFFSET ?;"
+    ],
+    "extra": [
+      "SELECT id, name, uin, app_id, cluster_id, intranet_addr, describe, create_at, update_at FROM ivc_intranet_whitelist WHERE uin = ? AND cluster_id = ? AND app_id = ? ORDER BY id LIMIT ? OFFSET ?;",
+      "SELECT id, name, uin, app_id, cluster_id, intranet_addr, describe, create_at, update_at FROM ivc_intranet_whitelist WHERE uin = ? AND cluster_id = ? AND name LIKE ? ORDER BY id LIMIT ? OFFSET ?;"
+    ],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 0,
+      "missing": 2,
+      "extra": 2
+    },
+    "human_review": "app_id,name和uin都是互斥条件"
+  },
+  {
+    "func_name": "FindKeys",
+    "code_line": "223",
+    "baseline_sql": [
+      "SELECT license_key FROM ivc_player_license WHERE id IN (?) AND effective_time IS NULL AND delete_time IS NULL;"
+    ],
+    "candidate_sql": [
+      "SELECT license_key FROM ivc_player_license WHERE id IN (?) AND effective_time IS NULL AND delete_time IS NULL;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT license_key FROM ivc_player_license WHERE id IN (?) AND effective_time IS NULL AND delete_time IS NULL;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindLicenses",
+    "code_line": "209",
+    "baseline_sql": [
+      "SELECT id, appid, license_key, type, features, technologies, valid_days, disable_domain_restrictions, domain_whitelist, effective_time FROM ivc_player_license WHERE delete_time is null AND appid = ? AND type = ? LIMIT ? OFFSET ?;",
+      "SELECT id, appid, license_key, type, features, technologies, valid_days, disable_domain_restrictions, domain_whitelist, effective_time FROM ivc_player_license WHERE delete_time is null AND appid = ? LIMIT ? OFFSET ?;",
+      "SELECT id, appid, license_key, type, features, technologies, valid_days, disable_domain_restrictions, domain_whitelist, effective_time FROM ivc_player_license WHERE delete_time is null LIMIT ? OFFSET ?;"
+    ],
+    "candidate_sql": [
+      "SELECT id, appid, license_key, type, features, technologies, valid_days, disable_domain_restrictions, domain_whitelist, effective_time FROM ivc_player_license WHERE delete_time is null AND appid = ? OFFSET ? LIMIT ?;",
+      "SELECT id, appid, license_key, type, features, technologies, valid_days, disable_domain_restrictions, domain_whitelist, effective_time FROM ivc_player_license WHERE delete_time is null OFFSET ? LIMIT ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT id, appid, license_key, type, features, technologies, valid_days, disable_domain_restrictions, domain_whitelist, effective_time FROM ivc_player_license WHERE delete_time is null AND appid = ? LIMIT ? OFFSET ?;",
+      "SELECT id, appid, license_key, type, features, technologies, valid_days, disable_domain_restrictions, domain_whitelist, effective_time FROM ivc_player_license WHERE delete_time is null LIMIT ? OFFSET ?;"
+    ],
+    "missing": [
+      "SELECT id, appid, license_key, type, features, technologies, valid_days, disable_domain_restrictions, domain_whitelist, effective_time FROM ivc_player_license WHERE delete_time is null AND appid = ? AND type = ? LIMIT ? OFFSET ?;"
+    ],
+    "extra": [],
+    "metrics": {
+      "baseline": 3,
+      "candidate": 2,
+      "common": 2,
+      "missing": 1,
+      "extra": 0
+    },
+    "human_review": "变体sql导致的"
+  },
+  {
+    "func_name": "FindMediaWhitelistCount",
+    "code_line": "60",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_media_whitelist` WHERE `app_id` = ? AND `cluster_id` = ? AND `name` LIKE ?;",
+      "SELECT COUNT(*) FROM `ivc_media_whitelist` WHERE `app_id` = ? AND `cluster_id` = ?;",
+      "SELECT COUNT(*) FROM `ivc_media_whitelist` WHERE `name` LIKE ?;",
+      "SELECT COUNT(*) FROM `ivc_media_whitelist`;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_media_whitelist WHERE app_id = ? AND cluster_id = ? AND name LIKE ?; -- 或 SELECT count(*) FROM ivc_media_whitelist WHERE uin = ? AND cluster_id = ? AND name LIKE ?; -- 或 SELECT count(*) FROM ivc_media_whitelist WHERE name = ? AND cluster_id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_media_whitelist` WHERE `app_id` = ? AND `cluster_id` = ? AND `name` LIKE ?;"
+    ],
+    "missing": [
+      "SELECT COUNT(*) FROM `ivc_media_whitelist` WHERE `name` LIKE ?;",
+      "SELECT COUNT(*) FROM `ivc_media_whitelist` WHERE `app_id` = ? AND `cluster_id` = ?;",
+      "SELECT COUNT(*) FROM `ivc_media_whitelist`;"
+    ],
+    "extra": [],
+    "metrics": {
+      "baseline": 4,
+      "candidate": 1,
+      "common": 1,
+      "missing": 3,
+      "extra": 0
+    },
+    "human_review": "变体sql较少"
+  },
+  {
+    "func_name": "FindMediaWhitelists",
+    "code_line": "32",
+    "baseline_sql": [
+      "SELECT * FROM `ivc_media_whitelist` WHERE `app_id` = 123 AND `cluster_id` = 'abc' AND `name` LIKE '%test%' ORDER BY `id` LIMIT 10 OFFSET 0;",
+      "SELECT * FROM `ivc_media_whitelist` WHERE `app_id` = 123 AND `cluster_id` = 'abc' ORDER BY `id` LIMIT 20 OFFSET 20;"
+    ],
+    "candidate_sql": [
+      "SELECT id, name, uin, app_id, cluster_id, gb_media_addr, rtmp_media_addr, describe, create_at, update_at FROM ivc_media_whitelist WHERE uin = ? AND app_id = ? AND cluster_id = ? ORDER BY id LIMIT 5 OFFSET 5;",
+      "SELECT id, name, uin, app_id, cluster_id, gb_media_addr, rtmp_media_addr, describe, create_at, update_at FROM ivc_media_whitelist WHERE uin = ? AND cluster_id = ? AND name LIKE ? ORDER BY id LIMIT 10 OFFSET 0;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "SELECT * FROM `ivc_media_whitelist` WHERE `app_id` = 123 AND `cluster_id` = 'abc' AND `name` LIKE '%test%' ORDER BY `id` LIMIT 10 OFFSET 0;",
+      "SELECT * FROM `ivc_media_whitelist` WHERE `app_id` = 123 AND `cluster_id` = 'abc' ORDER BY `id` LIMIT 20 OFFSET 20;"
+    ],
+    "extra": [
+      "SELECT id, name, uin, app_id, cluster_id, gb_media_addr, rtmp_media_addr, describe, create_at, update_at FROM ivc_media_whitelist WHERE uin = ? AND app_id = ? AND cluster_id = ? ORDER BY id LIMIT 5 OFFSET 5;",
+      "SELECT id, name, uin, app_id, cluster_id, gb_media_addr, rtmp_media_addr, describe, create_at, update_at FROM ivc_media_whitelist WHERE uin = ? AND cluster_id = ? AND name LIKE ? ORDER BY id LIMIT 10 OFFSET 0;"
+    ],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 0,
+      "missing": 2,
+      "extra": 2
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindOverallUserStorageByAppIds",
+    "code_line": "648",
+    "baseline_sql": [
+      "select date, sum(online_device) as online_device from ivc_usage_device where date BETWEEN ? AND ? GROUP BY date;",
+      "select date, sum(online_device) as online_device from ivc_usage_device where date BETWEEN ? AND ? and app_id in (?) GROUP BY date;"
+    ],
+    "candidate_sql": [
+      "select date, sum(online_device) as online_device from ivc_usage_device where date BETWEEN ? AND ? GROUP BY date;",
+      "select date, sum(online_device) as online_device from ivc_usage_device where date BETWEEN ? AND ? and app_id in (?) GROUP BY date;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "select date, sum(online_device) as online_device from ivc_usage_device where date BETWEEN ? AND ? and app_id in (?) GROUP BY date;",
+      "select date, sum(online_device) as online_device from ivc_usage_device where date BETWEEN ? AND ? GROUP BY date;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindOwnerUinByAppid",
+    "code_line": "466",
+    "baseline_sql": [
+      "SELECT app_id, uin, name FROM `ivc_user_info` WHERE app_id = ? LIMIT 1;"
+    ],
+    "candidate_sql": [
+      "SELECT uin FROM ivc_user_info WHERE app_id = ? LIMIT 1;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT app_id, uin, name FROM `ivc_user_info` WHERE app_id = ? LIMIT 1;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindPlanChannelsByAppId",
+    "code_line": "223",
+    "baseline_sql": [
+      "SELECT plan_id, count(*) as counts FROM ivc_record_plan_channels GROUP BY plan_id;",
+      "SELECT plan_id, count(*) as counts FROM ivc_record_plan_channels WHERE app_id = 123 GROUP BY plan_id;"
+    ],
+    "candidate_sql": [
+      "SELECT plan_id,count(*) as counts FROM ivc_record_plan_channels GROUP BY plan_id;",
+      "SELECT plan_id,count(*) as counts FROM ivc_record_plan_channels WHERE app_id = ? GROUP BY plan_id;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT plan_id, count(*) as counts FROM ivc_record_plan_channels WHERE app_id = 123 GROUP BY plan_id;",
+      "SELECT plan_id, count(*) as counts FROM ivc_record_plan_channels GROUP BY plan_id;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindPlansByAppId",
+    "code_line": "185",
+    "baseline_sql": [
+      "SELECT * FROM `ivc_record_plan` ORDER BY `plan_id` LIMIT 10 OFFSET 0;",
+      "SELECT * FROM `ivc_record_plan` WHERE `app_id` = 123 ORDER BY `plan_id` LIMIT 20 OFFSET 20;"
+    ],
+    "candidate_sql": [
+      "SELECT plan_id, plan_name, status, stream_type, transition, expiration, describe, create_at, update_at FROM ivc_record_plan ORDER BY plan_id LIMIT ? OFFSET ?;",
+      "SELECT plan_id, plan_name, status, stream_type, transition, expiration, describe, create_at, update_at FROM ivc_record_plan WHERE app_id = ? ORDER BY plan_id LIMIT ? OFFSET ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT * FROM `ivc_record_plan` WHERE `app_id` = 123 ORDER BY `plan_id` LIMIT 20 OFFSET 20;",
+      "SELECT * FROM `ivc_record_plan` ORDER BY `plan_id` LIMIT 10 OFFSET 0;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindQuotasByAppId",
+    "code_line": "64",
+    "baseline_sql": [
+      "SELECT date, field, sum(amount) as amounts FROM iss_postpay_bill WHERE date >= ? AND date <= ? AND cycle = 'Day' GROUP BY date, field;"
+    ],
+    "candidate_sql": [
+      "SELECT date,field,sum(amount) as amounts FROM iss_postpay_bill WHERE app_id = ? AND cycle = 'Day' AND date >= ? AND date <= ? GROUP BY date,field;",
+      "SELECT date,field,sum(amount) as amounts FROM iss_postpay_bill WHERE date >= ? AND date <= ? AND cycle = 'Day' GROUP BY date,field;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT date, field, sum(amount) as amounts FROM iss_postpay_bill WHERE date >= ? AND date <= ? AND cycle = 'Day' GROUP BY date, field;"
+    ],
+    "missing": [],
+    "extra": [
+      "SELECT date,field,sum(amount) as amounts FROM iss_postpay_bill WHERE app_id = ? AND cycle = 'Day' AND date >= ? AND date <= ? GROUP BY date,field;"
+    ],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 2,
+      "common": 1,
+      "missing": 0,
+      "extra": 1
+    },
+    "human_review": "c1覆盖了更多场景"
+  },
+  {
+    "func_name": "FindRateLimitConfList",
+    "code_line": "102",
+    "baseline_sql": [
+      "SELECT * FROM ivc_fcs_fcp WHERE deleted = 0 AND action = 'login';",
+      "SELECT * FROM ivc_fcs_fcp WHERE deleted = 0 AND appid = '12345';",
+      "SELECT * FROM ivc_fcs_fcp WHERE deleted = 0;"
+    ],
+    "candidate_sql": [
+      "SELECT id, action, appid, service_object, speed_limit_model, region_zone, c_time, u_time FROM ivc_fcs_fcp WHERE appid = ? AND deleted = 0;",
+      "SELECT id, action, appid, service_object, speed_limit_model, region_zone, c_time, u_time FROM ivc_fcs_fcp WHERE appid = ? AND region_zone = ? AND deleted = 0;",
+      "SELECT id, action, appid, service_object, speed_limit_model, region_zone, c_time, u_time FROM ivc_fcs_fcp WHERE deleted = 0;",
+      "SELECT id, action, appid, service_object, speed_limit_model, region_zone, c_time, u_time FROM ivc_fcs_fcp WHERE region_zone = ? AND deleted = 0;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT * FROM ivc_fcs_fcp WHERE deleted = 0 AND appid = '12345';",
+      "SELECT * FROM ivc_fcs_fcp WHERE deleted = 0;"
+    ],
+    "missing": [
+      "SELECT * FROM ivc_fcs_fcp WHERE deleted = 0 AND action = 'login';"
+    ],
+    "extra": [
+      "SELECT id, action, appid, service_object, speed_limit_model, region_zone, c_time, u_time FROM ivc_fcs_fcp WHERE region_zone = ? AND deleted = 0;",
+      "SELECT id, action, appid, service_object, speed_limit_model, region_zone, c_time, u_time FROM ivc_fcs_fcp WHERE appid = ? AND region_zone = ? AND deleted = 0;"
+    ],
+    "metrics": {
+      "baseline": 3,
+      "candidate": 4,
+      "common": 2,
+      "missing": 1,
+      "extra": 2
+    },
+    "human_review": "变体sql"
+  },
+  {
+    "func_name": "FindRegisteredUsersCounts",
+    "code_line": "55",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_user_info`;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_user_info;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_user_info`;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindSingleUserBillingByAppId",
+    "code_line": "306",
+    "baseline_sql": [
+      "SELECT date, field, sum(amount) as amounts FROM iss_postpay_bill WHERE app_id = ? AND cycle = 'Day' AND date >= ? AND date <= ? GROUP BY date, field;",
+      "SELECT date, field, sum(amount) as amounts FROM iss_postpay_bill WHERE app_id = ? AND push_status = 'NeedPush' AND cycle = 'Day' AND date >= ? AND date <= ? GROUP BY date, field;"
+    ],
+    "candidate_sql": [
+      "SELECT date,field,sum(amount) as amounts FROM iss_postpay_bill WHERE app_id = ? and cycle = 'Day' AND date >= ? AND date <= ? GROUP BY date,field;",
+      "SELECT date,field,sum(amount) as amounts FROM iss_postpay_bill WHERE app_id = ? and push_status = 'NeedPush' and cycle = 'Day' AND date >= ? AND date <= ? GROUP BY date,field;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT date, field, sum(amount) as amounts FROM iss_postpay_bill WHERE app_id = ? AND push_status = 'NeedPush' AND cycle = 'Day' AND date >= ? AND date <= ? GROUP BY date, field;",
+      "SELECT date, field, sum(amount) as amounts FROM iss_postpay_bill WHERE app_id = ? AND cycle = 'Day' AND date >= ? AND date <= ? GROUP BY date, field;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindSingleUserBillingIncomeByAppId",
+    "code_line": "385",
+    "baseline_sql": [
+      "SELECT date, field, SUM(amount*price) AS amounts FROM iss_postpay_bill WHERE app_id = 1310269012 and push_status = 'NeedPush' and cycle = 'Day' AND date BETWEEN '2023-03-16' AND '2023-03-17' GROUP BY date, field;",
+      "SELECT date, field, SUM(amount*price) AS amounts FROM iss_postpay_bill WHERE app_id = ? and push_status = 'NeedPush' and cycle = 'Day' AND date BETWEEN ? AND ? GROUP BY date, field;"
+    ],
+    "candidate_sql": [
+      "SELECT date, field, SUM(amount*price) AS amounts FROM iss_postpay_bill WHERE app_id = ? and push_status = 'NeedPush' and cycle = 'Day' AND date BETWEEN ? AND ? GROUP BY date, field;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT date, field, SUM(amount*price) AS amounts FROM iss_postpay_bill WHERE app_id = 1310269012 and push_status = 'NeedPush' and cycle = 'Day' AND date BETWEEN '2023-03-16' AND '2023-03-17' GROUP BY date, field;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindSingleUserOnlineDeviceByAppId",
+    "code_line": "336",
+    "baseline_sql": [
+      "SELECT date, sum(online_device) as online_device FROM ivc_usage_device WHERE app_id = ? AND date >= ? AND date <= ? GROUP BY date;"
+    ],
+    "candidate_sql": [
+      "SELECT date, sum(online_device) as online_device FROM ivc_usage_device WHERE app_id = ? AND date >= ? AND date <= ? GROUP BY date;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT date, sum(online_device) as online_device FROM ivc_usage_device WHERE app_id = ? AND date >= ? AND date <= ? GROUP BY date;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindTaskChannelsByAppId",
+    "code_line": "242",
+    "baseline_sql": [
+      "SELECT task_id, count(*) as counts FROM ivc_record_retrieve_task_channel GROUP BY task_id;",
+      "SELECT task_id, count(*) as counts FROM ivc_record_retrieve_task_channel WHERE app_id = ? GROUP BY task_id;"
+    ],
+    "candidate_sql": [
+      "SELECT task_id,count(*) as counts FROM ivc_record_retrieve_task_channel GROUP BY task_id;",
+      "SELECT task_id,count(*) as counts FROM ivc_record_retrieve_task_channel WHERE app_id = ? GROUP BY task_id;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT task_id, count(*) as counts FROM ivc_record_retrieve_task_channel WHERE app_id = ? GROUP BY task_id;",
+      "SELECT task_id, count(*) as counts FROM ivc_record_retrieve_task_channel GROUP BY task_id;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindTasksByAppId",
+    "code_line": "204",
+    "baseline_sql": [
+      "SELECT * FROM ivc_record_retrieve_task ORDER BY task_id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_record_retrieve_task WHERE app_id = ? ORDER BY task_id LIMIT ? OFFSET ?;"
+    ],
+    "candidate_sql": [],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "SELECT * FROM ivc_record_retrieve_task ORDER BY task_id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_record_retrieve_task WHERE app_id = ? ORDER BY task_id LIMIT ? OFFSET ?;"
+    ],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 0,
+      "common": 0,
+      "missing": 2,
+      "extra": 0
+    },
+    "human_review": "元信息不包含表结构映射数据，小模型不适配re-extract问题"
+  },
+  {
+    "func_name": "FindTemplatesByAppId",
+    "code_line": "166",
+    "baseline_sql": [
+      "SELECT * FROM ivc_record_template ORDER BY template_id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_record_template WHERE app_id = ? ORDER BY template_id LIMIT ? OFFSET ?;"
+    ],
+    "candidate_sql": [
+      "SELECT template_id, template_name, describe, create_at, update_at, time_sections FROM ivc_record_template ORDER BY template_id LIMIT ? OFFSET ?;",
+      "SELECT template_id, template_name, describe, create_at, update_at, time_sections FROM ivc_record_template WHERE app_id = ? ORDER BY template_id LIMIT ? OFFSET ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT * FROM ivc_record_template WHERE app_id = ? ORDER BY template_id LIMIT ? OFFSET ?;",
+      "SELECT * FROM ivc_record_template ORDER BY template_id LIMIT ? OFFSET ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindTotalChannelByAppId",
+    "code_line": "203",
+    "baseline_sql": [
+      "SELECT d.access_protocol, COUNT(*) AS total, SUM(c.state = 0) AS offline, SUM(c.state = 1) AS online FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? GROUP BY d.access_protocol;",
+      "SELECT d.access_protocol, COUNT(*) AS total, SUM(c.state = 0) AS offline, SUM(c.state = 1) AS online FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL GROUP BY d.access_protocol;"
+    ],
+    "candidate_sql": [
+      "select d.access_protocol, count(*) as total, SUM(c.state = 0) as offline, SUM(c.state = 1) as online from ivc_channel as c inner join ivc_device as d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null and d.app_id = ? group by d.access_protocol;",
+      "select d.access_protocol, count(*) as total, SUM(c.state = 0) as offline, SUM(c.state = 1) as online from ivc_channel as c inner join ivc_device as d on c.device_id=d.id where d.deleted_at is null and c.deleted_at is null group by d.access_protocol;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT d.access_protocol, COUNT(*) AS total, SUM(c.state = 0) AS offline, SUM(c.state = 1) AS online FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? GROUP BY d.access_protocol;",
+      "SELECT d.access_protocol, COUNT(*) AS total, SUM(c.state = 0) AS offline, SUM(c.state = 1) AS online FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL GROUP BY d.access_protocol;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindTotalChannelList",
+    "code_line": "739",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND c.id = ?;",
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND c.name LIKE ?;",
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND c.state = ?;",
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND d.access_protocol = ?;",
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND d.id = ? AND d.access_protocol = ? AND d.status = ? AND c.state = ? AND c.id = ? AND c.name LIKE ?;",
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND d.id = ?;",
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND d.status = ?;",
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ?;",
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND c.id = ?;",
+      "SELECT count(*) FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND c.name LIKE ?;",
+      "SELECT count(*) FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND c.state = ?;",
+      "SELECT count(*) FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.access_protocol = ?;",
+      "SELECT count(*) FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.id = ? AND d.access_protocol = ? AND d.status = ? AND c.state = ? AND c.id = ? AND c.name LIKE ?;",
+      "SELECT count(*) FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.id = ?;",
+      "SELECT count(*) FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.status = ?;",
+      "SELECT count(*) FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL;"
+    ],
+    "missing": [
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND d.id = ?;",
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND d.access_protocol = ?;",
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND c.name LIKE ?;",
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND d.status = ?;",
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND d.id = ? AND d.access_protocol = ? AND d.status = ? AND c.state = ? AND c.id = ? AND c.name LIKE ?;",
+      "SELECT COUNT(*) FROM ivc_channel AS c INNER JOIN ivc_device AS d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.app_id = ? AND c.state = ?;"
+    ],
+    "extra": [
+      "SELECT count(*) FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND c.name LIKE ?;",
+      "SELECT count(*) FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.id = ? AND d.access_protocol = ? AND d.status = ? AND c.state = ? AND c.id = ? AND c.name LIKE ?;",
+      "SELECT count(*) FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.status = ?;",
+      "SELECT count(*) FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND d.access_protocol = ?;",
+      "SELECT count(*) FROM ivc_channel as c INNER JOIN ivc_device as d ON c.device_id = d.id WHERE d.deleted_at IS NULL AND c.deleted_at IS NULL AND c.state = ?;"
+    ],
+    "metrics": {
+      "baseline": 7,
+      "candidate": 6,
+      "common": 1,
+      "missing": 6,
+      "extra": 5
+    },
+    "human_review": "变体sql"
+  },
+  {
+    "func_name": "FindTotalDeviceByAppId",
+    "code_line": "174",
+    "baseline_sql": [
+      "SELECT access_protocol, count(*) as total, sum(status=0) as unregistered, sum(status=1) as online, sum(status=2) as offline, sum(status=3) as disable FROM ivc_device WHERE deleted_at is null AND app_id = ? GROUP BY access_protocol;",
+      "SELECT access_protocol, count(*) as total, sum(status=0) as unregistered, sum(status=1) as online, sum(status=2) as offline, sum(status=3) as disable FROM ivc_device WHERE deleted_at is null GROUP BY access_protocol;"
+    ],
+    "candidate_sql": [
+      "SELECT access_protocol, count(*) as total, sum(status=0) as unregistered, sum(status=1) as online, sum(status=2) as offline, sum(status=3) as disable FROM ivc_device WHERE deleted_at is null AND app_id = ? GROUP BY access_protocol;",
+      "SELECT access_protocol, count(*) as total, sum(status=0) as unregistered, sum(status=1) as online, sum(status=2) as offline, sum(status=3) as disable FROM ivc_device WHERE deleted_at is null GROUP BY access_protocol;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT access_protocol, count(*) as total, sum(status=0) as unregistered, sum(status=1) as online, sum(status=2) as offline, sum(status=3) as disable FROM ivc_device WHERE deleted_at is null AND app_id = ? GROUP BY access_protocol;",
+      "SELECT access_protocol, count(*) as total, sum(status=0) as unregistered, sum(status=1) as online, sum(status=2) as offline, sum(status=3) as disable FROM ivc_device WHERE deleted_at is null GROUP BY access_protocol;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindTotalPlanByAppId",
+    "code_line": "108",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM ivc_record_plan WHERE app_id = ? AND status = 1;",
+      "SELECT COUNT(*) FROM ivc_record_plan WHERE status = 1;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_record_plan WHERE app_id = ? AND status = ?;",
+      "SELECT count(*) FROM ivc_record_plan WHERE status = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM ivc_record_plan WHERE app_id = ? AND status = 1;",
+      "SELECT COUNT(*) FROM ivc_record_plan WHERE status = 1;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindTotalTaskByAppId",
+    "code_line": "127",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM ivc_record_retrieve_task WHERE app_id = ?;",
+      "SELECT COUNT(*) FROM ivc_record_retrieve_task;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_record_retrieve_task WHERE app_id = ?;",
+      "SELECT count(*) FROM ivc_record_retrieve_task;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM ivc_record_retrieve_task;",
+      "SELECT COUNT(*) FROM ivc_record_retrieve_task WHERE app_id = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindTotalTemplateByAppId",
+    "code_line": "147",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM ivc_record_template WHERE app_id = 123;",
+      "SELECT COUNT(*) FROM ivc_record_template;"
+    ],
+    "candidate_sql": [
+      "SELECT COUNT(*) FROM ivc_record_template WHERE app_id = ?;",
+      "SELECT COUNT(*) FROM ivc_record_template;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM ivc_record_template WHERE app_id = 123;",
+      "SELECT COUNT(*) FROM ivc_record_template;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindUserActualIncomeByAppIds",
+    "code_line": "554",
+    "baseline_sql": [
+      "SELECT sum(actual_consume)/100 as actual_income, sum(prepaid_consume)/100 as prepaid_income FROM ivc_user_consume WHERE date BETWEEN '2023-09-13' AND '2023-09-14' AND app_id in (1310269012);",
+      "SELECT sum(actual_consume)/100 as actual_income, sum(prepaid_consume)/100 as prepaid_income FROM ivc_user_consume WHERE date BETWEEN '2023-09-13' AND '2023-09-14' AND app_id in (1310269012,1317026463);"
+    ],
+    "candidate_sql": [
+      "/* P=IVC_URS,f=...,i=...,o=...,a=...,s=... */ select sum(actual_consume)/100 as actual_income, sum(prepaid_consume)/100 as prepaid_income from ivc_user_consume where date BETWEEN ? AND ? and app_id in (1310269012);",
+      "/* P=IVC_URS,f=...,i=...,o=...,a=...,s=... */ select sum(actual_consume)/100 as actual_income, sum(prepaid_consume)/100 as prepaid_income from ivc_user_consume where date BETWEEN ? AND ? and app_id in (1310269012,1317026463);"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT sum(actual_consume)/100 as actual_income, sum(prepaid_consume)/100 as prepaid_income FROM ivc_user_consume WHERE date BETWEEN '2023-09-13' AND '2023-09-14' AND app_id in (1310269012,1317026463);"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindUserAppIdListByCustomerType",
+    "code_line": "66",
+    "baseline_sql": [
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND app_id = ? AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND app_id = ?;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND big_customer = 0 AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND big_customer = 0;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND big_customer = 1 AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND big_customer = 1;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND corporate = 0 AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND corporate = 0;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND corporate = 1 AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND corporate = 1;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND income_industry_id = ? AND app_id = ? AND big_customer = 1 AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND income_industry_id = ? AND app_id = ? AND big_customer = 1;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND income_industry_id = ? AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND income_industry_id = ?;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND internal = 0 AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND internal = 0;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND internal = 1 AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND internal = 1;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0;"
+    ],
+    "candidate_sql": [
+      "SELECT app_id FROM ivc_user_info WHERE status = ? AND app_id = ?;",
+      "SELECT app_id FROM ivc_user_info WHERE status = ? AND big_customer = ?;",
+      "SELECT app_id FROM ivc_user_info WHERE status = ? AND corporate = ?;",
+      "SELECT app_id FROM ivc_user_info WHERE status = ? AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = ? AND income_industry_id = ? AND app_id = ? AND internal = ? AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = ? AND income_industry_id = ? AND big_customer = ? AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = ? AND income_industry_id = ?;",
+      "SELECT app_id FROM ivc_user_info WHERE status = ? AND internal = ?;",
+      "SELECT app_id FROM ivc_user_info WHERE status = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND income_industry_id = ?;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND corporate = 0;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND big_customer = 0;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND internal = 0;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND app_id = ?;"
+    ],
+    "missing": [
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND big_customer = 1 AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND internal = 1 AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND income_industry_id = ? AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND income_industry_id = ? AND app_id = ? AND big_customer = 1;",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND income_industry_id = ? AND app_id = ? AND big_customer = 1 AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND corporate = 0 AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = 0 AND app_id = ? AND created_at <= FROM_UNIXTIME(?);"
+    ],
+    "extra": [
+      "SELECT app_id FROM ivc_user_info WHERE status = ? AND income_industry_id = ? AND big_customer = ? AND created_at <= FROM_UNIXTIME(?);",
+      "SELECT app_id FROM ivc_user_info WHERE status = ? AND income_industry_id = ? AND app_id = ? AND internal = ? AND created_at <= FROM_UNIXTIME(?);"
+    ],
+    "metrics": {
+      "baseline": 14,
+      "candidate": 9,
+      "common": 7,
+      "missing": 7,
+      "extra": 2
+    },
+    "human_review": "变体sql"
+  },
+  {
+    "func_name": "FindUserBillingByCustomerType",
+    "code_line": "192",
+    "baseline_sql": [
+      "SELECT A.date, A.field, SUM(A.amount) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.big_customer=? AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.corporate=? AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.internal=? AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;"
+    ],
+    "candidate_sql": [
+      "SELECT A.date, A.field, SUM(A.amount) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.big_customer=? AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.corporate=? AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.internal=? AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT A.date, A.field, SUM(A.amount) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.internal=? AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.big_customer=? AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.corporate=? AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 4,
+      "candidate": 4,
+      "common": 4,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindUserBillingConsumeByCustomerType",
+    "code_line": "237",
+    "baseline_sql": [
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.big_customer=0 AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.big_customer=1 AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.corporate=0 AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.corporate=1 AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.internal=0 AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.internal=1 AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;"
+    ],
+    "candidate_sql": [
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.big_customer=? AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.corporate=? AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.internal=? AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.internal=1 AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.big_customer=0 AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;",
+      "SELECT A.date, A.field, SUM(A.amount*A.price) AS amounts FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.corporate=0 AND A.date BETWEEN ? AND ? GROUP BY A.date, A.field;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 4,
+      "candidate": 4,
+      "common": 4,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindUserBillingConsumeListByFilter",
+    "code_line": "457",
+    "baseline_sql": [
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.big_customer=0 AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.big_customer=1 AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.corporate=0 AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.corporate=1 AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.income_industry_id=? AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.internal=0 AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.internal=0 AND B.income_industry_id=? AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.internal=1 AND A.date BETWEEN ? AND ? GROUP BY A.app_id;"
+    ],
+    "candidate_sql": [
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.big_customer=? AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.big_customer=? AND B.income_industry_id=? AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.corporate=? AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.income_industry_id=? AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.internal=? AND A.date BETWEEN ? AND ? GROUP BY A.app_id;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.internal=0 AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.income_industry_id=? AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.big_customer=0 AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND A.date BETWEEN ? AND ? GROUP BY A.app_id;",
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.corporate=1 AND A.date BETWEEN ? AND ? GROUP BY A.app_id;"
+    ],
+    "missing": [
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.internal=0 AND B.income_industry_id=? AND A.date BETWEEN ? AND ? GROUP BY A.app_id;"
+    ],
+    "extra": [
+      "SELECT A.app_id, SUM(A.amount*A.price) AS consume FROM iss_postpay_bill as A INNER JOIN ivc_user_info as B ON A.app_id = B.app_id WHERE A.push_status = 'NeedPush' AND A.cycle = 'Day' AND B.big_customer=? AND B.income_industry_id=? AND A.date BETWEEN ? AND ? GROUP BY A.app_id;"
+    ],
+    "metrics": {
+      "baseline": 6,
+      "candidate": 6,
+      "common": 5,
+      "missing": 1,
+      "extra": 1
+    },
+    "human_review": "变体sql"
+  },
+  {
+    "func_name": "FindUserBillingIncomeList",
+    "code_line": "587",
+    "baseline_sql": [
+      "SELECT app_id, SUM(actual_consume)/100 AS actual_income, SUM(prepaid_consume)/100 AS prepaid_income FROM ivc_user_consume WHERE date BETWEEN ? AND ? GROUP BY app_id;"
+    ],
+    "candidate_sql": [
+      "select app_id,sum(actual_consume)/100 as actual_income,sum(prepaid_consume)/100 as prepaid_income from ivc_user_consume where date BETWEEN ? AND ? group by app_id;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT app_id, SUM(actual_consume)/100 AS actual_income, SUM(prepaid_consume)/100 AS prepaid_income FROM ivc_user_consume WHERE date BETWEEN ? AND ? GROUP BY app_id;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindUserCountByCustomerType",
+    "code_line": "112",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM ivc_user_info WHERE status = 0 AND big_customer = 0 AND updated_at BETWEEN ? AND ?;",
+      "SELECT COUNT(*) FROM ivc_user_info WHERE status = 0 AND big_customer = 1 AND updated_at BETWEEN ? AND ?;",
+      "SELECT COUNT(*) FROM ivc_user_info WHERE status = 0 AND corporate = 0 AND updated_at BETWEEN ? AND ?;",
+      "SELECT COUNT(*) FROM ivc_user_info WHERE status = 0 AND corporate = 1 AND updated_at BETWEEN ? AND ?;",
+      "SELECT COUNT(*) FROM ivc_user_info WHERE status = 0 AND internal = 0 AND updated_at BETWEEN ? AND ?;",
+      "SELECT COUNT(*) FROM ivc_user_info WHERE status = 0 AND internal = 1 AND updated_at BETWEEN ? AND ?;",
+      "SELECT COUNT(*) FROM ivc_user_info WHERE status = 0 AND updated_at BETWEEN ? AND ?;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM user_info WHERE status = ? AND corporate = ? AND updated_at BETWEEN ? AND ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "SELECT COUNT(*) FROM ivc_user_info WHERE status = 0 AND big_customer = 1 AND updated_at BETWEEN ? AND ?;",
+      "SELECT COUNT(*) FROM ivc_user_info WHERE status = 0 AND updated_at BETWEEN ? AND ?;",
+      "SELECT COUNT(*) FROM ivc_user_info WHERE status = 0 AND corporate = 0 AND updated_at BETWEEN ? AND ?;",
+      "SELECT COUNT(*) FROM ivc_user_info WHERE status = 0 AND internal = 0 AND updated_at BETWEEN ? AND ?;"
+    ],
+    "extra": [
+      "SELECT count(*) FROM user_info WHERE status = ? AND corporate = ? AND updated_at BETWEEN ? AND ?;"
+    ],
+    "metrics": {
+      "baseline": 4,
+      "candidate": 1,
+      "common": 0,
+      "missing": 4,
+      "extra": 1
+    },
+    "human_review": "表名不对"
+  },
+  {
+    "func_name": "FindUserInfoByName",
+    "code_line": "110",
+    "baseline_sql": [
+      "SELECT app_id, internal FROM ivc_user_info WHERE name LIKE ? LIMIT 1;"
+    ],
+    "candidate_sql": [
+      "SELECT app_id, internal FROM ivc_user_info WHERE name LIKE ? LIMIT 1;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT app_id, internal FROM ivc_user_info WHERE name LIKE ? LIMIT 1;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindUserListByFilter",
+    "code_line": "416",
+    "baseline_sql": [
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND app_id = ? ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND big_customer = 0 ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND big_customer = 1 ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND corporate = 0 ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND corporate = 1 ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND income_industry_id = ? AND app_id = ? AND big_customer = 1 ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND income_industry_id = ? AND app_id = ? ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND income_industry_id = ? ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND internal = 0 ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND internal = 1 ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 ORDER BY uin LIMIT ? OFFSET ?;"
+    ],
+    "candidate_sql": [
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE app_id = ? AND status = 0 AND big_customer = ? ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE app_id = ? AND status = 0 AND corporate = ? ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE app_id = ? AND status = 0 AND income_industry_id = ? AND internal = ? AND big_customer = ? AND corporate = ? ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE app_id = ? AND status = 0 AND income_industry_id = ? ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE app_id = ? AND status = 0 AND internal = ? ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE app_id = ? AND status = 0 ORDER BY uin LIMIT ? OFFSET ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND app_id = ? ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND income_industry_id = ? AND app_id = ? ORDER BY uin LIMIT ? OFFSET ?;"
+    ],
+    "missing": [
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND income_industry_id = ? ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND corporate = 0 ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND big_customer = 1 ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND internal = 1 ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE status = 0 AND income_industry_id = ? AND app_id = ? AND big_customer = 1 ORDER BY uin LIMIT ? OFFSET ?;"
+    ],
+    "extra": [
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE app_id = ? AND status = 0 AND corporate = ? ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE app_id = ? AND status = 0 AND internal = ? ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE app_id = ? AND status = 0 AND income_industry_id = ? AND internal = ? AND big_customer = ? AND corporate = ? ORDER BY uin LIMIT ? OFFSET ?;",
+      "SELECT name, app_id, uin, income_industry_id, income_industry_name, internal FROM ivc_user_info WHERE app_id = ? AND status = 0 AND big_customer = ? ORDER BY uin LIMIT ? OFFSET ?;"
+    ],
+    "metrics": {
+      "baseline": 8,
+      "candidate": 6,
+      "common": 2,
+      "missing": 6,
+      "extra": 4
+    },
+    "human_review": ""
+  },
+  {
+    "func_name": "FindUserOnlineDeviceByAppIds",
+    "code_line": "354",
+    "baseline_sql": [
+      "select date, sum(online_device) as online_device from ivc_usage_device where date BETWEEN '2023-09-13' AND '2023-09-14' GROUP BY date;",
+      "select date, sum(online_device) as online_device from ivc_usage_device where date BETWEEN '2023-09-13' AND '2023-09-14' and app_id in (1310269012) GROUP BY date;",
+      "select date, sum(online_device) as online_device from ivc_usage_device where date BETWEEN '2023-09-13' AND '2023-09-14' and app_id in (1310269012,1310269013,1310269014) GROUP BY date;"
+    ],
+    "candidate_sql": [
+      "/* P=IVC_URS,f=FlowName,i=100024403002,o=1310269012,a=100024403002,s=1310269012 */ select date, sum(online_device) as online_device from ivc_usage_device where date BETWEEN ? AND ? and app_id in (1310269012) GROUP BY date;",
+      "/* P=IVC_URS,f=FlowName,i=100024403002,o=1310269012,a=100024403002,s=1310269012 */ select date, sum(online_device) as online_device from ivc_usage_device where date BETWEEN ? AND ? and app_id in (1310269012,1310269013,1310269014) GROUP BY date;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "select date, sum(online_device) as online_device from ivc_usage_device where date BETWEEN '2023-09-13' AND '2023-09-14' and app_id in (1310269012,1310269013,1310269014) GROUP BY date;"
+    ],
+    "missing": [
+      "select date, sum(online_device) as online_device from ivc_usage_device where date BETWEEN '2023-09-13' AND '2023-09-14' GROUP BY date;"
+    ],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 1,
+      "common": 1,
+      "missing": 1,
+      "extra": 0
+    },
+    "human_review": "变体sql"
+  },
+  {
+    "func_name": "FindUserWhitelistBucketByAppIds",
+    "code_line": "522",
+    "baseline_sql": [
+      "SELECT date, SUM(total_storage) AS total_storage, SUM(std_storage) AS std_storage, SUM(arc_storage) AS arc_storage, SUM(sia_storage) AS sia_storage, SUM(dp_arc_storage) AS dp_arc_storage FROM ivc_bucket_summary WHERE date BETWEEN ? AND ? AND app_id IN (?) GROUP BY date;",
+      "SELECT date, SUM(total_storage) AS total_storage, SUM(std_storage) AS std_storage, SUM(arc_storage) AS arc_storage, SUM(sia_storage) AS sia_storage, SUM(dp_arc_storage) AS dp_arc_storage FROM ivc_bucket_summary WHERE date BETWEEN ? AND ? AND app_id IN (?, ?) GROUP BY date;"
+    ],
+    "candidate_sql": [
+      "/* P=IVC_URS,f=FlowValue,i=100024403002,o=1310269012,a=1310269012,s=100024403002 */ select date,sum(total_storage) as total_storage, sum(std_storage) as std_storage, sum(arc_storage) as arc_storage, sum(sia_storage) as sia_storage, sum(dp_arc_storage) as dp_arc_storage from ivc_bucket_summary where date BETWEEN ? AND ? and app_id in (1310269012) GROUP BY date;",
+      "/* P=IVC_URS,f=FlowValue,i=10002440303002,o=1310269012,a=1310269012,1310269013,s=100024403002 */ select date,sum(total_storage) as total_storage, sum(std_storage) as std_storage, sum(arc_storage) as arc_storage, sum(sia_storage) as sia_storage, sum(dp_arc_storage) as dp_arc_storage from ivc_bucket_summary where date BETWEEN ? AND ? and app_id in (1310269012,1310269013) GROUP BY date;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT date, SUM(total_storage) AS total_storage, SUM(std_storage) AS std_storage, SUM(arc_storage) AS arc_storage, SUM(sia_storage) AS sia_storage, SUM(dp_arc_storage) AS dp_arc_storage FROM ivc_bucket_summary WHERE date BETWEEN ? AND ? AND app_id IN (?, ?) GROUP BY date;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing comment,   app_id in (1310269012)?"
+  },
+  {
+    "func_name": "FindUsersByName",
+    "code_line": "129",
+    "baseline_sql": [
+      "SELECT app_id, uin, name FROM ivc_user_info WHERE name LIKE ?;"
+    ],
+    "candidate_sql": [
+      "SELECT app_id, uin, name FROM ivc_user_info WHERE name LIKE ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT app_id, uin, name FROM ivc_user_info WHERE name LIKE ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, exactly same"
+  },
+  {
+    "func_name": "FindYesterdayBillingModeAppId",
+    "code_line": "147",
+    "baseline_sql": [
+      "SELECT date, category, mode FROM ivc_billing_mode WHERE app_id = ? AND category = ? AND date < ? ORDER BY date DESC LIMIT 1;"
+    ],
+    "candidate_sql": [
+      "SELECT date, category, mode FROM ivc_billing_mode WHERE app_id = ? AND category = ? AND date < ? ORDER BY date DESC LIMIT 1;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT date, category, mode FROM ivc_billing_mode WHERE app_id = ? AND category = ? AND date < ? ORDER BY date DESC LIMIT 1;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, exactly same"
+  },
+  {
+    "func_name": "InsertApprovalEvent",
+    "code_line": "237",
+    "baseline_sql": [
+      "INSERT INTO ivc_approval_event (id, order_id, creator, operator, approver, approve_msg, step_type, approve_res, total_approve_res, approve_time, approve_content, action, create_at, update_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
+    ],
+    "candidate_sql": [
+      "INSERT INTO ivc_approval_event (id, order_id, creator, action, approver, approve_res, total_approve_res, approve_time, step_type, approve_msg, approve_content, create_at, update_at, operator) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "INSERT INTO ivc_approval_event (id, order_id, creator, operator, approver, approve_msg, step_type, approve_res, total_approve_res, approve_time, approve_content, action, create_at, update_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true"
+  },
+  {
+    "func_name": "InsertBucketWhitelist",
+    "code_line": "104",
+    "baseline_sql": [
+      "INSERT INTO `ivc_bucket_whitelist` (`id`, `name`, `uin`, `app_id`, `region`, `region_name`, `bucket_id`, `seg_duration`, `seg_size`, `describe`, `create_at`, `update_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
+    ],
+    "candidate_sql": [],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "INSERT INTO `ivc_bucket_whitelist` (`id`, `name`, `uin`, `app_id`, `region`, `region_name`, `bucket_id`, `seg_duration`, `seg_size`, `describe`, `create_at`, `update_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
+    ],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 0,
+      "common": 0,
+      "missing": 1,
+      "extra": 0
+    },
+    "human_review": "false"
+  },
+  {
+    "func_name": "InsertIntranetWhitelist",
+    "code_line": "84",
+    "baseline_sql": [
+      "INSERT INTO `ivc_intranet_whitelist` (`id`, `name`, `uin`, `app_id`, `cluster_id`, `intranet_addr`, `describe`, `create_at`, `update_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);"
+    ],
+    "candidate_sql": [
+      "INSERT INTO intranet (id, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?);"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "INSERT INTO `ivc_intranet_whitelist` (`id`, `name`, `uin`, `app_id`, `cluster_id`, `intranet_addr`, `describe`, `create_at`, `update_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);"
+    ],
+    "extra": [
+      "INSERT INTO intranet (id, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?);"
+    ],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 0,
+      "missing": 1,
+      "extra": 1
+    },
+    "human_review": "false, incorrect table name"
+  },
+  {
+    "func_name": "InsertMediaWhitelist",
+    "code_line": "98",
+    "baseline_sql": [
+      "INSERT INTO `ivc_media_whitelist` (`id`,`name`,`uin`,`app_id`,`cluster_id`,`gb_media_addr`,`rtmp_media_addr`,`describe`,`create_at`,`update_at`) VALUES (?,?,?,?,?,?,?,?,?,?);"
+    ],
+    "candidate_sql": [
+      "INSERT INTO `ivc_media_whitelist` (`app_id`, `uin`, `name`, `cluster_id`, `describe`, `gb_media_addr`, `rtmp_media_addr`, `create_at`, `update_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "INSERT INTO `ivc_media_whitelist` (`id`,`name`,`uin`,`app_id`,`cluster_id`,`gb_media_addr`,`rtmp_media_addr`,`describe`,`create_at`,`update_at`) VALUES (?,?,?,?,?,?,?,?,?,?);"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, The primary key ID in the database (especially the auto-increment ID) is automatically generated and returned by the database when data is inserted."
+  },
+  {
+    "func_name": "IsExist",
+    "code_line": "186",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM ivc_player_license WHERE id=? AND delete_time IS NULL;"
+    ],
+    "candidate_sql": [
+      "/* SELECT */ SELECT count(*) FROM ivc_player_license WHERE id = ? AND delete_time IS NULL;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM ivc_player_license WHERE id=? AND delete_time IS NULL;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing comment"
+  },
+  {
+    "func_name": "IsExist",
+    "code_line": "195",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_player_license` WHERE id = ? AND delete_time IS NULL;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_player_license WHERE id = ? AND delete_time is null;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_player_license` WHERE id = ? AND delete_time IS NULL;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing the single quotes"
+  },
+  {
+    "func_name": "IsExit",
+    "code_line": "18",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_blocker_user` WHERE app_id = ? AND uin = ?;",
+      "SELECT COUNT(*) FROM `ivc_blocker_user` WHERE id = ?;"
+    ],
+    "candidate_sql": [
+      "SELECT count(*) FROM ivc_blocker_user WHERE app_id = ? AND uin = ?;",
+      "SELECT count(*) FROM ivc_blocker_user WHERE id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_blocker_user` WHERE app_id = ? AND uin = ?;",
+      "SELECT COUNT(*) FROM `ivc_blocker_user` WHERE id = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true2, Exactly equal after removing the single quotes"
+  },
+  {
+    "func_name": "QueryApprovalEventByFilter",
+    "code_line": "247",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_approval_event` WHERE `order_id` = ?;"
+    ],
+    "candidate_sql": [
+      "SELECT COUNT(*) FROM ivc_approval_event WHERE order_id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_approval_event` WHERE `order_id` = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing the single quotes"
+  },
+  {
+    "func_name": "QueryApprovalEventById",
+    "code_line": "256",
+    "baseline_sql": [
+      "SELECT id, order_id, creator, operator, approver, approve_msg, step_type, approve_res, total_approve_res, approve_time, approve_content, action, create_at, update_at FROM ivc_approval_event WHERE id = ? LIMIT 1;"
+    ],
+    "candidate_sql": [
+      "/* SELECT */ SELECT id, order_id, creator, operator, approver, approve_msg, step_type, approve_res, total_approve_res, approve_time, approve_content, action, create_at, update_at FROM ivc_approval_event WHERE id = ? LIMIT 1;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT id, order_id, creator, operator, approver, approve_msg, step_type, approve_res, total_approve_res, approve_time, approve_content, action, create_at, update_at FROM ivc_approval_event WHERE id = ? LIMIT 1;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing comment"
+  },
+  {
+    "func_name": "QueryBucketRegionName",
+    "code_line": "181",
+    "baseline_sql": [
+      "SELECT region_name FROM ivc_region_code WHERE id = ?;"
+    ],
+    "candidate_sql": [
+      "SELECT region_name FROM ivc_region_code WHERE id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT region_name FROM ivc_region_code WHERE id = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, exactly same"
+  },
+  {
+    "func_name": "QueryBucketWhitelistByAppIdAndRegion",
+    "code_line": "114",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM ivc_bucket_whitelist WHERE app_id = ? AND region = ?;"
+    ],
+    "candidate_sql": [
+      "SELECT COUNT(*) FROM ivc_bucket_whitelist WHERE app_id = ? AND region = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM ivc_bucket_whitelist WHERE app_id = ? AND region = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, exactly same"
+  },
+  {
+    "func_name": "QueryBucketWhitelistById",
+    "code_line": "126",
+    "baseline_sql": [
+      "SELECT * FROM `ivc_bucket_whitelist` WHERE id = ? LIMIT 1;"
+    ],
+    "candidate_sql": [
+      "SELECT id, name, uin, app_id, region, region_name, bucket_id, seg_duration, seg_size, describe, create_at, update_at FROM ivc_bucket_whitelist WHERE id = ? LIMIT 1;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT * FROM `ivc_bucket_whitelist` WHERE id = ? LIMIT 1;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, exactly equal"
+  },
+  {
+    "func_name": "QueryBucketWhitelistRegion",
+    "code_line": "150",
+    "baseline_sql": [
+      "SELECT region FROM qcloud_cos_bucket WHERE appId = ? AND bucket = ?;"
+    ],
+    "candidate_sql": [
+      "SELECT region FROM qcloud_cos_bucket WHERE appId = ? AND bucket = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT region FROM qcloud_cos_bucket WHERE appId = ? AND bucket = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, exactly same"
+  },
+  {
+    "func_name": "QueryCloudRecordTimelineWhitelistByAppId",
+    "code_line": "20",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_cloudrecord_timeline_whitelist` WHERE `app_id` = ?;"
+    ],
+    "candidate_sql": [
+      "SELECT COUNT(*) FROM ivc_cloudrecord_timeline_whitelist WHERE app_id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_cloudrecord_timeline_whitelist` WHERE `app_id` = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing the single quotes"
+  },
+  {
+    "func_name": "QueryCloudRecordTimelineWhitelistById",
+    "code_line": "30",
+    "baseline_sql": [
+      "SELECT `id`, `name`, `uin`, `app_id`, `created_at`, `updated_at` FROM `ivc_cloudrecord_timeline_whitelist` WHERE `id` = ? LIMIT 1;"
+    ],
+    "candidate_sql": [
+      "SELECT id, name, uin, app_id, created_at, updated_at FROM ivc_cloudrecord_timeline_whitelist WHERE id = ? LIMIT 1;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT `id`, `name`, `uin`, `app_id`, `created_at`, `updated_at` FROM `ivc_cloudrecord_timeline_whitelist` WHERE `id` = ? LIMIT 1;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing the single quotes"
+  },
+  {
+    "func_name": "QueryDailyReportWhitelistByAppId",
+    "code_line": "20",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_dailyreport_whitelist` WHERE app_id = ?;"
+    ],
+    "candidate_sql": [
+      "SELECT COUNT(*) FROM ivc_dailyreport_whitelist WHERE app_id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_dailyreport_whitelist` WHERE app_id = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing the single quotes"
+  },
+  {
+    "func_name": "QueryDailyReportWhitelistById",
+    "code_line": "30",
+    "baseline_sql": [
+      "SELECT id, name, uin, app_id, altername, created_at, updated_at FROM ivc_dailyreport_whitelist WHERE id = ? LIMIT 1;"
+    ],
+    "candidate_sql": [
+      "SELECT id, name, uin, app_id, altername, created_at, updated_at FROM ivc_dailyreport_whitelist WHERE id = ? LIMIT 1;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT id, name, uin, app_id, altername, created_at, updated_at FROM ivc_dailyreport_whitelist WHERE id = ? LIMIT 1;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, exactly same"
+  },
+  {
+    "func_name": "QueryGBinviteWhitelistByAppId",
+    "code_line": "20",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_gb_invite_whitelist` WHERE app_id = ?;"
+    ],
+    "candidate_sql": [
+      "SELECT COUNT(*) FROM ivc_gb_invite_whitelist WHERE app_id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_gb_invite_whitelist` WHERE app_id = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing the single quotes"
+  },
+  {
+    "func_name": "QueryGBinviteWhitelistById",
+    "code_line": "27",
+    "baseline_sql": [
+      "SELECT * FROM ivc_gb_invite_whitelist WHERE id = ? LIMIT 1;"
+    ],
+    "candidate_sql": [
+      "SELECT id, name, uin, app_id, created_at FROM ivc_gb_invite_whitelist WHERE id = ? LIMIT 1;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT * FROM ivc_gb_invite_whitelist WHERE id = ? LIMIT 1;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true"
+  },
+  {
+    "func_name": "QueryIntranetWhitelistByAppIdAndClusterId",
+    "code_line": "94",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_intranet_whitelist` WHERE `app_id` = ? AND `cluster_id` = ?;"
+    ],
+    "candidate_sql": [
+      "/* SELECT */ SELECT count(*) FROM ivc_intranet_whitelist WHERE app_id = ? AND cluster_id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_intranet_whitelist` WHERE `app_id` = ? AND `cluster_id` = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing comment and single quote"
+  },
+  {
+    "func_name": "QueryIntranetWhitelistById",
+    "code_line": "103",
+    "baseline_sql": [
+      "SELECT id, name, uin, app_id, cluster_id, intranet_addr, describe, create_at, update_at FROM ivc_intranet_whitelist WHERE id = ? LIMIT 1;"
+    ],
+    "candidate_sql": [
+      "SELECT id, name, uin, app_id, cluster_id, intranet_addr, describe, create_at, update_at FROM ivc_intranet_whitelist WHERE id = ? LIMIT 1;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT id, name, uin, app_id, cluster_id, intranet_addr, describe, create_at, update_at FROM ivc_intranet_whitelist WHERE id = ? LIMIT 1;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, exactly same"
+  },
+  {
+    "func_name": "QueryMediaWhitelistByAppIdAndClusterId",
+    "code_line": "108",
+    "baseline_sql": [
+      "SELECT COUNT(*) FROM `ivc_media_whitelist` WHERE `app_id` = ? AND `cluster_id` = ?;"
+    ],
+    "candidate_sql": [
+      "SELECT COUNT(*) FROM ivc_media_whitelist WHERE app_id = ? AND cluster_id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT COUNT(*) FROM `ivc_media_whitelist` WHERE `app_id` = ? AND `cluster_id` = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing the single quotes"
+  },
+  {
+    "func_name": "QueryMediaWhitelistById",
+    "code_line": "120",
+    "baseline_sql": [
+      "SELECT id, name, uin, app_id, cluster_id, gb_media_addr, rtmp_media_addr, describe, create_at, update_at FROM `ivc_media_whitelist` WHERE id = 123 LIMIT 1;",
+      "SELECT id, name, uin, app_id, cluster_id, gb_media_addr, rtmp_media_addr, describe, create_at, update_at FROM `ivc_media_whitelist` WHERE id = ? LIMIT 1;"
+    ],
+    "candidate_sql": [
+      "SELECT id, name, uin, app_id, cluster_id, gb_media_addr, rtmp_media_addr, describe, create_at, update_at FROM ivc_media_whitelist WHERE id = ? LIMIT 1;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT id, name, uin, app_id, cluster_id, gb_media_addr, rtmp_media_addr, describe, create_at, update_at FROM `ivc_media_whitelist` WHERE id = 123 LIMIT 1;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing the single quotes"
+  },
+  {
+    "func_name": "UpdateApprovalEvent",
+    "code_line": "284",
+    "baseline_sql": [
+      "UPDATE ivc_approval_event SET order_id = ?, creator = ?, operator = ?, approver = ?, approve_msg = ?, step_type = ?, approve_res = ?, total_approve_res = ?, approve_time = ?, approve_content = ?, action = ?, create_at = ?, update_at = ? WHERE id = ?;"
+    ],
+    "candidate_sql": [
+      "UPDATE ivc_approval_event SET order_id = ?, operator = ?, approver = ?, approve_msg = ?, step_type = ?, approve_res = ?, total_approve_res = ?, approve_time = ?, update_at = ? WHERE id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "UPDATE ivc_approval_event SET order_id = ?, creator = ?, operator = ?, approver = ?, approve_msg = ?, step_type = ?, approve_res = ?, total_approve_res = ?, approve_time = ?, approve_content = ?, action = ?, create_at = ?, update_at = ? WHERE id = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true"
+  },
+  {
+    "func_name": "UpdateApprovalEventStatus",
+    "code_line": "294",
+    "baseline_sql": [
+      "UPDATE ivc_approval_event SET approve_res = ?, total_approve_res = ? WHERE id = ?;"
+    ],
+    "candidate_sql": [
+      "UPDATE ivc_approval_event SET approve_res = ?, total_approve_res = ? WHERE id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "UPDATE ivc_approval_event SET approve_res = ?, total_approve_res = ? WHERE id = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true"
+  },
+  {
+    "func_name": "UpdateBucketWhitelist",
+    "code_line": "140",
+    "baseline_sql": [
+      "UPDATE ivc_bucket_whitelist SET name = ?, uin = ?, app_id = ?, region = ?, region_name = ?, bucket_id = ?, seg_duration = ?, seg_size = ?, describe = ?, create_at = ?, update_at = ? WHERE id = ?;"
+    ],
+    "candidate_sql": [
+      "INSERT INTO ivc_bucket_whitelist (name, uin, app_id, region, region_name, bucket_id, seg_duration, seg_size, describe, create_at, update_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+      "UPDATE ivc_bucket_whitelist SET name = ?, uin = ?, app_id = ?, region = ?, region_name = ?, bucket_id = ?, seg_duration = ?, seg_size = ?, describe = ?, create_at = ?, update_at = ? WHERE id = ?;",
+      "UPDATE ivc_bucket_whitelist SET name=?, uin=?, app_id=?, region=?, region_name=?, bucket_id=?, seg_duration=?, seg_size=?, describe=?, create_at=?, update_at=? WHERE id=?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "UPDATE ivc_bucket_whitelist SET name = ?, uin = ?, app_id = ?, region = ?, region_name = ?, bucket_id = ?, seg_duration = ?, seg_size = ?, describe = ?, create_at = ?, update_at = ? WHERE id = ?;"
+    ],
+    "missing": [],
+    "extra": [
+      "INSERT INTO ivc_bucket_whitelist (name, uin, app_id, region, region_name, bucket_id, seg_duration, seg_size, describe, create_at, update_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
+    ],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 2,
+      "common": 1,
+      "missing": 0,
+      "extra": 1
+    },
+    "human_review": "true2,false1, extra is false"
+  },
+  {
+    "func_name": "UpdateIntranetWhitelist",
+    "code_line": "117",
+    "baseline_sql": [
+      "INSERT INTO ivc_intranet_whitelist (name, uin, app_id, cluster_id, intranet_addr, describe, create_at, update_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+      "UPDATE ivc_intranet_whitelist SET name=?, uin=?, app_id=?, cluster_id=?, intranet_addr=?, describe=?, create_at=?, update_at=? WHERE id=?;"
+    ],
+    "candidate_sql": [
+      "INSERT INTO ivc_intranet_whitelist (name, uin, app_id, cluster_id, intranet_addr, describe, create_at, update_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+      "UPDATE ivc_intranet_whitelist SET app_id = ?, uin = ?, name = ?, describe = ?, intranet_addr = ?, cluster_id = ?, update_at = ? WHERE id = ?;",
+      "UPDATE ivc_intranet_whitelist SET name = ?, uin = ?, app_id = ?, cluster_id = ?, intranet_addr = ?, describe = ?, update_at = ? WHERE id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "INSERT INTO ivc_intranet_whitelist (name, uin, app_id, cluster_id, intranet_addr, describe, create_at, update_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+      "UPDATE ivc_intranet_whitelist SET name=?, uin=?, app_id=?, cluster_id=?, intranet_addr=?, describe=?, create_at=?, update_at=? WHERE id=?;"
+    ],
+    "missing": []:,
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after formatting"
+  },
+  {
+    "func_name": "UpdateMediaWhitelist",
+    "code_line": "134",
+    "baseline_sql": [
+      "INSERT INTO `ivc_media_whitelist` (`id`, `name`, `uin`, `app_id`, `cluster_id`, `gb_media_addr`, `rtmp_media_addr`, `describe`, `create_at`, `update_at`) VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+      "UPDATE `ivc_media_whitelist` SET `id` = ?, `name` = ?, `uin` = ?, `app_id` = ?, `cluster_id` = ?, `gb_media_addr` = ?, `rtmp_media_addr` = ?, `describe` = ?, `create_at` = ?, `update_at` = ? WHERE `id` = ?;"
+    ],
+    "candidate_sql": [
+      "INSERT INTO ivc_media_whitelist (name, uin, app_id, cluster_id, gb_media_addr, rtmp_media_addr, describe, create_at, update_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+      "UPDATE ivc_media_whitelist SET name = ?, uin = ?, app_id = ?, cluster_id = ?, gb_media_addr = ?, rtmp_media_addr = ?, describe = ?, create_at = ?, update_at = ? WHERE id = ?;",
+      "UPDATE ivc_media_whitelist SET name=?, uin=?, app_id=?, cluster_id=?, gb_media_addr=?, rtmp_media_addr=?, describe=?, create_at=?, update_at=? WHERE id=?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "UPDATE `ivc_media_whitelist` SET `id` = ?, `name` = ?, `uin` = ?, `app_id` = ?, `cluster_id` = ?, `gb_media_addr` = ?, `rtmp_media_addr` = ?, `describe` = ?, `create_at` = ?, `update_at` = ? WHERE `id` = ?;",
+      "INSERT INTO `ivc_media_whitelist` (`id`, `name`, `uin`, `app_id`, `cluster_id`, `gb_media_addr`, `rtmp_media_addr`, `describe`, `create_at`, `update_at`) VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 2,
+      "candidate": 2,
+      "common": 2,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, The primary key ID in the database (especially the auto-increment ID) is automatically generated and returned by the database when data is inserted."
+  },
+  {
+    "func_name": "findClusterList",
+    "code_line": "70",
+    "baseline_sql": [
+      "SELECT `id`, `name`, `region` FROM `ivc_cluster_conf` WHERE deleted_at is null;"
+    ],
+    "candidate_sql": [
+      "SELECT id, name, region FROM ivc_cluster_conf WHERE deleted_at is null;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT `id`, `name`, `region` FROM `ivc_cluster_conf` WHERE deleted_at is null;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing the single quotes"
+  },
+  {
+    "func_name": "findIncomeIndustryIdList",
+    "code_line": "202",
+    "baseline_sql": [
+      "SELECT income_industry_id, income_industry_name FROM ivc_user_info WHERE status = 0 AND income_industry_id <> 0 GROUP BY income_industry_id, income_industry_name;"
+    ],
+    "candidate_sql": [
+      "SELECT income_industry_id, income_industry_name FROM ivc_user_info WHERE status = ? AND income_industry_id <> ? GROUP BY income_industry_id, income_industry_name;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT income_industry_id, income_industry_name FROM ivc_user_info WHERE status = 0 AND income_industry_id <> 0 GROUP BY income_industry_id, income_industry_name;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "false, Has a clear value and should not be ?"
+  },
+  {
+    "func_name": "findOneTimeResourcePackByAppId",
+    "code_line": "230",
+    "baseline_sql": [
+      "SELECT A.resource_id, A.start_date, A.end_date, A.ctime, A.regions, A.field, A.amount_detail, B.remaining_detail, CASE WHEN end_date < CURDATE() THEN 'expired' ELSE 'valid' END as date_category FROM iss_prepay_resource AS A LEFT JOIN (SELECT resource_id, MAX(date) AS max_date FROM iss_prepay_resource_userecord GROUP BY resource_id) AS B_max_date ON A.resource_id = B_max_date.resource_id LEFT JOIN iss_prepay_resource_userecord AS B ON B.resource_id = B_max_date.resource_id AND B.date = B_max_date.max_date WHERE app_id=? AND A.field != 'view_storage' AND A.field != 'access';"
+    ],
+    "candidate_sql": [
+      "SELECT `a`.`resource_id` AS `resource_id`, `a`.`start_date` AS `start_date`, `a`.`end_date` AS `end_date`, `a`.`ctime` AS `ctime`, `a`.`regions` AS `regions`, `a`.`field` AS `field`, `a`.`amount_detail` AS `amount_detail`, `b`.`remaining_detail` AS `remaining_detail`, CASE WHEN `a`.`end_date` < CURDATE() THEN 'expired' ELSE 'valid' END AS `date_category` FROM `iss_prepay_resource` AS `a` LEFT JOIN (SELECT `iss_prepay_resource_userecord`.`resource_id` AS `resource_id`, MAX(`iss_prepay_resource_userecord`.`date`) AS `max_date` FROM `iss_prepay_resource_userecord` AS `iss_prepay_resource_userecord` GROUP BY `iss_prepay_resource_userecord`.`resource_id`) AS `b_max_date` ON `a`.`resource_id` = `b_max_date`.`resource_id` LEFT JOIN `iss_prepay_resource_userecord` AS `b` ON `b`.`resource_id` = `b_max_date`.`resource_id` AND `b`.`date` = `b_max_date`.`max_date` WHERE `a`.`app_id` = ? AND `a`.`field` <> 'view_storage' AND `a`.`field` <> 'access'"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT A.resource_id, A.start_date, A.end_date, A.ctime, A.regions, A.field, A.amount_detail, B.remaining_detail, CASE WHEN end_date < CURDATE() THEN 'expired' ELSE 'valid' END as date_category FROM iss_prepay_resource AS A LEFT JOIN (SELECT resource_id, MAX(date) AS max_date FROM iss_prepay_resource_userecord GROUP BY resource_id) AS B_max_date ON A.resource_id = B_max_date.resource_id LEFT JOIN iss_prepay_resource_userecord AS B ON B.resource_id = B_max_date.resource_id AND B.date = B_max_date.max_date WHERE app_id=? AND A.field != 'view_storage' AND A.field != 'access';"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "false, LLM hallucinations"
+  },
+  {
+    "func_name": "findRegionCodeList",
+    "code_line": "84",
+    "baseline_sql": [
+      "SELECT DISTINCT(region) FROM ivc_cluster_conf;"
+    ],
+    "candidate_sql": [
+      "/* P=IVC_URS,f=FlowValue,i=100024403002,o=1310269012,a=100024403002,s=FlowValue */ SELECT DISTINCT(region) FROM ivc_cluster_conf;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT DISTINCT(region) FROM ivc_cluster_conf;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing comment"
+  },
+  {
+    "func_name": "findSrvInterfaceList",
+    "code_line": "91",
+    "baseline_sql": [
+      "SELECT `service`, `interface` FROM `ivc_service_interface`;"
+    ],
+    "candidate_sql": [
+      "SELECT service, interface FROM ivc_service_interface;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT `service`, `interface` FROM `ivc_service_interface`;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing the single quotes"
+  },
+  {
+    "func_name": "findUserInfoByAppId",
+    "code_line": "99",
+    "baseline_sql": [
+      "SELECT `uin`, `app_id`, `name`, `status`, `industry_name`, `industry_grade`, `system_architect`, `business_manager`, `corporate`, `district_id`, `district_belong`, `internal`, `created_at`, `updated_at` FROM `ivc_user_info` WHERE `app_id` = ?;"
+    ],
+    "candidate_sql": [
+      "SELECT uin, app_id, name, status, industry_name, industry_grade, system_architect, business_manager, corporate, district_id, district_belong, internal, created_at, updated_at FROM ivc_user_info WHERE app_id = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT `uin`, `app_id`, `name`, `status`, `industry_name`, `industry_grade`, `system_architect`, `business_manager`, `corporate`, `district_id`, `district_belong`, `internal`, `created_at`, `updated_at` FROM `ivc_user_info` WHERE `app_id` = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after removing the single quotes"
+  },
+  {
+    "func_name": "findUserPermissionByName",
+    "code_line": "427",
+    "baseline_sql": [
+      "SELECT u.name AS user_name, r.name AS role_name, r.permission FROM ivc_ops_user AS u JOIN ivc_ops_role AS r ON u.role_id = r.id WHERE u.delete_at is NULL AND u.name = ?;"
+    ],
+    "candidate_sql": [
+      "SELECT u.name AS user_name, r.name AS role_name, r.permission FROM ivc_ops_user AS u JOIN ivc_ops_role AS r ON u.role_id = r.id WHERE u.delete_at is NULL AND u.name = ?;"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT u.name AS user_name, r.name AS role_name, r.permission FROM ivc_ops_user AS u JOIN ivc_ops_role AS r ON u.role_id = r.id WHERE u.delete_at is NULL AND u.name = ?;"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, exactly equal"
+  },
+  {
+    "func_name": "findViewStorageResourcePackByAppId",
+    "code_line": "214",
+    "baseline_sql": [
+      "SELECT resource_id, amount_detail, start_date, end_date, ctime, regions, field, CASE WHEN end_date < CURDATE() THEN 'expired' ELSE 'valid' END as date_category FROM iss_prepay_resource WHERE app_id = ? AND field = 'view_storage';"
+    ],
+    "candidate_sql": [
+      "SELECT resource_id,amount_detail,start_date,end_date,ctime,regions,field, CASE WHEN end_date < CURDATE() THEN 'expired' ELSE 'valid' END as date_category FROM iss_prepay_resource WHERE app_id=? AND field='view_storage';"
+    ],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [
+      "SELECT resource_id, amount_detail, start_date, end_date, ctime, regions, field, CASE WHEN end_date < CURDATE() THEN 'expired' ELSE 'valid' END as date_category FROM iss_prepay_resource WHERE app_id = ? AND field = 'view_storage';"
+    ],
+    "missing": [],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 1,
+      "common": 1,
+      "missing": 0,
+      "extra": 0
+    },
+    "human_review": "true, Exactly equal after formatting"
+  },
+  {
+    "func_name": "paginateQueryChannelListByAppId",
+    "code_line": "780",
+    "baseline_sql": [
+      "SELECT * FROM ivc_channel AS c ORDER BY c.id LIMIT ? OFFSET ?;"
+    ],
+    "candidate_sql": [],
+    "baseline_chain": "",
+    "candidate_chain": "",
+    "common": [],
+    "missing": [
+      "SELECT * FROM ivc_channel AS c ORDER BY c.id LIMIT ? OFFSET ?;"
+    ],
+    "extra": [],
+    "metrics": {
+      "baseline": 1,
+      "candidate": 0,
+      "common": 0,
+      "missing": 1,
+      "extra": 0
+    },
+    "human_review": "true, exactly equal"
+  },
+  {
+    "consistent": 149,
+    "missing": 95,
+    "extra": 44
+  }
+]

@@ -11,8 +11,9 @@ import aiohttp
 import yaml
 from tqdm import tqdm
 
-from utils.llm_client import LLMClientManager
-from config.validation.validation_prompts import (
+from utils.llm_client import LLMClient
+from utils.format_validators import  validate_sql_generation_response, validate_precheck_response
+from config.data_processing.validation.validation_prompts import (
     ANALYSIS_PROMPT_TEMPLATE,
     VERIFICATION_PROMPT_TEMPLATE,
     FORMATTING_PROMPT_TEMPLATE,
@@ -33,7 +34,7 @@ class RerunValidator:
             custom_output_dir: 自定义输出目录，如果提供则覆盖配置文件中的output_dir
         """
         self.config = self._load_config(config_path)
-        self.client_manager = LLMClientManager()
+        self.client = LLMClient(self.config['server'])
         self._setup_logging()
         
         # 如果提供了自定义输出目录，则覆盖配置文件中的设置
@@ -88,20 +89,31 @@ class RerunValidator:
         """对单个记录进行分析，并立即将结果写入文件"""
         async with semaphore:
             prompt = self._format_rerun_prompt(record)
-            client = self.client_manager.get_client(self.config['server'])
+            client = self.client
             
             try:
                 # 使用带重试机制的call_async方法
-                result_content = await client.call_async(
+                # 从配置获取max_tokens
+                from config.data_processing.workflow.workflow_config import get_workflow_config
+                workflow_config = get_workflow_config()
+                max_tokens = workflow_config.get_max_tokens("validation", "validator")
+                
+                result_content = await client.call_async_with_format_validation(
                     session, 
                     prompt, 
-                    max_tokens=4096, 
+                    validator=validate_sql_generation_response,
+                    max_tokens=max_tokens, 
                     temperature=0.0,
                     max_retries=1000,
-                    retry_delay=1.0
+                    retry_delay=1.0,
+                    module="validation"
                 )
                 
                 try:
+                    # 确保result_content是字符串
+                    if isinstance(result_content, dict):
+                        result_content = json.dumps(result_content)
+                    
                     new_sql = json.loads(result_content)
                     json_parse_success = True
                     json_parse_error = None
@@ -208,16 +220,27 @@ class RerunValidator:
             包含预检查结果的字典
         """
         try:
-            client = self.client_manager.get_client(self.config['server'])
+            client = self.client
             prompt = self._format_no_sql_check_prompt(record)
             
-            result_content = await client.call_async(
+            # 从配置获取max_tokens
+            from config.data_processing.workflow.workflow_config import get_workflow_config
+            workflow_config = get_workflow_config()
+            max_tokens = workflow_config.get_max_tokens("validation", "precheck")
+            
+            # 从配置获取重试参数
+            max_retries = workflow_config.get_max_retries("validation", "precheck")
+            retry_delay = workflow_config.get_retry_delay("validation", "precheck")
+            
+            result_content = await client.call_async_with_format_validation(
                 session,
                 prompt,
-                max_tokens=1024,  # 预检查不需要太多token
+                validator=validate_precheck_response,
+                max_tokens=max_tokens,  # 预检查不需要太多token
                 temperature=0.0,
-                max_retries=1000,
-                retry_delay=1.0
+                max_retries=max_retries,
+                retry_delay=retry_delay,
+                module="validation"
             )
             
             if not result_content:
@@ -230,6 +253,10 @@ class RerunValidator:
                 }
             
             # 解析返回结果
+            # 确保result_content是字符串
+            if isinstance(result_content, dict):
+                result_content = json.dumps(result_content)
+            
             result_content = result_content.strip().lower()
             will_generate_sql = None
             
@@ -303,7 +330,7 @@ class RerunValidator:
         """
         try:
             # 获取LLM客户端
-            client = self.client_manager.get_client(self.config['server'])
+            client = self.client
             
             async with aiohttp.ClientSession() as session:
                 # 预检查步骤：判断是否会生成SQL
@@ -342,13 +369,24 @@ class RerunValidator:
                 
                 # 第一阶段：分析
                 stage_prompts = self.generate_precheck_prompts(record)
-                analysis_result = await client.call_async(
+                # 从配置获取max_tokens
+                from config.data_processing.workflow.workflow_config import get_workflow_config
+                workflow_config = get_workflow_config()
+                max_tokens = workflow_config.get_max_tokens("validation", "validator")
+                
+                # 从配置获取重试参数
+                max_retries = workflow_config.get_max_retries("validation", "validator")
+                retry_delay = workflow_config.get_retry_delay("validation", "validator")
+                
+                analysis_result = await client.call_async_with_format_validation(
                     session,
                     stage_prompts['analysis_prompt'], 
-                    max_tokens=4096, 
+                    validator=validate_sql_generation_response,
+                    max_tokens=max_tokens, 
                     temperature=0.0,
-                    max_retries=1000,
-                    retry_delay=1.0
+                    max_retries=max_retries,
+                    retry_delay=retry_delay,
+                    module="validation"
                 )
                 
                 if not analysis_result:
@@ -364,14 +402,20 @@ class RerunValidator:
                     }
                 
                 # 第二阶段：验证
+                # 确保analysis_result是字符串
+                if isinstance(analysis_result, dict):
+                    analysis_result = json.dumps(analysis_result)
+                
                 verification_prompts = self.generate_precheck_prompts(record, analysis_result)
-                verification_result = await client.call_async(
+                verification_result = await client.call_async_with_format_validation(
                     session,
                     verification_prompts['verification_prompt'],
-                    max_tokens=4096,
+                    validator=validate_sql_generation_response,
+                    max_tokens=max_tokens,
                     temperature=0.0,
-                    max_retries=1000,
-                    retry_delay=1.0
+                    max_retries=max_retries,
+                    retry_delay=retry_delay,
+                    module="validation"
                 )
                 
                 if not verification_result:
@@ -388,13 +432,15 @@ class RerunValidator:
                 
                 # 第三阶段：格式化
                 format_prompt = FORMATTING_PROMPT_TEMPLATE.format(sql_statement=verification_result)
-                final_result = await client.call_async(
+                final_result = await client.call_async_with_format_validation(
                     session,
                     format_prompt,
-                    max_tokens=4096,
+                    validator=validate_sql_generation_response,
+                    max_tokens=max_tokens,
                     temperature=0.0,
-                    max_retries=1000,
-                    retry_delay=1.0
+                    max_retries=max_retries,
+                    retry_delay=retry_delay,
+                    module="validation"
                 )
                 
                 if not final_result:
@@ -412,10 +458,18 @@ class RerunValidator:
                 # 尝试解析JSON
                 parsed_json = None
                 try:
+                    # 确保final_result是字符串
+                    if isinstance(final_result, dict):
+                        final_result = json.dumps(final_result)
+                    
                     parsed_json = json.loads(final_result)
                 except (json.JSONDecodeError, TypeError) as e:
                     # 尝试提取JSON部分（可能包含在代码块中）
                     import re
+                    # 确保final_result是字符串
+                    if isinstance(final_result, dict):
+                        final_result = json.dumps(final_result)
+                    
                     # 修复正则表达式，正确处理换行符和嵌套结构
                     json_match = re.search(r'```json\s*(.*?)\s*```', final_result, re.DOTALL)
                     if json_match:

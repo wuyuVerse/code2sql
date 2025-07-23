@@ -1,0 +1,55 @@
+{
+  "workflow_id": "workflow_20250722_174524",
+  "start_time": "2025-07-22T17:45:59.829245",
+  "end_time": "2025-07-22T17:47:34.331309",
+  "total_steps": 2,
+  "steps": [
+    {
+      "step_name": "synthetic_data_generation_step",
+      "step_type": "synthetic_data_generation",
+      "timestamp": "2025-07-22T17:45:59.829245",
+      "scenarios": [
+        "no-where"
+      ],
+      "count_per_scenario": 10,
+      "total_packs_generated": 9,
+      "llm_server": "v3",
+      "temperature": 0.7,
+      "max_tokens": 4096,
+      "parallel": true,
+      "max_workers": 2,
+      "validate": true,
+      "output_file": "synthetic_output/workflow_20250722_174524/synthetic_data_generation/synthetic_data_generation_step.json",
+      "validation_file": "synthetic_output/workflow_20250722_174524/synthetic_data_generation/synthetic_data_generation_step_validation.json",
+      "validation_results": {
+        "synthetic_no-where_FetchWithFilter": "invalid",
+        "synthetic_no-where_SyncWithExternal": "invalid",
+        "synthetic_no-where_SearchByKeyword": "invalid",
+        "synthetic_no-where_MeasureEfficiency": "invalid",
+        "synthetic_no-where_ScaleCapacity": "invalid",
+        "synthetic_no-where_MatchByPattern": "invalid",
+        "synthetic_no-where_FilterByAttribute": "invalid",
+        "synthetic_no-where_RetrieveByDate": "invalid",
+        "synthetic_no-where_MigrateData": "invalid"
+      },
+      "valid_packs": 0,
+      "invalid_packs": 9,
+      "validation_rate": 0.0
+    },
+    {
+      "step_name": "sql_generation_step",
+      "step_type": "sql_generation",
+      "timestamp": "2025-07-22T17:47:34.331227",
+      "input_file": "synthetic_output/workflow_20250722_174524/synthetic_data_generation/synthetic_data_generation_step.json",
+      "output_file": "synthetic_output/workflow_20250722_174524/sql_generation/sql_generation_step.json",
+      "concurrency": 80,
+      "valid_count": 9,
+      "invalid_count": 0,
+      "total_count": 9,
+      "success_rate": 100.0
+    }
+  ],
+  "final_data_count": 0,
+  "extracted_data_count": 0,
+  "workflow_directory": "synthetic_output/workflow_20250722_174524"
+}

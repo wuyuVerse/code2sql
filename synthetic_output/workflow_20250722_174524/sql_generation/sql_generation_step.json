@@ -1,0 +1,617 @@
+[
+  {
+    "function_name": "FetchWithFilter",
+    "orm_code": "func (t *Treatment) FetchWithFilter(filter map[string]interface{}, page, size int) ([]types.TreatmentRecord, error) {\n\trecords := make([]types.TreatmentRecord, 0)\n\terr := base.GetInstance().MedicalDriver().Table(\"treatment\").Scopes(PaginateDB(page, size)).\n\t\tWhere(filter).Order(\"created_at desc\").Find(&records).Error\n\tif err != nil {\n\t\tif err == db.ErrRecordNotFound {\n\t\t\treturn records, utils.RecordNotFoundError\n\t\t}\n\t\treturn records, err\n\t}\n\treturn records, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "空filter",
+            "sql": "SELECT id, patient_id, doctor_id, diagnosis, treatment, status, created_at, updated_at FROM treatment ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "仅patient_id条件",
+            "sql": "SELECT id, patient_id, doctor_id, diagnosis, treatment, status, created_at, updated_at FROM treatment WHERE patient_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "仅doctor_id条件",
+            "sql": "SELECT id, patient_id, doctor_id, diagnosis, treatment, status, created_at, updated_at FROM treatment WHERE doctor_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "仅status条件",
+            "sql": "SELECT id, patient_id, doctor_id, diagnosis, treatment, status, created_at, updated_at FROM treatment WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "patient_id和doctor_id组合条件",
+            "sql": "SELECT id, patient_id, doctor_id, diagnosis, treatment, status, created_at, updated_at FROM treatment WHERE patient_id = ? AND doctor_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "patient_id和status组合条件",
+            "sql": "SELECT id, patient_id, doctor_id, diagnosis, treatment, status, created_at, updated_at FROM treatment WHERE patient_id = ? AND status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "doctor_id和status组合条件",
+            "sql": "SELECT id, patient_id, doctor_id, diagnosis, treatment, status, created_at, updated_at FROM treatment WHERE doctor_id = ? AND status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "date_from条件",
+            "sql": "SELECT id, patient_id, doctor_id, diagnosis, treatment, status, created_at, updated_at FROM treatment WHERE created_at >= ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "date_to条件",
+            "sql": "SELECT id, patient_id, doctor_id, diagnosis, treatment, status, created_at, updated_at FROM treatment WHERE created_at <= ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "date_from和date_to组合条件",
+            "sql": "SELECT id, patient_id, doctor_id, diagnosis, treatment, status, created_at, updated_at FROM treatment WHERE created_at >= ? AND created_at <= ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "完整条件组合",
+            "sql": "SELECT id, patient_id, doctor_id, diagnosis, treatment, status, created_at, updated_at FROM treatment WHERE patient_id = ? AND doctor_id = ? AND status = ? AND created_at >= ? AND created_at <= ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "TreatmentRecord",
+        "code_value": "type TreatmentRecord struct {\n\tID          int       `json:\"id\" gorm:\"column:id\"`\n\tPatientID   string    `json:\"patient_id\" gorm:\"column:patient_id\"`\n\tDoctorID    string    `json:\"doctor_id\" gorm:\"column:doctor_id\"`\n\tDiagnosis   string    `json:\"diagnosis\" gorm:\"column:diagnosis\"`\n\tTreatment   string    `json:\"treatment\" gorm:\"column:treatment\"`\n\tStatus      int       `json:\"status\" gorm:\"column:status\"`\n\tCreatedAt   time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt   time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "TreatmentStatus",
+        "code_value": "const (\n\tTreatmentPending = 0\n\tTreatmentInProgress = 1\n\tTreatmentCompleted = 2\n\tTreatmentCancelled = 3\n)"
+      },
+      {
+        "code_key": "TreatmentTable",
+        "code_value": "const TreatmentTable = \"treatment\""
+      },
+      {
+        "code_key": "PaginateDB",
+        "code_value": "func PaginateDB(page, size int) func(db *gorm.DB) *gorm.DB {\n\treturn func(db *gorm.DB) *gorm.DB {\n\t\toffset := (page - 1) * size\n\t\treturn db.Offset(offset).Limit(size)\n\t}\n}"
+      },
+      {
+        "code_key": "TreatmentFilter",
+        "code_value": "type TreatmentFilter struct {\n\tPatientID *string `json:\"patient_id\"`\n\tDoctorID  *string `json:\"doctor_id\"`\n\tStatus    *int    `json:\"status\"`\n\tDateFrom  *string `json:\"date_from\"`\n\tDateTo    *string `json:\"date_to\"`\n}"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "SyncWithExternal",
+    "orm_code": "func (r *Review) SyncWithExternal(filter map[string]interface{}, page, size int) ([]types.Treatment, error) {\n\tts := make([]types.Treatment, 0)\n\tcomment := r.CommentFunc(\"SYNC_COMMENT\")\n\terr := base.GetInstance().GormDriver().Clauses(comment).Table(\"reader_analytics\").Scopes(PaginateDB(page, size)).\n\t\tWhere(filter).Find(&ts).Error\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn ts, utils.RecordNotFoundError\n\t\t}\n\t\treturn ts, err\n\t}\n\treturn ts, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "Empty filter",
+            "sql": "SELECT id, patient_id, type, status, created_at, updated_at FROM reader_analytics WHERE SYNC_COMMENT LIMIT 10 OFFSET 0;"
+          },
+          {
+            "scenario": "Filter with patient_id condition",
+            "sql": "SELECT id, patient_id, type, status, created_at, updated_at FROM reader_analytics WHERE SYNC_COMMENT AND patient_id = '123' LIMIT 10 OFFSET 0;"
+          },
+          {
+            "scenario": "Filter with status and type conditions",
+            "sql": "SELECT id, patient_id, type, status, created_at, updated_at FROM reader_analytics WHERE SYNC_COMMENT AND status = 1 AND type = 2 LIMIT 10 OFFSET 0;"
+          },
+          {
+            "scenario": "Different pagination parameters",
+            "sql": "SELECT id, patient_id, type, status, created_at, updated_at FROM reader_analytics WHERE SYNC_COMMENT LIMIT 50 OFFSET 100;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "Treatment",
+        "code_value": "type Treatment struct {\n\tID        string    `json:\"id\" gorm:\"column:id\"`\n\tPatientID string    `json:\"patient_id\" gorm:\"column:patient_id\"`\n\tType      int       `json:\"type\" gorm:\"column:type\"`\n\tStatus    int       `json:\"status\" gorm:\"column:status\"`\n\tCreatedAt time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "Review",
+        "code_value": "type Review struct {\n\tCommentFunc func(string) clause.Expression\n}"
+      },
+      {
+        "code_key": "SyncStatus",
+        "code_value": "const (\n\tSyncPending = 0\n\tSyncSuccess = 1\n\tSyncFailed  = 2\n)"
+      },
+      {
+        "code_key": "ReaderAnalyticsTable",
+        "code_value": "const ReaderAnalyticsTable = \"reader_analytics\""
+      },
+      {
+        "code_key": "SYNC_COMMENT",
+        "code_value": "const SYNC_COMMENT = \"SYNC_COMMENT\""
+      },
+      {
+        "code_key": "PaginateDB",
+        "code_value": "func PaginateDB(page, size int) func(db *gorm.DB) *gorm.DB {\n\treturn func(db *gorm.DB) *gorm.DB {\n\t\tif page <= 0 {\n\t\t\tpage = 1\n\t\t}\n\t\tswitch {\n\t\tcase size > 100:\n\t\t\tsize = 100\n\t\tcase size <= 0:\n\t\t\tsize = 10\n\t\t}\n\t\toffset := (page - 1) * size\n\t\treturn db.Offset(offset).Limit(size)\n\t}\n}"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "SearchByKeyword",
+    "orm_code": "func (m *Manifest) SearchByKeyword(filter map[string]interface{}, page, size int) ([]types.CertificationRecord, error) {\n\tcr := make([]types.CertificationRecord, 0)\n\terr := base.GetInstance().MainDB().Table(\"certification_records\").\n\t\tWhere(filter).Order(\"created_at desc\").Scopes(PaginateDB(page, size)).Find(&cr).Error\n\tif err != nil {\n\t\tif err == gorm.ErrRecordNotFound {\n\t\t\treturn cr, utils.RecordNotFoundError\n\t\t}\n\t\treturn cr, err\n\t}\n\treturn cr, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "无筛选条件",
+            "sql": "SELECT id, certificate, status, issued_at, expires_at, created_at, updated_at FROM certification_records ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按status筛选",
+            "sql": "SELECT id, certificate, status, issued_at, expires_at, created_at, updated_at FROM certification_records WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按status和issued_at筛选",
+            "sql": "SELECT id, certificate, status, issued_at, expires_at, created_at, updated_at FROM certification_records WHERE status = ? AND issued_at = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按certificate模糊匹配",
+            "sql": "SELECT id, certificate, status, issued_at, expires_at, created_at, updated_at FROM certification_records WHERE certificate LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "CertificationRecord",
+        "code_value": "type CertificationRecord struct {\n\tID          string    `json:\"id\" gorm:\"column:id;primary_key\"`\n\tCertificate string    `json:\"certificate\" gorm:\"column:certificate\"`\n\tStatus      int       `json:\"status\" gorm:\"column:status\"`\n\tIssuedAt    time.Time `json:\"issued_at\" gorm:\"column:issued_at\"`\n\tExpiresAt   time.Time `json:\"expires_at\" gorm:\"column:expires_at\"`\n\tCreatedAt   time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt   time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "SearchRequest",
+        "code_value": "type SearchRequest struct {\n\tKeyword    string `json:\"keyword\"`\n\tPage       int    `json:\"page\"`\n\tPageSize   int    `json:\"page_size\"`\n\tStatus     *int   `json:\"status,omitempty\"`\n\tDateFilter string `json:\"date_filter,omitempty\"`\n}"
+      },
+      {
+        "code_key": "PaginateResult",
+        "code_value": "type PaginateResult struct {\n\tTotal       int64                    `json:\"total\"`\n\tPages       int                      `json:\"pages\"`\n\tCurrentPage int                      `json:\"current_page\"`\n\tData        []CertificationRecord `json:\"data\"`\n}"
+      },
+      {
+        "code_key": "CERTIFICATION_TABLE",
+        "code_value": "const CERTIFICATION_TABLE = \"certification_records\""
+      },
+      {
+        "code_key": "DEFAULT_PAGE_SIZE",
+        "code_value": "const DEFAULT_PAGE_SIZE = 20"
+      },
+      {
+        "code_key": "CERT_STATUS_ACTIVE",
+        "code_value": "const CERT_STATUS_ACTIVE = 1"
+      },
+      {
+        "code_key": "CERT_STATUS_EXPIRED",
+        "code_value": "const CERT_STATUS_EXPIRED = 2"
+      },
+      {
+        "code_key": "CERT_STATUS_REVOKED",
+        "code_value": "const CERT_STATUS_REVOKED = 3"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "MeasureEfficiency",
+    "orm_code": "func (a *Achievement) MeasureEfficiency(criteria map[string]interface{}, page, size int) ([]types.PerformanceMetric, error) {\n\tmetrics := make([]types.PerformanceMetric, 0)\n\tdb := base.GetInstance().AnalyticsDriver().Table(\"curriculum_standards\")\n\terr := db.Order(\"modification_date desc\").Scopes(PaginateDB(page, size)).\n\t\tWhere(criteria).Find(&metrics).Error\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn metrics, utils.DataNotFoundError\n\t\t}\n\t\treturn metrics, err\n\t}\n\treturn metrics, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "无任何条件",
+            "sql": "SELECT id, efficiency_score, assessment_date, modified_by, modification_date FROM curriculum_standards ORDER BY modification_date desc LIMIT 20 OFFSET 0;"
+          },
+          {
+            "scenario": "单条件 - 最小分数",
+            "sql": "SELECT id, efficiency_score, assessment_date, modified_by, modification_date FROM curriculum_standards WHERE efficiency_score >= 85.0 ORDER BY modification_date desc LIMIT 10 OFFSET 10;"
+          },
+          {
+            "scenario": "多条件组合",
+            "sql": "SELECT id, efficiency_score, assessment_date, modified_by, modification_date FROM curriculum_standards WHERE efficiency_score >= 70.0 AND efficiency_score <= 90.0 AND assessment_date >= '2023-01-01 00:00:00' AND modified_by = 'user123' ORDER BY modification_date desc LIMIT 5 OFFSET 10;"
+          },
+          {
+            "scenario": "使用IN条件",
+            "sql": "SELECT id, efficiency_score, assessment_date, modified_by, modification_date FROM curriculum_standards WHERE modified_by IN ('user123', 'user456', 'user789') ORDER BY modification_date desc LIMIT 20 OFFSET 0;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "PerformanceMetric",
+        "code_value": "type PerformanceMetric struct {\n\tID               string    `json:\"id\" gorm:\"column:id\"`\n\tEfficiencyScore  float64   `json:\"efficiency_score\" gorm:\"column:efficiency_score\"`\n\tAssessmentDate   time.Time `json:\"assessment_date\" gorm:\"column:assessment_date\"`\n\tModifiedBy       string    `json:\"modified_by\" gorm:\"column:modified_by\"`\n\tModificationDate time.Time `json:\"modification_date\" gorm:\"column:modification_date\"`\n}"
+      },
+      {
+        "code_key": "Achievement",
+        "code_value": "type Achievement struct {\n\tbase.BaseModel\n\tMetrics []PerformanceMetric `json:\"metrics\" gorm:\"foreignKey:AchievementID\"`\n}"
+      },
+      {
+        "code_key": "CurriculumStandardsTable",
+        "code_value": "const CurriculumStandardsTable = \"curriculum_standards\""
+      },
+      {
+        "code_key": "EfficiencyCriteria",
+        "code_value": "type EfficiencyCriteria struct {\n\tMinScore float64 `json:\"min_score\"`\n\tMaxScore float64 `json:\"max_score\"`\n\tPeriod   string  `json:\"period\"`\n}"
+      },
+      {
+        "code_key": "DefaultPageSize",
+        "code_value": "const DefaultPageSize = 20"
+      },
+      {
+        "code_key": "PerformanceStatus",
+        "code_value": "type PerformanceStatus int\nconst (\n\tStatusPending PerformanceStatus = iota\n\tStatusApproved\n\tStatusRejected\n)"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "ScaleCapacity",
+    "orm_code": "func (e *Equipment) ScaleCapacity(filter map[string]interface{}, page, size int) ([]types.ArmorDetail, error) {\n\tarmors := make([]types.ArmorDetail, 0)\n\terr := base.GetInstance().MainDriver().Table(\"order_history\").\n\t\tWhere(filter).Order(\"ModuleName desc\").Scopes(PaginateDB(page, size)).Find(&armors).Error\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn armors, utils.EmptyResultError\n\t\t}\n\t\treturn armors, err\n\t}\n\treturn armors, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "无筛选条件（filter为空）",
+            "sql": "SELECT * FROM order_history ORDER BY ModuleName DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "单条件筛选（如filter = {\"room_number\": \"101\"}）",
+            "sql": "SELECT * FROM order_history WHERE room_number = ? ORDER BY ModuleName DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "多条件组合筛选（如filter = {\"room_number\": \"101\", \"status\": 1}）",
+            "sql": "SELECT * FROM order_history WHERE room_number = ? AND status = ? ORDER BY ModuleName DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "包含其他字段的筛选（如filter = {\"wing\": \"East\", \"floor\": 2}）",
+            "sql": "SELECT * FROM order_history WHERE wing = ? AND floor = ? ORDER BY ModuleName DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "Hospital",
+        "code_value": "type Hospital struct {\n\ttypes.MedicalQuery\n\t*RoomInfo\n}"
+      },
+      {
+        "code_key": "MedicalQuery",
+        "code_value": "type MedicalQuery struct {\n\tBedCount      int `json:\"bed_count\"`\n\tDoctorCount   int `json:\"doctor_count\"`\n\tPatientCount  int `json:\"patient_count\"`\n}"
+      },
+      {
+        "code_key": "RoomInfo",
+        "code_value": "type RoomInfo struct {\n\tRoomNumber string `json:\"room_number\" gorm:\"column:room_number\"`\n\tFloor      int    `json:\"floor\" gorm:\"column:floor\"`\n\tWing       string `json:\"wing\" gorm:\"column:wing\"`\n\tStatus     int    `json:\"status\" gorm:\"column:status\"`\n}"
+      },
+      {
+        "code_key": "PatientDetail",
+        "code_value": "type PatientDetail struct {\n\tID         string    `json:\"id\" gorm:\"column:id\"`\n\tName       string    `json:\"name\" gorm:\"column:name\"`\n\tAdmitDate  time.Time `json:\"admit_date\" gorm:\"column:admit_date\"`\n\tDischargeDate time.Time `json:\"discharge_date\" gorm:\"column:discharge_date\"`\n\tRoomNumber string    `json:\"room_number\" gorm:\"column:room_number\"`\n\tDoctorID   string    `json:\"doctor_id\" gorm:\"column:doctor_id\"`\n}"
+      },
+      {
+        "code_key": "HospitalTable",
+        "code_value": "const HospitalTable = \"hospital_records\""
+      },
+      {
+        "code_key": "PatientStatus",
+        "code_value": "const (\n\tAdmitted = iota + 1\n\tDischarged\n\tTransferred\n\tDeceased\n)"
+      },
+      {
+        "code_key": "Asset",
+        "code_value": "type Asset struct {\n\tID          string `json:\"id\" gorm:\"column:id\"`\n\tName        string `json:\"name\" gorm:\"column:name\"`\n\tType        int    `json:\"type\" gorm:\"column:type\"`\n\tLocation    string `json:\"location\" gorm:\"column:location\"`\n\tStatus      int    `json:\"status\" gorm:\"column:status\"`\n\tPurchaseDate time.Time `json:\"purchase_date\" gorm:\"column:purchase_date\"`\n}"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "MatchByPattern",
+    "orm_code": "func (b *Book) MatchByPattern(criteria map[string]interface{}, page, size int) ([]types.PublicationRecord, error) {\n\tpr := make([]types.PublicationRecord, 0)\n\tcomment := b.CommentFunc(\"SELECT\")\n\terr := base.GetInstance().LibDriver().Clauses(comment).Table(\"exam_results\").Order(\"created_at DESC\").\n\t\tScopes(PaginateDB(page, size)).Where(criteria).Find(&pr).Error\n\tif err != nil {\n\t\tif err == db.ErrRecordNotFound {\n\t\t\treturn pr, utils.RecordNotFoundError\n\t\t}\n\t\treturn pr, err\n\t}\n\treturn pr, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "无任何条件（空map）",
+            "sql": "SELECT id, title, author, isbn, publisher, created_at, updated_at FROM exam_results ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "单条件查询（例如按ID查询）",
+            "sql": "SELECT id, title, author, isbn, publisher, created_at, updated_at FROM exam_results WHERE id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "多条件组合查询（例如按作者和ISBN查询）",
+            "sql": "SELECT id, title, author, isbn, publisher, created_at, updated_at FROM exam_results WHERE author = ? AND isbn = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "包含非匹配条件的查询",
+            "sql": "SELECT id, title, author, isbn, publisher, created_at, updated_at FROM exam_results WHERE title LIKE ? AND publisher = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "PublicationRecord",
+        "code_value": "type PublicationRecord struct {\n\tID        string    `json:\"id\" gorm:\"column:id\"`\n\tTitle     string    `json:\"title\" gorm:\"column:title\"`\n\tAuthor    string    `json:\"author\" gorm:\"column:author\"`\n\tISBN      string    `json:\"isbn\" gorm:\"column:isbn\"`\n\tPublisher string    `json:\"publisher\" gorm:\"column:publisher\"`\n\tCreatedAt time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "Book",
+        "code_value": "type Book struct {\n\tCommentFunc func(string) string\n}"
+      },
+      {
+        "code_key": "ExamResultsTable",
+        "code_value": "const ExamResultsTable = \"exam_results\""
+      },
+      {
+        "code_key": "TournamentStatus",
+        "code_value": "const (\n\tTournamentPending = iota\n\tTournamentStarted\n\tTournamentFinished\n)"
+      },
+      {
+        "code_key": "ChapterQuery",
+        "code_value": "type ChapterQuery struct {\n\tBookID   string `json:\"book_id\"`\n\tKeywords string `json:\"keywords\"`\n\tOrderBy  string `json:\"order_by\"` // title, created_at\n}"
+      },
+      {
+        "code_key": "PaginateDB",
+        "code_value": "func PaginateDB(page, size int) func(db *gorm.DB) *gorm.DB {\n\treturn func(db *gorm.DB) *gorm.DB {\n\t\toffset := (page - 1) * size\n\t\treturn db.Offset(offset).Limit(size)\n\t}\n}"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "FilterByAttribute",
+    "orm_code": "func (l *Lab) FilterByAttribute(criteria map[string]interface{}, page, size int) ([]types.LabRecord, error) {\n\tvar records []types.LabRecord\n\tcomment := l.CommentFunc(\"SELECT\")\n\terr := base.GetInstance().MainDB().Clauses(comment).Table(\"compliance_records\").\n\t\tWhere(criteria).Scopes(PaginateDB(page, size)).Order(\"created_at DESC\").Find(&records).Error\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn nil, utils.ErrNotFound\n\t\t}\n\t\treturn nil, err\n\t}\n\treturn records, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "criteria为空",
+            "sql": "SELECT * FROM compliance_records ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "criteria包含name条件",
+            "sql": "SELECT * FROM compliance_records WHERE name = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "criteria包含status条件",
+            "sql": "SELECT * FROM compliance_records WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "criteria包含name和status条件",
+            "sql": "SELECT * FROM compliance_records WHERE name = ? AND status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "LabRecord",
+        "code_value": "type LabRecord struct {\n\tID        string    `gorm:\"column:id;primaryKey\"`\n\tName      string    `gorm:\"column:name\"`\n\tStatus    int       `gorm:\"column:status\"`\n\tCreatedAt time.Time `gorm:\"column:created_at\"`\n\tUpdatedAt time.Time `gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "LabCriteria",
+        "code_value": "type LabCriteria struct {\n\tName   *string `json:\"name\"`\n\tStatus *int    `json:\"status\"`\n}"
+      },
+      {
+        "code_key": "COMPLIANCE_RECORDS_TABLE",
+        "code_value": "const COMPLIANCE_RECORDS_TABLE = \"compliance_records\""
+      },
+      {
+        "code_key": "LabResponse",
+        "code_value": "type LabResponse struct {\n\tRecords []LabRecord `json:\"records\"`\n\tTotal   int         `json:\"total\"`\n}"
+      },
+      {
+        "code_key": "LabStatus",
+        "code_value": "const (\n\tLabStatusPending = 1\n\tLabStatusActive  = 2\n\tLabStatusExpired = 3\n)"
+      },
+      {
+        "code_key": "LabComment",
+        "code_value": "type LabComment struct {\n\tQueryType string `gorm:\"comment\"`\n}"
+      },
+      {
+        "code_key": "PaginateDB",
+        "code_value": "func PaginateDB(page, size int) func(db *gorm.DB) *gorm.DB {\n\treturn func(db *gorm.DB) *gorm.DB {\n\t\toffset := (page - 1) * size\n\t\treturn db.Offset(offset).Limit(size)\n\t}\n}"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "RetrieveByDate",
+    "orm_code": "func (r *Report) RetrieveByDate(criteria map[string]interface{}, offset, limit int) ([]types.PriceRecord, error) {\n\tvar records []types.PriceRecord\n\terr := base.GetInstance().FinanceDriver().Table(\"price_history\").\n\t\tWhere(criteria).\n\t\tOrder(\"transaction_date desc\").\n\t\tOffset(offset).Limit(limit).\n\t\tFind(&records).Error\n\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn nil, utils.DataNotFoundError\n\t\t}\n\t\treturn nil, err\n\t}\n\treturn records, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "仅资产符号条件",
+            "sql": "SELECT id, transaction_date, asset_symbol, open_price, close_price, volume, exchange_code, created_at, updated_at FROM price_history WHERE asset_symbol = ? ORDER BY transaction_date DESC OFFSET ? LIMIT ?;"
+          },
+          {
+            "scenario": "仅交易所代码条件",
+            "sql": "SELECT id, transaction_date, asset_symbol, open_price, close_price, volume, exchange_code, created_at, updated_at FROM price_history WHERE exchange_code = ? ORDER BY transaction_date DESC OFFSET ? LIMIT ?;"
+          },
+          {
+            "scenario": "日期范围条件",
+            "sql": "SELECT id, transaction_date, asset_symbol, open_price, close_price, volume, exchange_code, created_at, updated_at FROM price_history WHERE transaction_date >= ? AND transaction_date <= ? ORDER BY transaction_date DESC OFFSET ? LIMIT ?;"
+          },
+          {
+            "scenario": "交易量范围条件",
+            "sql": "SELECT id, transaction_date, asset_symbol, open_price, close_price, volume, exchange_code, created_at, updated_at FROM price_history WHERE volume >= ? AND volume <= ? ORDER BY transaction_date DESC OFFSET ? LIMIT ?;"
+          },
+          {
+            "scenario": "组合条件示例1（资产+交易所）",
+            "sql": "SELECT id, transaction_date, asset_symbol, open_price, close_price, volume, exchange_code, created_at, updated_at FROM price_history WHERE asset_symbol = ? AND exchange_code = ? ORDER BY transaction_date DESC OFFSET ? LIMIT ?;"
+          },
+          {
+            "scenario": "组合条件示例2（资产+日期范围）",
+            "sql": "SELECT id, transaction_date, asset_symbol, open_price, close_price, volume, exchange_code, created_at, updated_at FROM price_history WHERE asset_symbol = ? AND transaction_date >= ? AND transaction_date <= ? ORDER BY transaction_date DESC OFFSET ? LIMIT ?;"
+          },
+          {
+            "scenario": "组合条件示例3（交易所+交易量范围）",
+            "sql": "SELECT id, transaction_date, asset_symbol, open_price, close_price, volume, exchange_code, created_at, updated_at FROM price_history WHERE exchange_code = ? AND volume >= ? AND volume <= ? ORDER BY transaction_date DESC OFFSET ? LIMIT ?;"
+          },
+          {
+            "scenario": "完整组合条件",
+            "sql": "SELECT id, transaction_date, asset_symbol, open_price, close_price, volume, exchange_code, created_at, updated_at FROM price_history WHERE asset_symbol = ? AND exchange_code = ? AND transaction_date >= ? AND transaction_date <= ? AND volume >= ? AND volume <= ? ORDER BY transaction_date DESC OFFSET ? LIMIT ?;"
+          },
+          {
+            "scenario": "无WHERE条件",
+            "sql": "SELECT id, transaction_date, asset_symbol, open_price, close_price, volume, exchange_code, created_at, updated_at FROM price_history ORDER BY transaction_date DESC OFFSET ? LIMIT ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "PriceRecord",
+        "code_value": "type PriceRecord struct {\n\tID               int       `json:\"id\" gorm:\"column:id\"`\n\tTransactionDate  time.Time `json:\"transaction_date\" gorm:\"column:transaction_date\"`\n\tAssetSymbol      string    `json:\"asset_symbol\" gorm:\"column:asset_symbol\"`\n\tOpenPrice        float64   `json:\"open_price\" gorm:\"column:open_price\"`\n\tClosePrice       float64   `json:\"close_price\" gorm:\"column:close_price\"`\n\tVolume           int       `json:\"volume\" gorm:\"column:volume\"`\n\tExchangeCode     string    `json:\"exchange_code\" gorm:\"column:exchange_code\"`\n\tCreatedAt        time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt        time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "PriceCriteria",
+        "code_value": "type PriceCriteria struct {\n\tAssetSymbol   *string    `json:\"asset_symbol\"`\n\tExchangeCode  *string    `json:\"exchange_code\"`\n\tStartDate     *time.Time `json:\"start_date\"`\n\tEndDate       *time.Time `json:\"end_date\"`\n\tMinVolume     *int       `json:\"min_volume\"`\n\tMaxVolume     *int       `json:\"max_volume\"`\n}"
+      },
+      {
+        "code_key": "PriceResponse",
+        "code_value": "type PriceResponse struct {\n\tRecords       []PriceRecord `json:\"records\"`\n\tTotalCount    int           `json:\"total_count\"`\n\tPage          int           `json:\"page\"`\n\tPageSize      int           `json:\"page_size\"`\n\tHasMore       bool          `json:\"has_more\"`\n}"
+      },
+      {
+        "code_key": "PriceHistoryTable",
+        "code_value": "const PriceHistoryTable = \"price_history\""
+      },
+      {
+        "code_key": "DefaultPageSize",
+        "code_value": "const DefaultPageSize = 50"
+      },
+      {
+        "code_key": "MaxQueryRange",
+        "code_value": "const MaxQueryRange = 365 * 24 * time.Hour"
+      },
+      {
+        "code_key": "SortDirection",
+        "code_value": "type SortDirection string\nconst (\n\tSortAsc  SortDirection = \"asc\"\n\tSortDesc SortDirection = \"desc\"\n)"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "MigrateData",
+    "orm_code": "func (a *Article) MigrateData(filter map[string]interface{}, page, size int) ([]types.ArticleSource, error) {\n\tas := make([]types.ArticleSource, 0)\n\terr := base.GetInstance().MainDB().Table(\"virtual_items\").Order(\"created_at desc\").\n\t\tScopes(PaginateDB(page, size)).Where(filter).Find(&as).Error\n\tif err != nil {\n\t\tif err == gorm.ErrRecordNotFound {\n\t\t\treturn as, utils.RecordNotFoundError\n\t\t}\n\t\treturn as, err\n\t}\n\treturn as, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "无筛选条件",
+            "sql": "SELECT id, title, content, author_id, status, created_at, updated_at FROM virtual_items ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按title筛选",
+            "sql": "SELECT id, title, content, author_id, status, created_at, updated_at FROM virtual_items WHERE title = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按content筛选",
+            "sql": "SELECT id, title, content, author_id, status, created_at, updated_at FROM virtual_items WHERE content = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按author_id筛选",
+            "sql": "SELECT id, title, content, author_id, status, created_at, updated_at FROM virtual_items WHERE author_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按status筛选",
+            "sql": "SELECT id, title, content, author_id, status, created_at, updated_at FROM virtual_items WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按title和status筛选",
+            "sql": "SELECT id, title, content, author_id, status, created_at, updated_at FROM virtual_items WHERE title = ? AND status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按author_id和status筛选",
+            "sql": "SELECT id, title, content, author_id, status, created_at, updated_at FROM virtual_items WHERE author_id = ? AND status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按title和author_id筛选",
+            "sql": "SELECT id, title, content, author_id, status, created_at, updated_at FROM virtual_items WHERE title = ? AND author_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "ArticleSource",
+        "code_value": "type ArticleSource struct {\n\tID        uint      `json:\"id\" gorm:\"column:id\"`\n\tTitle     string    `json:\"title\" gorm:\"column:title\"`\n\tContent   string    `json:\"content\" gorm:\"column:content\"`\n\tAuthorID  uint      `json:\"author_id\" gorm:\"column:author_id\"`\n\tStatus    int       `json:\"status\" gorm:\"column:status\"`\n\tCreatedAt time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "ArticleRequest",
+        "code_value": "type ArticleRequest struct {\n\tTitle    string `json:\"title\"`\n\tContent  string `json:\"content\"`\n\tAuthorID uint   `json:\"author_id\"`\n\tStatus   int    `json:\"status\"`\n}"
+      },
+      {
+        "code_key": "ArticleResponse",
+        "code_value": "type ArticleResponse struct {\n\tID        uint      `json:\"id\"`\n\tTitle     string    `json:\"title\"`\n\tContent   string    `json:\"content\"`\n\tAuthor    string    `json:\"author\"`\n\tCreatedAt time.Time `json:\"created_at\"`\n\tStatus    string    `json:\"status\"`\n}"
+      },
+      {
+        "code_key": "VirtualItemsTable",
+        "code_value": "const VirtualItemsTable = \"virtual_items\""
+      },
+      {
+        "code_key": "ArticleStatus",
+        "code_value": "const (\n\tArticleStatusDraft = 0\n\tArticleStatusPublished = 1\n\tArticleStatusArchived = 2\n)"
+      },
+      {
+        "code_key": "Feed",
+        "code_value": "type Feed struct {\n\ttypes.ArticleSource\n\tLikesCount uint `json:\"likes_count\" gorm:\"column:likes_count\"`\n}"
+      },
+      {
+        "code_key": "Refund",
+        "code_value": "type Refund struct {\n\tID        uint      `json:\"id\" gorm:\"column:id\"`\n\tOrderID   uint      `json:\"order_id\" gorm:\"column:order_id\"`\n\tAmount    float64   `json:\"amount\" gorm:\"column:amount\"`\n\tStatus    string    `json:\"status\" gorm:\"column:status\"`\n\tCreatedAt time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n}"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  }
+]

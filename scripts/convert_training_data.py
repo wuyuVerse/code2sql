@@ -13,7 +13,7 @@ from pathlib import Path
 project_root = Path(__file__).parents[1]
 sys.path.insert(0, str(project_root))
 
-from data_processing.training_data_converter import TrainingDataConverter
+from data_processing.converter.training_data_converter import TrainingDataConverter
 
 def main():
     """主函数"""

@@ -1,0 +1,436 @@
+[
+  {
+    "function_name": "BulkUpdate",
+    "orm_code": "func (c *Currency) BulkUpdate() ([]types.ProgressRecord, error) {\n\trecords := make([]types.ProgressRecord, 0)\n\tcomment := c.CommentFunc(\"SELECT\")\n\terr := base.GetInstance().MainDriver().Clauses(comment).Table(\"progress_tracking\").\n\t\tWhere(\"activation_date > NOW() - INTERVAL '30 days'\").\n\t\tOrder(\"delivery_code desc\").Find(&records).Error\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn records, fmt.Errorf(\"no active records found\")\n\t\t}\n\t\treturn records, err\n\t}\n\treturn records, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      "SELECT id, delivery_code, activation_date, status, created_at, updated_at FROM progress_tracking WHERE activation_date > NOW() - INTERVAL '30 days' ORDER BY delivery_code DESC;"
+    ],
+    "sql_types": [
+      "SELECT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "ProgressRecord",
+        "code_value": "type ProgressRecord struct {\n\tID             string    `gorm:\"column:id\"`\n\tDeliveryCode   string    `gorm:\"column:delivery_code\"`\n\tActivationDate time.Time `gorm:\"column:activation_date\"`\n\tStatus         int       `gorm:\"column:status\"`\n\tCreatedAt      time.Time `gorm:\"column:created_at\"`\n\tUpdatedAt      time.Time `gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "Currency",
+        "code_value": "type Currency struct {\n\tCommentFunc func(string) string\n}"
+      },
+      {
+        "code_key": "ProgressTrackingTable",
+        "code_value": "const ProgressTrackingTable = \"progress_tracking\""
+      },
+      {
+        "code_key": "RecordStatus",
+        "code_value": "const (\n\tRecordStatusPending   = 0\n\tRecordStatusActive    = 1\n\tRecordStatusArchived  = 2\n)"
+      },
+      {
+        "code_key": "BaseDriver",
+        "code_value": "var BaseDriver = base.GetInstance().MainDriver()"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "SearchByKeyword",
+    "orm_code": "func (a *Auction) SearchByKeyword(page, size int) ([]types.AuctionItem, error) {\n\titems := make([]types.AuctionItem, 0)\n\terr := base.GetInstance().MainDB().Table(\"seo_metadata\").\n\t\tWhere(\"status = ?\", 1).\n\t\tOrder(\"created_at desc\").\n\t\tScopes(PaginateDB(page, size)).\n\t\tFind(&items).Error\n\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn items, fmt.Errorf(\"no active auctions found\")\n\t\t}\n\t\treturn items, err\n\t}\n\treturn items, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "Page 1 with size 10",
+            "sql": "SELECT * FROM seo_metadata WHERE status = 1 ORDER BY created_at DESC LIFMIT 10 OFFSET 0;"
+          },
+          {
+            "scenario": "Page 2 with size 10",
+            "sql": "SELECT * FROM seo_metadata WHERE status = 1 ORDER BY created_at DESC LIMIT 10 OFFSET 10;"
+          },
+          {
+            "scenario": "Custom page and size",
+            "sql": "SELECT * FROM seo_metadata WHERE status = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "AuctionItem",
+        "code_value": "type AuctionItem struct {\n\tID        uint      `json:\"id\" gorm:\"column:id\"`\n\tTitle     string    `json:\"title\" gorm:\"column:title\"`\n\tKeyword   string    `json:\"keyword\" gorm:\"column:keyword\"`\n\tStatus    int       `json:\"status\" gorm:\"column:status\"`\n\tStartTime time.Time `json:\"start_time\" gorm:\"column:start_time\"`\n\tEndTime   time.Time `json:\"end_time\" gorm:\"column:end_time\"`\n\tCreatedAt time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "AuctionStatus",
+        "code_value": "const (\n\tAuctionActive = 1\n\tAuctionClosed = 0\n\tAuctionPending = 2\n)"
+      },
+      {
+        "code_key": "SeoMetadataTable",
+        "code_value": "const SeoMetadataTable = \"seo_metadata\""
+      },
+      {
+        "code_key": "CarrierService",
+        "code_value": "type CarrierService struct {\n\tID          string `json:\"id\" gorm:\"column:id\"`\n\tServiceName string `json:\"service_name\" gorm:\"column:service_name\"`\n\tMaxWeight   int    `json:\"max_weight\" gorm:\"column:max_weight\"`\n\tIsActive    bool   `json:\"is_active\" gorm:\"column:is_active\"`\n}"
+      },
+      {
+        "code_key": "ExpenseRecord",
+        "code_value": "type ExpenseRecord struct {\n\tID          string    `json:\"id\" gorm:\"column:id\"`\n\tCategory    string    `json:\"category\" gorm:\"column:category\"`\n\tAmount      float64   `json:\"amount\" gorm:\"column:amount\"`\n\tDescription string    `json:\"description\" gorm:\"column:description\"`\n\tRecordDate  time.Time `json:\"record_date\" gorm:\"column:record_date\"`\n}"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "SyncWithExternal",
+    "orm_code": "func (s *Seller) SyncWithExternal(page, size int) ([]types.ProfileDetail, error) {\n\tprofiles := make([]types.ProfileDetail, 0)\n\terr := base.GetInstance().MainDB().Table(\"security_clearances\").\n\t\tWhere(\"PermissionType = ?\", \"external\").\n\t\tOrder(\"Category DESC\").\n\t\tScopes(PaginateDB(page, size)).\n\t\tFind(&profiles).Error\n\n\tif err != nil {\n\t\tif err == gorm.ErrRecordNotFound {\n\t\t\treturn profiles, utils.ResourceNotFoundError\n\t\t}\n\t\treturn profiles, err\n\t}\n\treturn profiles, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "Default query with pagination",
+            "sql": "SELECT id, name, category, permission_type, created_at, updated_at FROM security_clearances WHERE PermissionType = 'external' ORDER BY category DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "ProfileDetail",
+        "code_value": "type ProfileDetail struct {\n\tID            string    `json:\"id\" gorm:\"column:id\"`\n\tName          string    `json:\"name\" gorm:\"column:name\"`\n\tCategory      string    `json:\"category\" gorm:\"column:category\"`\n\tPermissionType string   `json:\"permission_type\" gorm:\"column:permission_type\"`\n\tCreatedAt     time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt     time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "SecurityClearanceTable",
+        "code_value": "const SecurityClearanceTable = \"security_clearances\""
+      },
+      {
+        "code_key": "GPSLocation",
+        "code_value": "type GPSLocation struct {\n\tLatitude  float64 `json:\"latitude\"`\n\tLongitude float64 `json:\"longitude\"`\n\tAccuracy  float64 `json:\"accuracy\"`\n}"
+      },
+      {
+        "code_key": "CharacterType",
+        "code_value": "type CharacterType int\nconst (\n\tHero CharacterType = iota + 1\n\tVillain\n\tNeutral\n)"
+      },
+      {
+        "code_key": "ExternalSyncConfig",
+        "code_value": "var ExternalSyncConfig = struct {\n\tMaxRetries    int\n\tTimeout       time.Duration\n\tBatchSize     int\n}{\n\tMaxRetries: 3,\n\tTimeout:    30 * time.Second,\n\tBatchSize:  100,\n}"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "QueryByCondition",
+    "orm_code": "func (m *Marketplace) QueryByCondition(page, size int) ([]types.EditorProfile, error) {\n\tprofiles := make([]types.EditorProfile, 0)\n\terr := base.GetInstance().GormDriver().Table(\"training_modules\"). \n\t\tWhere(\"auth_token IS NOT NULL\"). \n\t\tOrder(\"discount_rate DESC\"). \n\t\tScopes(PaginateDB(page, size)). \n\t\tFind(&profiles).Error\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn profiles, utils.EmptyResultError\n\t\t}\n\t\treturn profiles, err\n\t}\n\treturn profiles, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      "SELECT id, name, auth_token, discount_rate, created_at, updated_at FROM training_modules WHERE auth_token IS NOT NULL ORDER BY discount_rate DESC LIMIT ? OFFSET ?;"
+    ],
+    "sql_types": [
+      "SELECT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "EditorProfile",
+        "code_value": "type EditorProfile struct {\n\tID           string  `json:\"id\" gorm:\"column:id\"`\n\tName         string  `json:\"name\" gorm:\"column:name\"`\n\tAuthToken    *string `json:\"auth_token\" gorm:\"column:auth_token\"`\n\tDiscountRate float64 `json:\"discount_rate\" gorm:\"column:discount_rate\"`\n\tCreatedAt    int64   `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt    int64   `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "TrainingModuleTable",
+        "code_value": "const TrainingModuleTable = \"training_modules\""
+      },
+      {
+        "code_key": "PaginationParams",
+        "code_value": "type PaginationParams struct {\n\tPage int `json:\"page\"`\n\tSize int `json:\"size\"`\n}"
+      },
+      {
+        "code_key": "QueryError",
+        "code_value": "type QueryError string\nconst ErrEmptyResult = \"empty result\""
+      },
+      {
+        "code_key": "Marketplace",
+        "code_value": "type Marketplace struct {\n\tDB *gorm.DB `json:\"-\"`\n}"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "AnalyzePerformance",
+    "orm_code": "func (s *Semester) AnalyzePerformance() ([]types.CurriculumTrack, error) {\n\tvar tracks []types.CurriculumTrack\n\tcomment := s.CommentFunc(\"ANALYZE\")\n\terr := base.GetInstance().EduDriver().Clauses(comment).Table(\"curriculum_standards\").\n\t\tWhere(\"state = ?\", \"active\").Order(\"floor asc\").Find(&tracks).Error\n\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn nil, utils.EmptyDataSetError\n\t\t}\n\t\treturn nil, fmt.Errorf(\"performance analysis failed: %v\", err)\n\t}\n\treturn tracks, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "查询active状态的课程标准并按floor升序排列",
+            "sql": "SELECT id, name, floor, state, credit FROM curriculum_standards WHERE state = 'active' ORDER BY floor ASC;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "CurriculumTrack",
+        "code_value": "type CurriculumTrack struct {\n\tID     string `gorm:\"column:id;primaryKey\"`\n\tName   string `gorm:\"column:name\"`\n\tFloor  int    `gorm:\"column:floor\"`\n\tState  string `gorm:\"column:state\"`\n\tCredit int    `gorm:\"column:credit\"`\n}"
+      },
+      {
+        "code_key": "Semester",
+        "code_value": "type Semester struct {\n\tCommentFunc func(string) *gorm.DB `json:\"-\"`\n\tID          string               `gorm:\"column:id\"`\n\tYear        int                  `gorm:\"column:year\"`\n}"
+      },
+      {
+        "code_key": "CurriculumStandardTable",
+        "code_value": "const CurriculumStandardTable = \"curriculum_standards\""
+      },
+      {
+        "code_key": "ActiveState",
+        "code_value": "const ActiveState = \"active\""
+      },
+      {
+        "code_key": "CommentType",
+        "code_value": "type CommentType string\nconst AnalyzeCommentType CommentType = \"ANALYZE\""
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "PurgeExpiredRecords",
+    "orm_code": "func (r *Role) PurgeExpiredRecords(page, size int) ([]types.Document, error) {\n\tdocs := make([]types.Document, 0)\n\terr := base.GetInstance().DbDriver().Table(\"department_structure\").\n\t\tWhere(\"expired_at < ?\", time.Now().Unix()).\n\t\tOrder(\"created_at desc\").\n\t\tScopes(PaginateDB(page, size)).\n\t\tFind(&docs).Error\n\tif err != nil {\n\t\tif err == gorm.ErrRecordNotFound {\n\t\t\treturn docs, nil\n\t\t}\n\t\treturn nil, err\n\t}\n\treturn docs, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "基础查询模板",
+            "sql": "SELECT id, name, parent_id, expired_at, created_at, updated_at FROM department_structure WHERE expired_at < ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "第一页，默认每页大小",
+            "sql": "SELECT id, name, parent_id, expired_at, created_at, updated_at FROM department_structure WHERE expired_at < ? ORDER BY created_at DESC LIMIT 20 OFFSET 0;"
+          },
+          {
+            "scenario": "第二页，自定义每页大小",
+            "sql": "SELECT id, name, parent_id, expired_at, created_at, updated_at FROM department_structure WHERE expired_at < ? ORDER BY created_at DESC LIMIT 50 OFFSET 50;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "DepartmentStructure",
+        "code_value": "type DepartmentStructure struct {\n\tID        string `json:\"id\" gorm:\"column:id\"`\n\tName      string `json:\"name\" gorm:\"column:name\"`\n\tParentID  string `json:\"parent_id\" gorm:\"column:parent_id\"`\n\tExpiredAt int64  `json:\"expired_at\" gorm:\"column:expired_at\"`\n\tCreatedAt int64  `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt int64  `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "Role",
+        "code_value": "type Role struct {\n\tID          string `json:\"id\" gorm:\"column:id\"`\n\tName        string `json:\"name\" gorm:\"column:name\"`\n\tDescription string `json:\"description\" gorm:\"column:description\"`\n\tCreatedAt   int64  `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt   int64  `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "Document",
+        "code_value": "type Document struct {\n\tID        string `json:\"id\" gorm:\"column:id\"`\n\tContent   string `json:\"content\" gorm:\"column:content\"`\n\tCreatedAt int64  `json:\"created_at\" gorm:\"column:created_at\"`\n}"
+      },
+      {
+        "code_key": "DEPARTMENT_STRUCTURE_TABLE",
+        "code_value": "const DEPARTMENT_STRUCTURE_TABLE = \"department_structure\""
+      },
+      {
+        "code_key": "DefaultPageSize",
+        "code_value": "const DefaultPageSize = 20"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "SortByField",
+    "orm_code": "func (t *Textbook) SortByField(page, size int) ([]types.ThemeCollection, error) {\n\tvar themes []types.ThemeCollection\n\tcomment := t.CommentFunc(\"SELECT\")\n\terr := base.GetInstance().PrimaryDB().Clauses(comment).Table(\"product_catalog\").\n\t\tWhere(\"status = ?\", 1).Order(\"updated_at desc\").Scopes(Paginate(page, size)).Find(&themes).Error\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn nil, nil\n\t\t}\n\t\treturn nil, err\n\t}\n\treturn themes, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "查询product_catalog表中status为1的记录，按updated_at降序排列，并分页",
+            "sql": "SELECT id, name, status, updated_at, created_at FROM product_catalog WHERE status = 1 ORDER BY updated_at DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "ThemeCollection",
+        "code_value": "type ThemeCollection struct {\n\tID        uint      `gorm:\"column:id\"`\n\tName      string    `gorm:\"column:name\"`\n\tStatus    int       `gorm:\"column:status\"`\n\tUpdatedAt time.Time `gorm:\"column:updated_at\"`\n\tCreatedAt time.Time `gorm:\"column:created_at\"`\n}"
+      },
+      {
+        "code_key": "Textbook",
+        "code_value": "type Textbook struct {\n\tCommentFunc func(string) string\n}"
+      },
+      {
+        "code_key": "Paginate",
+        "code_value": "func Paginate(page, size int) func(db *gorm.DB) *gorm.DB {\n\treturn func(db *gorm.DB) *gorm.DB {\n\t\toffset := (page - 1) * size\n\t\treturn db.Offset(offset).Limit(size)\n\t}\n}"
+      },
+      {
+        "code_key": "ProductCatalogTable",
+        "code_value": "const ProductCatalogTable = \"product_catalog\""
+      },
+      {
+        "code_key": "ActiveStatus",
+        "code_value": "const ActiveStatus = 1"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "RetrieveByDate",
+    "orm_code": "func (r *Result) RetrieveByDate(page, size int) ([]types.Warehouse, error) {\n\tws := make([]types.Warehouse, 0)\n\tcomment := r.CommentFunc(\"SELECT\")\n\terr := base.GetInstance().Driver().Clauses(comment).Table(\"resource_allocation\").\n\t\tWhere(\"timezone = 'UTC'\").Order(\"created_at desc\").Scopes(Paginate(page, size)).\n\t\tFind(&ws).Error\n\tif err != nil {\n\t\tif err == gorm.ErrRecordNotFound {\n\t\t\treturn ws, fmt.Errorf(\"no records found\")\n\t\t}\n\t\treturn ws, err\n\t}\n\treturn ws, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "Base query with pagination parameters",
+            "sql": "SELECT * FROM resource_allocation WHERE timezone = 'UTC' ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "Example with page=1, size=10",
+            "sql": "SELECT * FROM resource_allocation WHERE timezone = 'UTC' ORDER BY created_at DESC LIMIT 10 OFFSET 0;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "Warehouse",
+        "code_value": "type Warehouse struct {\n\tID        string    `json:\"id\" gorm:\"column:id\"`\n\tName      string    `json:\"name\" gorm:\"column:name\"`\n\tLocation  string    `json:\"location\" gorm:\"column:location\"`\n\tCapacity  int       `json:\"capacity\" gorm:\"column:capacity\"`\n\tStatus    int       `json:\"status\" gorm:\"column:status\"`\n\tCreatedAt time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "ResourceAllocationTable",
+        "code_value": "const ResourceAllocationTable = \"resource_allocation\""
+      },
+      {
+        "code_key": "Vehicle",
+        "code_value": "type Vehicle struct {\n\tID          string `json:\"id\" gorm:\"column:id\"`\n\tType        string `json:\"type\" gorm:\"column:type\"`\n\tPlateNumber string `json:\"plate_number\" gorm:\"column:plate_number\"`\n\tStatus      int    `json:\"status\" gorm:\"column:status\"`\n\tWarehouseID string `json:\"warehouse_id\" gorm:\"column:warehouse_id\"`\n}"
+      },
+      {
+        "code_key": "Lab",
+        "code_value": "type Lab struct {\n\tID        string    `json:\"id\" gorm:\"column:id\"`\n\tName      string    `json:\"name\" gorm:\"column:name\"`\n\tLocation  string    `json:\"location\" gorm:\"column:location\"`\n\tCreatedAt time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "UTC_TIMEZONE",
+        "code_value": "const UTC_TIMEZONE = \"UTC\""
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "TrackBehavior",
+    "orm_code": "func (b *Buyer) TrackBehavior(page, size int) ([]types.OfficeActivity, error) {\n\tactivities := make([]types.OfficeActivity, 0)\n\terr := base.GetInstance().GormDriver().Table(\"vendor_contracts\").\n\t\tWhere(\"status = ?\", \"active\").\n\t\tOrder(\"created_at desc\").\n\t\tScopes(PaginateDB(page, size)).\n\t\tFind(&activities).Error\n\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn activities, utils.ErrNoRecords\n\t\t}\n\t\treturn activities, err\n\t}\n\treturn activities, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "Default query with pagination",
+            "sql": "SELECT id, vendor_id, action, status, created_at, updated_at FROM vendor_contracts WHERE status = 'active' ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "OfficeActivity",
+        "code_value": "type OfficeActivity struct {\n\tID        string    `json:\"id\" gorm:\"column:id\"`\n\tVendorID  string    `json:\"vendor_id\" gorm:\"column:vendor_id\"`\n\tAction    string    `json:\"action\" gorm:\"column:action\"`\n\tStatus    string    `json:\"status\" gorm:\"column:status\"`\n\tCreatedAt time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "VendorContractTable",
+        "code_value": "const VendorContractTable = \"vendor_contracts\""
+      },
+      {
+        "code_key": "ActivityStatus",
+        "code_value": "type ActivityStatus string\nconst (\n\tStatusActive   ActivityStatus = \"active\"\n\tStatusInactive ActivityStatus = \"inactive\"\n\tStatusPending  ActivityStatus = \"pending\"\n)"
+      },
+      {
+        "code_key": "Buyer",
+        "code_value": "type Buyer struct {\n\tID   string `json:\"id\" gorm:\"column:id\"`\n\tName string `json:\"name\" gorm:\"column:name\"`\n}"
+      },
+      {
+        "code_key": "PageSizeLimit",
+        "code_value": "const PageSizeLimit = 50"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "CalculateDiscount",
+    "orm_code": "func (t *Theme) CalculateDiscount(page, size int) ([]types.Character, error) {\n\tcs := make([]types.Character, 0)\n\tcomment := t.CommentFunc(\"SELECT\")\n\terr := base.GetInstance().GormDriver().Clauses(comment).Table(\"skill_assessments\").\n\t\tWhere(\"weight > ?\", 50).Order(\"longitude desc\").Scopes(PaginateDB(page, size)).\n\t\tFind(&cs).Error\n\tif err != nil {\n\t\tif err == gorm.ErrRecordNotFound {\n\t\t\treturn cs, utils.RecordNotFoundError\n\t\t}\n\t\treturn cs, err\n\t}\n\treturn cs, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "Default query with pagination",
+            "sql": "SELECT id, name, weight, longitude, skill_level, created_at, updated_at FROM skill_assessments WHERE weight > 50 ORDER BY longitude DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "Character",
+        "code_value": "type Character struct {\n\tID          int     `json:\"id\" gorm:\"column:id\"`\n\tName        string  `json:\"name\" gorm:\"column:name\"`\n\tWeight      float32 `json:\"weight\" gorm:\"column:weight\"`\n\tLongitude   float64 `json:\"longitude\" gorm:\"column:longitude\"`\n\tSkillLevel  int     `json:\"skill_level\" gorm:\"column:skill_level\"`\n\tCreatedAt   int64   `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt   int64   `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "Theme",
+        "code_value": "type Theme struct {\n\tCommentFunc func(string) string\n}"
+      },
+      {
+        "code_key": "SkillAssessmentTable",
+        "code_value": "const SkillAssessmentTable = \"skill_assessments\""
+      },
+      {
+        "code_key": "Pagination",
+        "code_value": "type Pagination struct {\n\tPage int `json:\"page\"`\n\tSize int `json:\"size\"`\n}"
+      },
+      {
+        "code_key": "MAX_WEIGHT",
+        "code_value": "const MAX_WEIGHT = 100"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  }
+]

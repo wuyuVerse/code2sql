@@ -1,0 +1,109 @@
+# 数据清洗工作流配置
+workflow_settings:
+  # 并发处理设置
+  concurrency:
+    # SQL完整性检查并发数
+    sql_completeness_check: 100
+    # SQL正确性检查并发数  
+    sql_correctness_check: 100
+    # 冗余SQL验证并发数
+    redundant_sql_validation: 100
+    # 控制流验证并发数
+    control_flow_validation: 100
+    # 关键词数据处理并发数
+    keyword_data_processing: 100
+    # 默认并发数（备用）
+    default: 50
+  
+  # 超时设置（秒）
+  timeout:
+    llm_request: 45
+    session_timeout: 300
+  
+  # 重试设置
+  retry:
+    max_retries: 10
+    retry_delay: 1.0
+  
+  # 格式验证设置
+  format_validation:
+    # 默认重试次数
+    max_retries: 10
+    # 重试延迟（秒）
+    retry_delay: 1.0
+    # 是否启用格式验证
+    enabled: true
+    # 各模块的格式验证配置
+    modules:
+      validation:
+        redundant_sql_validator:
+          max_retries: 10
+          retry_delay: 2.0
+        control_flow_validator:
+          max_retries: 10
+          retry_delay: 1.0
+      workflow:
+        sql_completeness_check:
+          max_retries: 10
+          retry_delay: 1.0
+        sql_correctness_check:
+          max_retries: 10
+          retry_delay: 1.0
+        keyword_processing:
+          max_retries: 10
+          retry_delay: 1.0
+      synthetic_data_generator:
+        max_retries: 10
+    retry_delay: 1.0
+  
+  # LLM设置
+  llm:
+    # 默认LLM服务器
+    default_server: "v3"
+    # 默认最大token数
+    max_tokens: 4096
+    # 温度设置
+    temperature: 0.0
+    # 各模块的max_tokens配置
+    max_tokens_config:
+      # 验证模块
+      validation:
+        redundant_sql_validator: 4096
+        control_flow_validator: 4096
+        validator: 4096
+        precheck: 1024  # 预检查不需要太多token
+      # 工作流模块
+      workflow:
+        sql_completeness_check: 4096
+        sql_correctness_check: 4096
+        keyword_processing: 4096
+        fix_review: 4096
+        llm_review: 4096
+      # 合成数据生成模块
+      synthetic_data_generator: 4096
+      # RL模块
+      rl:
+        table_extraction: 1024
+        column_extraction: 1024
+        keyword_evaluation: 2048
+        control_flow_penalty: 2048
+      # 默认配置（当模块未指定时使用）
+      default: 4096
+    # 各模块的LLM服务器配置
+    servers:
+      # 验证模块
+      validation:
+        redundant_sql_validator: "v3"
+        control_flow_validator: "v3"
+        validator: "v3"
+      # 工作流模块
+      workflow:
+        sql_completeness_check: "v3"
+        sql_correctness_check: "v3"
+        keyword_processing: "v3"
+        fix_review: "v3"
+        llm_review: "v3"
+      # 合成数据生成模块
+      synthetic_data_generator: "v3"
+      # 默认配置（当模块未指定时使用）
+      default: "v3" 

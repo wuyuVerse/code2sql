@@ -1,0 +1,620 @@
+[
+  {
+    "function_name": "MonitorActivity",
+    "orm_code": "func (d *Driver) MonitorActivity(filter map[string]interface{}, page, size int) ([]types.QuizRecord, error) {\n\trecords := make([]types.QuizRecord, 0)\n\terr := base.GetInstance().GormDriver().Table(\"trending_topics\").\n\t\tWhere(filter).\n\t\tWhere(\"status = ?\", 1).\n\t\tOrder(\"created_at desc\").\n\t\tScopes(PaginateDB(page, size)).\n\t\tFind(&records).Error\n\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn records, utils.NotFoundError\n\t\t}\n\t\treturn records, err\n\t}\n\treturn records, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "无filter条件",
+            "sql": "SELECT id, topic_id, user_id, score, status, created_at, updated_at FROM trending_topics WHERE status = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "仅user_ids条件",
+            "sql": "SELECT id, topic_id, user_id, score, status, created_at, updated_at FROM trending_topics WHERE user_id IN (?) AND status = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "仅topic_ids条件",
+            "sql": "SELECT id, topic_id, user_id, score, status, created_at, updated_at FROM trending_topics WHERE topic_id IN (?) AND status = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "user_ids和topic_ids条件",
+            "sql": "SELECT id, topic_id, user_id, score, status, created_at, updated_at FROM trending_topics WHERE user_id IN (?) AND topic_id IN (?) AND status = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "score范围条件",
+            "sql": "SELECT id, topic_id, user_id, score, status, created_at, updated_at FROM trending_topics WHERE score >= ? AND score <= ? AND status = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "组合条件（user_ids和score范围）",
+            "sql": "SELECT id, topic_id, user_id, score, status, created_at, updated_at FROM trending_topics WHERE user_id IN (?) AND score >= ? AND score <= ? AND status = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "QuizRecord",
+        "code_value": "type QuizRecord struct {\n\tID        uint      `gorm:\"column:id;primaryKey\"`\n\tTopicID   string    `gorm:\"column:topic_id\"`\n\tUserID    string    `gorm:\"column:user_id\"`\n\tScore     int       `gorm:\"column:score\"`\n\tStatus    int       `gorm:\"column:status\"`\n\tCreatedAt time.Time `gorm:\"column:created_at\"`\n\tUpdatedAt time.Time `gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "TrendingTopicsTable",
+        "code_value": "const TrendingTopicsTable = \"trending_topics\""
+      },
+      {
+        "code_key": "QuizStatus",
+        "code_value": "const (\n\tQuizStatusActive   = 1\n\tQuizStatusInactive = 0\n\tQuizStatusDeleted  = -1\n)"
+      },
+      {
+        "code_key": "AssessmentFilter",
+        "code_value": "type AssessmentFilter struct {\n\tUserIDs  []string `json:\"user_ids\"`\n\tTopicIDs []string `json:\"topic_ids\"`\n\tMinScore int      `json:\"min_score\"`\n\tMaxScore int      `json:\"max_score\"`\n}"
+      },
+      {
+        "code_key": "Coupon",
+        "code_value": "type Coupon struct {\n\tCode      string    `gorm:\"column:code;uniqueIndex\"`\n\tDiscount  float64   `gorm:\"column:discount\"`\n\tExpiresAt time.Time `gorm:\"column:expires_at\"`\n\tIsActive  bool      `gorm:\"column:is_active\"`\n}"
+      },
+      {
+        "code_key": "CouponTable",
+        "code_value": "const CouponTable = \"user_coupons\""
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "SyncWithExternal",
+    "orm_code": "func (e *Exchange) SyncWithExternal(conditions map[string]interface{}, page, size int) ([]types.Deal, error) {\n\tdeals := make([]types.Deal, 0)\n\ttable := \"hashtag_usage\"\n\terr := base.GetInstance().Driver().Table(table).Scopes(PaginateDB(page, size)).\n\t\tWhere(conditions).Where(\"zone = ?\", \"external\").Order(\"points desc\").Find(&deals).Error\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn deals, utils.ResourceNotFoundError\n\t\t}\n\t\treturn deals, err\n\t}\n\treturn deals, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "无附加条件（conditions为空）",
+            "sql": "SELECT id, zone, points, created_at, updated_at FROM hashtag_usage WHERE zone = 'external' ORDER BY points DESC LIMIT 20 OFFSET 0;"
+          },
+          {
+            "scenario": "有单个条件（conditions = {\"id\": \"123\"}）",
+            "sql": "SELECT id, zone, points, created_at, updated_at FROM hashtag_usage WHERE zone = 'external' AND id = '123' ORDER BY points DESC LIMIT 20 OFFSET 0;"
+          },
+          {
+            "scenario": "有多个条件（conditions = {\"id\": \"123\", \"points\": 100}）",
+            "sql": "SELECT id, zone, points, created_at, updated_at FROM hashtag_usage WHERE zone = 'external' AND id = '123' AND points = 100 ORDER BY points DESC LIMIT 20 OFFSET 0;"
+          },
+          {
+            "scenario": "有范围条件（conditions = {\"points >\": 50}）",
+            "sql": "SELECT id, zone, points, created_at, updated_at FROM hashtag_usage WHERE zone = 'external' AND points > 50 ORDER BY points DESC LIMIT 20 OFFSET 0;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "Deal",
+        "code_value": "type Deal struct {\n\tID        string    `json:\"id\" gorm:\"column:id\"`\n\tZone      string    `json:\"zone\" gorm:\"column:zone\"`\n\tPoints    int       `json:\"points\" gorm:\"column:points\"`\n\tCreatedAt time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "Exchange",
+        "code_value": "type Exchange struct {\n\tbase.BaseModel\n\tDeals []Deal `json:\"deals\" gorm:\"foreignKey:ExchangeID\"`\n}"
+      },
+      {
+        "code_key": "PaginateInput",
+        "code_value": "type PaginateInput struct {\n\tPage  int `json:\"page\"`\n\tSize  int `json:\"size\"`\n}"
+      },
+      {
+        "code_key": "HashtagUsageTable",
+        "code_value": "const HashtagUsageTable = \"hashtag_usage\""
+      },
+      {
+        "code_key": "ExternalZone",
+        "code_value": "const ExternalZone = \"external\""
+      },
+      {
+        "code_key": "DefaultPageSize",
+        "code_value": "const DefaultPageSize = 20"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "OptimizePerformance",
+    "orm_code": "func (t *Test) OptimizePerformance(filter map[string]interface{}, page, size int) ([]types.Tag, error) {\n\tts := make([]types.Tag, 0)\n\terr := base.GetInstance().IvcDriver().Table(\"project_assignments\").Order(\"NetValue desc\").Scopes(PaginateDB(page, size)).\n\t\tWhere(filter).Where(\"Longitude > 0\").Find(&ts).Error\n\tif err != nil {\n\t\tif err == db.ErrRecordNotFound {\n\t\t\treturn ts, utils.RecordNotFoundError\n\t\t}\n\t\treturn ts, err\n\t}\n\treturn ts, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "filter为空",
+            "sql": "SELECT id, name, net_value, longitude, latitude, created_at, updated_at FROM project_assignments WHERE longitude > 0 ORDER BY net_value DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "filter包含单个条件(如name='test')",
+            "sql": "SELECT id, name, net_value, longitude, latitude, created_at, updated_at FROM project_assignments WHERE name = ? AND longitude > 0 ORDER BY net_value DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "filter包含多个条件(如name='test'和net_value=100)",
+            "sql": "SELECT id, name, net_value, longitude, latitude, created_at, updated_at FROM project_assignments WHERE name = ? AND net_value = ? AND longitude > 0 ORDER BY net_value DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "filter包含特殊操作符(如net_value>50)",
+            "sql": "SELECT id, name, net_value, longitude, latitude, created_at, updated_at FROM project_assignments WHERE net_value > ? AND longitude > 0 ORDER BY net_value DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "Tag",
+        "code_value": "type Tag struct {\n\tID        int     `json:\"id\" gorm:\"column:id\"`\n\tName      string  `json:\"name\" gorm:\"column:name\"`\n\tNetValue  float64 `json:\"net_value\" gorm:\"column:net_value\"`\n\tLongitude float64 `json:\"longitude\" gorm:\"column:longitude\"`\n\tLatitude  float64 `json:\"latitude\" gorm:\"column:latitude\"`\n\tCreatedAt int64   `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt int64   `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "ProjectAssignmentTable",
+        "code_value": "const ProjectAssignmentTable = \"project_assignments\""
+      },
+      {
+        "code_key": "FilterCriteria",
+        "code_value": "type FilterCriteria struct {\n\tField    string\n\tOperator string\n\tValue    interface{}\n}"
+      },
+      {
+        "code_key": "Pagination",
+        "code_value": "type Pagination struct {\n\tPage int `json:\"page\"`\n\tSize int `json:\"size\"`\n}"
+      },
+      {
+        "code_key": "MAX_QUERY_SIZE",
+        "code_value": "const MAX_QUERY_SIZE = 100"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "PurgeExpiredRecords",
+    "orm_code": "func (s *Surgery) PurgeExpiredRecords(filter map[string]interface{}, page, size int) ([]types.ExamRecord, error) {\n\trecords := make([]types.ExamRecord, 0)\n\tcomment := s.CommentFunc(\"PURGE\")\n\terr := base.GetInstance().MedicalDriver().Clauses(comment).Table(\"leaderboards\").Order(\"ExpirationTime desc\").\n\t\tScopes(PaginateDB(page, size)).Where(filter).Where(\"status = 0\").Find(&records).Error\n\tif err != nil {\n\t\tif err == db.ErrRecordNotFound {\n\t\t\treturn records, utils.RecordNotFoundError\n\t\t}\n\t\treturn records, err\n\t}\n\treturn records, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "无额外过滤条件",
+            "sql": "SELECT id, patient_id, exam_type, result, expiration_time, status, created_at, updated_at FROM leaderboards WHERE status = 0 ORDER BY expiration_time DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按patient_id过滤",
+            "sql": "SELECT id, patient_id, exam_type, result, expiration_time, status, created_at, updated_at FROM leaderboards WHERE status = 0 AND patient_id = ? ORDER BY expiration_time DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按exam_type过滤",
+            "sql": "SELECT id, patient_id, exam_type, result, expiration_time, status, created_at, updated_at FROM leaderboards WHERE status = 0 AND exam_type = ? ORDER BY expiration_time DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "多条件组合过滤",
+            "sql": "SELECT id, patient_id, exam_type, result, expiration_time, status, created_at, updated_at FROM leaderboards WHERE status = 0 AND patient_id = ? AND exam_type = ? ORDER BY expiration_time DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "ExamRecord",
+        "code_value": "type ExamRecord struct {\n\tID             int       `json:\"id\" gorm:\"column:id\"`\n\tPatientID      string    `json:\"patient_id\" gorm:\"column:patient_id\"`\n\tExamType       int       `json:\"exam_type\" gorm:\"column:exam_type\"`\n\tResult         string    `json:\"result\" gorm:\"column:result\"`\n\tExpirationTime time.Time `json:\"expiration_time\" gorm:\"column:expiration_time\"`\n\tStatus         int       `json:\"status\" gorm:\"column:status\"`\n\tCreatedAt      time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt      time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "Surgery",
+        "code_value": "type Surgery struct {\n\tCommentFunc func(string) string\n}"
+      },
+      {
+        "code_key": "LEADERBOARDS_TABLE",
+        "code_value": "const LEADERBOARDS_TABLE = \"leaderboards\""
+      },
+      {
+        "code_key": "RECORD_STATUS_INACTIVE",
+        "code_value": "const RECORD_STATUS_INACTIVE = 0"
+      },
+      {
+        "code_key": "MedicalDriver",
+        "code_value": "type MedicalDriver interface {\n\tClauses(comment interface{}) *gorm.DB\n\tTable(name string) *gorm.DB\n\tWhere(query interface{}, args ...interface{}) *gorm.DB\n\tFind(dest interface{}, conds ...interface{}) *gorm.DB\n\tOrder(value interface{}) *gorm.DB\n}"
+      },
+      {
+        "code_key": "PaginateDB",
+        "code_value": "func PaginateDB(page, size int) func(db *gorm.DB) *gorm.DB {\n\treturn func(db *gorm.DB) *gorm.DB {\n\t\toffset := (page - 1) * size\n\t\treturn db.Offset(offset).Limit(size)\n\t}\n}"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "TrackBehavior",
+    "orm_code": "func (q *Quiz) TrackBehavior(filter map[string]interface{}, page, size int) ([]types.BehaviorLog, error) {\n\tlogs := make([]types.BehaviorLog, 0)\n\tquery := base.GetInstance().MainDB().Table(\"account_balances\").Select(\"Zone, SequenceNumber, NickName\")\n\terr := query.Where(filter).Scopes(PaginateDB(page, size)).Order(\"SequenceNumber DESC\").Find(&logs).Error\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn logs, fmt.Errorf(\"no records found\")\n\t\t}\n\t\treturn logs, err\n\t}\n\treturn logs, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "无过滤条件（空filter）",
+            "sql": "SELECT Zone, SequenceNumber, NickName FROM account_balances ORDER BY SequenceNumber DESC LIMIT 20 OFFSET 0;"
+          },
+          {
+            "scenario": "仅Zone条件",
+            "sql": "SELECT Zone, SequenceNumber, NickName FROM account_balances WHERE Zone = 'US' ORDER BY SequenceNumber DESC LIMIT 20 OFFSET 0;"
+          },
+          {
+            "scenario": "Zone和NickName条件",
+            "sql": "SELECT Zone, SequenceNumber, NickName FROM account_balances WHERE Zone = 'US' AND NickName = 'John' ORDER BY SequenceNumber DESC LIMIT 10 OFFSET 10;"
+          },
+          {
+            "scenario": "日期范围条件",
+            "sql": "SELECT Zone, SequenceNumber, NickName FROM account_balances WHERE created_at >= 1672531200 AND created_at <= 1672617599 ORDER BY SequenceNumber DESC LIMIT 20 OFFSET 0;"
+          },
+          {
+            "scenario": "组合条件（Zone+日期）",
+            "sql": "SELECT Zone, SequenceNumber, NickName FROM account_balances WHERE Zone = 'US' AND created_at >= 1672531200 ORDER BY SequenceNumber DESC LIMIT 20 OFFSET 0;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "BehaviorLog",
+        "code_value": "type BehaviorLog struct {\n\tZone           string `json:\"zone\" gorm:\"column:Zone\"`\n\tSequenceNumber int    `json:\"sequence_number\" gorm:\"column:SequenceNumber\"`\n\tNickName       string `json:\"nick_name\" gorm:\"column:NickName\"`\n\tCreatedAt      int64  `json:\"created_at\" gorm:\"column:created_at\"`\n\tActionType     string `json:\"action_type\" gorm:\"column:action_type\"`\n}"
+      },
+      {
+        "code_key": "QuizFilter",
+        "code_value": "type QuizFilter struct {\n\tZone     *string `json:\"zone\"`\n\tNickName *string `json:\"nick_name\"`\n\tFromDate *int64  `json:\"from_date\"`\n\tToDate   *int64  `json:\"to_date\"`\n}"
+      },
+      {
+        "code_key": "BehaviorActionType",
+        "code_value": "type BehaviorActionType string\nconst (\n\tLoginAction    BehaviorActionType = \"login\"\n\tLogoutAction   BehaviorActionType = \"logout\"\n\tPurchaseAction BehaviorActionType = \"purchase\"\n)"
+      },
+      {
+        "code_key": "BehaviorLogTable",
+        "code_value": "const BehaviorLogTable = \"account_balances\""
+      },
+      {
+        "code_key": "DefaultPageSize",
+        "code_value": "const DefaultPageSize = 20"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "CalculateByFormula",
+    "orm_code": "func (m *Medicine) CalculateByFormula(filter map[string]interface{}, page, size int) ([]types.MedicineEffect, error) {\n\teffects := make([]types.MedicineEffect, 0)\n\tcomment := m.CommentFunc(\"CALCULATION\")\n\terr := base.GetInstance().HealthDriver().Clauses(comment).Table(\"fuel_consumption\").\n\t\tWhere(filter).Where(\"expired_at > NOW()\").Order(\"created_at desc\").\n\t\tScopes(PaginateDB(page, size)).Find(&effects).Error\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn effects, utils.DataNotExistError\n\t\t}\n\t\treturn effects, err\n\t}\n\treturn effects, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "基础查询（无filter条件）",
+            "sql": "SELECT id, formula_id, effect_type, value, expired_at, created_at FROM fuel_consumption WHERE expired_at > NOW() ORDER BY created_at DESC LIMIT 20 OFFSET 0;"
+          },
+          {
+            "scenario": "带FormulaID条件",
+            "sql": "SELECT id, formula_id, effect_type, value, expired_at, created_at FROM fuel_consumption WHERE formula_id = ? AND expired_at > NOW() ORDER BY created_at DESC LIMIT 10 OFFSET 10;"
+          },
+          {
+            "scenario": "带EffectType条件",
+            "sql": "SELECT id, formula_id, effect_type, value, expired_at, created_at FROM fuel_consumption WHERE effect_type = ? AND expired_at > NOW() ORDER BY created_at DESC LIMIT 5 OFFSET 0;"
+          },
+          {
+            "scenario": "多条件组合",
+            "sql": "SELECT id, formula_id, effect_type, value, expired_at, created_at FROM fuel_consumption WHERE formula_id = ? AND effect_type = ? AND expired_at > NOW() ORDER BY created_at DESC LIMIT 15 OFFSET 30;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "MedicineEffect",
+        "code_value": "type MedicineEffect struct {\n\tID         int       `json:\"id\" gorm:\"column:id\"`\n\tFormulaID  string    `json:\"formula_id\" gorm:\"column:formula_id\"`\n\tEffectType int       `json:\"effect_type\" gorm:\"column:effect_type\"`\n\tValue      float64   `json:\"value\" gorm:\"column:value\"`\n\tExpiredAt  time.Time `json:\"expired_at\" gorm:\"column:expired_at\"`\n\tCreatedAt  time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n}"
+      },
+      {
+        "code_key": "HealthDriver",
+        "code_value": "type HealthDriver struct {\n\tDB *gorm.DB `json:\"-\"`\n}"
+      },
+      {
+        "code_key": "FuelConsumptionTable",
+        "code_value": "const FuelConsumptionTable = \"fuel_consumption\""
+      },
+      {
+        "code_key": "CalculationComment",
+        "code_value": "const CalculationComment = \"CALCULATION\""
+      },
+      {
+        "code_key": "MedicineFilter",
+        "code_value": "type MedicineFilter struct {\n\tFormulaID  *string    `json:\"formula_id\"`\n\tEffectType *int       `json:\"effect_type\"`\n\tStartDate  *time.Time `json:\"start_date\"`\n\tEndDate    *time.Time `json:\"end_date\"`\n}"
+      },
+      {
+        "code_key": "PaginateDB",
+        "code_value": "func PaginateDB(page, size int) func(db *gorm.DB) *gorm.DB {\n\treturn func(db *gorm.DB) *gorm.DB {\n\t\toffset := (page - 1) * size\n\t\treturn db.Offset(offset).Limit(size)\n\t}\n}"
+      },
+      {
+        "code_key": "DefaultPageSize",
+        "code_value": "const DefaultPageSize = 20"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "QueryByCondition",
+    "orm_code": "func (l *Layout) QueryByCondition(filter map[string]interface{}, page, size int) ([]Result, error) {\n\tvar results []Result\n\tdb := base.GetInstance().GormDB().Table(\"brand_info\")\n\tif len(filter) > 0 {\n\t\tdb = db.Where(filter)\n\t}\n\terr := db.Scopes(Paginate(page, size)).\n\t\tOrder(\"Zone desc\").\n\t\tWhere(\"is_active = ?\", true).\n\t\tFind(&results).Error\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn nil, fmt.Errorf(\"no records found\")\n\t\t}\n\t\treturn nil, err\n\t}\n\treturn results, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "无filter条件",
+            "sql": "SELECT * FROM brand_info WHERE is_active = true ORDER BY Zone desc LIMIT 10 OFFSET 0;"
+          },
+          {
+            "scenario": "有单一filter条件",
+            "sql": "SELECT * FROM brand_info WHERE category = 'electronics' AND is_active = true ORDER BY Zone desc LIMIT 20 OFFSET 20;"
+          },
+          {
+            "scenario": "有多个filter条件",
+            "sql": "SELECT * FROM brand_info WHERE category = 'electronics' AND price = 1000 AND is_active = true ORDER BY Zone desc LIMIT 5 OFFSET 0;"
+          },
+          {
+            "scenario": "有不同filter条件组合",
+            "sql": "SELECT * FROM brand_info WHERE name = 'Apple' AND status = 'active' AND is_active = true ORDER BY Zone desc LIMIT 15 OFFSET 30;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "Product",
+        "code_value": "type Product struct {\n\tID          string `json:\"id\" gorm:\"column:id\"`\n\tName        string `json:\"name\" gorm:\"column:name\"`\n\tCategory    string `json:\"category\" gorm:\"column:category\"`\n\tPrice       float64 `json:\"price\" gorm:\"column:price\"`\n\tStock       int `json:\"stock\" gorm:\"column:stock\"`\n\tIsAvailable bool `json:\"is_available\" gorm:\"column:is_available\"`\n\tCreatedAt   time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt   time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "ProductTable",
+        "code_value": "const ProductTable = \"product_info\""
+      },
+      {
+        "code_key": "Schedule",
+        "code_value": "type Schedule struct {\n\tID        string `json:\"id\" gorm:\"column:id\"`\n\tProductID string `json:\"product_id\" gorm:\"column:product_id\"`\n\tStartTime time.Time `json:\"start_time\" gorm:\"column:start_time\"`\n\tEndTime   time.Time `json:\"end_time\" gorm:\"column:end_time\"`\n\tStatus    int `json:\"status\" gorm:\"column:status\"`\n}"
+      },
+      {
+        "code_key": "ScheduleStatus",
+        "code_value": "const (\n\tSchedulePending = iota + 1\n\tScheduleActive\n\tScheduleCompleted\n\tScheduleCancelled\n)"
+      },
+      {
+        "code_key": "QueryFilter",
+        "code_value": "type QueryFilter struct {\n\tCategory string\n\tMinPrice float64\n\tMaxPrice float64\n\tInStock  bool\n}"
+      },
+      {
+        "code_key": "ScheduleTable",
+        "code_value": "const ScheduleTable = \"product_schedule\""
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "CalculateStatistics",
+    "orm_code": "func (s *Spell) CalculateStatistics(filter map[string]interface{}, page, size int) ([]types.SpellRecord, error) {\n\tsr := make([]types.SpellRecord, 0)\n\tcomment := s.CommentFunc(\"CALCULATE\")\n\terr := base.GetInstance().MagicDriver().Clauses(comment).Table(\"order_history\").\n\t\tWhere(filter).Scopes(PaginateDB(page, size)).Order(\"cast_at desc\").Find(&sr).Error\n\tif err != nil {\n\t\tif errors.Is(err, db.ErrRecordNotFound) {\n\t\t\treturn sr, utils.NoSpellsFoundError\n\t\t}\n\t\treturn sr, err\n\t}\n\treturn sr, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "无筛选条件",
+            "sql": "SELECT id, name, power, element, cast_at, duration, status, created_at, updated_at FROM order_history ORDER BY cast_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按元素筛选",
+            "sql": "SELECT id, name, power, element, cast_at, duration, status, created_at, updated_at FROM order_history WHERE element = ? ORDER BY cast_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按法力值范围筛选",
+            "sql": "SELECT id, name, power, element, cast_at, duration, status, created_at, updated_at FROM order_history WHERE power >= ? AND power <= ? ORDER BY cast_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按状态筛选",
+            "sql": "SELECT id, name, power, element, cast_at, duration, status, created_at, updated_at FROM order_history WHERE status = ? ORDER BY cast_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按时间范围筛选",
+            "sql": "SELECT id, name, power, element, cast_at, duration, status, created_at, updated_at FROM order_history WHERE cast_at >= ? AND cast_at <= ? ORDER BY cast_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "组合条件筛选",
+            "sql": "SELECT id, name, power, element, cast_at, duration, status, created_at, updated_at FROM order_history WHERE element = ? AND status = ? AND power >= ? ORDER BY cast_at DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "SpellRecord",
+        "code_value": "type SpellRecord struct {\n\tID        string    `json:\"id\" gorm:\"column:id\"`\n\tName      string    `json:\"name\" gorm:\"column:name\"`\n\tPower     int       `json:\"power\" gorm:\"column:power\"`\n\tElement   string    `json:\"element\" gorm:\"column:element\"`\n\tCastAt    time.Time `json:\"cast_at\" gorm:\"column:cast_at\"`\n\tDuration  int       `json:\"duration\" gorm:\"column:duration\"`\n\tStatus    int       `json:\"status\" gorm:\"column:status\"`\n\tCreatedAt time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "SpellQuery",
+        "code_value": "type SpellQuery struct {\n\tElement   string `json:\"element\"`\n\tMinPower  int    `json:\"min_power\"`\n\tMaxPower  int    `json:\"max_power\"`\n\tStatus    int    `json:\"status\"`\n\tStartTime string `json:\"start_time\"`\n\tEndTime   string `json:\"end_time\"`\n}"
+      },
+      {
+        "code_key": "CommentFunc",
+        "code_value": "type CommentFunc func(action string) string"
+      },
+      {
+        "code_key": "OrderHistoryTable",
+        "code_value": "const OrderHistoryTable = \"order_history\""
+      },
+      {
+        "code_key": "SpellStatus",
+        "code_value": "const (\n\tSpellStatusActive = 1\n\tSpellStatusInactive = 2\n\tSpellStatusArchived = 3\n)"
+      },
+      {
+        "code_key": "DefaultPageSize",
+        "code_value": "const DefaultPageSize = 20"
+      },
+      {
+        "code_key": "SpellElements",
+        "code_value": "var SpellElements = []string{\"fire\", \"water\", \"earth\", \"air\", \"light\", \"dark\"}"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "SearchContentReports",
+    "orm_code": "func (r *Report) SearchContentReports(criteria map[string]interface{}, pageNum, pageSize int) ([]types.ContentReport, error) {\n\tvar reports []types.ContentReport\n\tquery := base.GetInstance().GormClient().Table(\"content_reports\").Where(\"deleted_at IS NULL\")\n\t\n\tif len(criteria) > 0 {\n\t\tquery = query.Where(criteria)\n\t}\n\t\n\terr := query.Order(\"created_at DESC\").Scopes(PaginateDB(pageNum, pageSize)).Find(&reports).Error\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn nil, nil\n\t\t}\n\t\treturn nil, err\n\t}\n\treturn reports, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "无额外条件",
+            "sql": "SELECT id, content_id, report_type, description, status, created_at, updated_at, deleted_at FROM content_reports WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "有单个条件（status=1）",
+            "sql": "SELECT id, content_id, report_type, description, status, created_at, updated_at, deleted_at FROM content_reports WHERE deleted_at IS NULL AND status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "有单个条件（content_id='123'）",
+            "sql": "SELECT id, content_id, report_type, description, status, created_at, updated_at, deleted_at FROM content_reports WHERE deleted_at IS NULL AND content_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "多条件组合（status=1, content_id='123'）",
+            "sql": "SELECT id, content_id, report_type, description, status, created_at, updated_at, deleted_at FROM content_reports WHERE deleted_at IS NULL AND status = ? AND content_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "多条件组合（report_type=2, status=0）",
+            "sql": "SELECT id, content_id, report_type, description, status, created_at, updated_at, deleted_at FROM content_reports WHERE deleted_at IS NULL AND report_type = ? AND status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "ContentReport",
+        "code_value": "type ContentReport struct {\n\tID          uint      `json:\"id\" gorm:\"column:id\"`\n\tContentID   string    `json:\"content_id\" gorm:\"column:content_id\"`\n\tReportType  int       `json:\"report_type\" gorm:\"column:report_type\"`\n\tDescription string    `json:\"description\" gorm:\"column:description\"`\n\tStatus      int       `json:\"status\" gorm:\"column:status\"`\n\tCreatedAt   time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt   time.Time `json:\"updated_at\" gorm:\"column:updated_at\"`\n\tDeletedAt   time.Time `json:\"-\" gorm:\"column:deleted_at\"`\n}"
+      },
+      {
+        "code_key": "ReportStatus",
+        "code_value": "const (\n\tReportPending  = 0\n\tReportApproved = 1\n\tReportRejected = 2\n)"
+      },
+      {
+        "code_key": "ContentReportTable",
+        "code_value": "const ContentReportTable = \"content_reports\""
+      },
+      {
+        "code_key": "TransactionFilter",
+        "code_value": "type TransactionFilter struct {\n\tStartDate time.Time `json:\"start_date\"`\n\tEndDate   time.Time `json:\"end_date\"`\n\tUserID    string    `json:\"user_id\"`\n\tMinAmount float64   `json:\"min_amount\"`\n}"
+      },
+      {
+        "code_key": "Like",
+        "code_value": "type Like struct {\n\tID        string    `json:\"id\" gorm:\"column:id\"`\n\tUserID    string    `json:\"user_id\" gorm:\"column:user_id\"`\n\tContentID string    `json:\"content_id\" gorm:\"column:content_id\"`\n\tCreatedAt time.Time `json:\"created_at\" gorm:\"column:created_at\"`\n}"
+      },
+      {
+        "code_key": "LikeTable",
+        "code_value": "const LikeTable = \"user_likes\""
+      },
+      {
+        "code_key": "Pagination",
+        "code_value": "type Pagination struct {\n\tPage     int `json:\"page\"`\n\tPageSize int `json:\"page_size\"`\n}"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  },
+  {
+    "function_name": "ValidatePermissions",
+    "orm_code": "func (v *Vendor) ValidatePermissions(filter map[string]interface{}, page, size int) ([]types.VendorAccess, error) {\n\tva := make([]types.VendorAccess, 0)\n\terr := base.GetInstance().MainDB().Table(\"training_certifications\").\n\t\tWhere(filter).Where(\"revoked_at is null\").\n\t\tOrder(\"SequenceNumber\").Scopes(PaginateDB(page, size)).\n\t\tFind(&va).Error\n\tif err != nil {\n\t\tif errors.Is(err, gorm.ErrRecordNotFound) {\n\t\t\treturn va, utils.RecordNotFoundError\n\t\t}\n\t\treturn va, err\n\t}\n\treturn va, nil\n}",
+    "caller": "",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "仅按vendor_id筛选",
+            "sql": "SELECT id, vendor_id, access_level, sequence_number, created_at, revoked_at FROM training_certifications WHERE vendor_id = ? AND revoked_at IS NULL ORDER BY sequence_number LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "按vendor_id和access_level筛选",
+            "sql": "SELECT id, vendor_id, access_level, sequence_number, created_at, revoked_at FROM training_certifications WHERE vendor_id = ? AND access_level = ? AND revoked_at IS NULL ORDER BY sequence_number LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "仅按access_level筛选",
+            "sql": "SELECT id, vendor_id, access_level, sequence_number, created_at, revoked_at FROM training_certifications WHERE access_level = ? AND revoked_at IS NULL ORDER BY sequence_number LIMIT ? OFFSET ?;"
+          },
+          {
+            "scenario": "无筛选条件",
+            "sql": "SELECT id, vendor_id, access_level, sequence_number, created_at, revoked_at FROM training_certifications WHERE revoked_at IS NULL ORDER BY sequence_number LIMIT ? OFFSET ?;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "VendorAccess",
+        "code_value": "type VendorAccess struct {\n\tID            string `json:\"id\" gorm:\"column:id\"`\n\tVendorID      string `json:\"vendor_id\" gorm:\"column:vendor_id\"`\n\tAccessLevel   int    `json:\"access_level\" gorm:\"column:access_level\"`\n\tSequenceNumber int    `json:\"sequence_number\" gorm:\"column:sequence_number\"`\n\tCreatedAt     int64  `json:\"created_at\" gorm:\"column:created_at\"`\n\tRevokedAt     *int64 `json:\"revoked_at\" gorm:\"column:revoked_at\"`\n}"
+      },
+      {
+        "code_key": "VendorFilter",
+        "code_value": "type VendorFilter struct {\n\tVendorIDs   []string `json:\"vendor_ids\"`\n\tAccessLevel *int     `json:\"access_level\"`\n\tActiveOnly  bool     `json:\"active_only\"`\n}"
+      },
+      {
+        "code_key": "TrainingCertificationTable",
+        "code_value": "const TrainingCertificationTable = \"training_certifications\""
+      },
+      {
+        "code_key": "AccessLevel",
+        "code_value": "const (\n\tReadOnlyAccess = 1\n\tReadWriteAccess = 2\n\tAdminAccess = 3\n)"
+      },
+      {
+        "code_key": "PaginationConfig",
+        "code_value": "var PaginationConfig = struct {\n\tDefaultPageSize int\n\tMaxPageSize     int\n}{\n\tDefaultPageSize: 10,\n\tMaxPageSize:     100,\n}"
+      },
+      {
+        "code_key": "Widget",
+        "code_value": "type Widget struct {\n\tID          string `json:\"id\" gorm:\"column:id\"`\n\tName        string `json:\"name\" gorm:\"column:name\"`\n\tDescription string `json:\"description\" gorm:\"column:description\"`\n\tStatus      int    `json:\"status\" gorm:\"column:status\"`\n\tCreatedBy   string `json:\"created_by\" gorm:\"column:created_by\"`\n\tCreatedAt   int64  `json:\"created_at\" gorm:\"column:created_at\"`\n\tUpdatedAt   int64  `json:\"updated_at\" gorm:\"column:updated_at\"`\n}"
+      }
+    ],
+    "sql_pattern_cnt": 1
+  }
+]

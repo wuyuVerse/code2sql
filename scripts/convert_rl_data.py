@@ -15,7 +15,7 @@ from pathlib import Path
 project_root = Path(__file__).parents[1]
 sys.path.insert(0, str(project_root))
 
-from data_processing.rl_data_converter import RLDataConverter
+from data_processing.converter.rl_data_converter import RLDataConverter
 
 def show_data_sample(parquet_path: Path, num_samples: int = 3):
     """
@@ -96,15 +96,15 @@ RL训练数据采用RLHF (Reinforcement Learning from Human Feedback) 格式，
 这种格式与verl框架完全兼容，可直接用于PPO、DPO等RL算法训练。
 """)
 
-def main():
-    """主函数"""
+async def main():
+    """主函数（异步）"""
     print("🚀 开始ORM到SQL的RL训练数据转换...")
     
     converter = RLDataConverter()
     
     try:
         # 执行转换
-        train_path, val_path, dataset_info = converter.run_conversion(val_ratio=0.1)
+        train_path, val_path, dataset_info = await converter.run_conversion(val_ratio=0.1)
         
         print(f"\n✅ RL数据转换完成!")
         print(f"📁 训练集路径: {train_path}")
@@ -145,4 +145,5 @@ def main():
         sys.exit(1)
 
 if __name__ == "__main__":
-    main() 
+    import asyncio
+    asyncio.run(main()) 

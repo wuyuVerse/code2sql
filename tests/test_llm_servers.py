@@ -13,7 +13,8 @@ sys.path.insert(0, project_root)
 
 from openai import OpenAI
 from config.llm.llm_config import get_llm_config, ServerConfig
-from utils.llm_client import LLMClient, LLMClientManager
+from utils.llm_client import LLMClient
+from utils.format_validators import validate_json_format
 
 
 class TestLLMServers:
@@ -63,11 +64,17 @@ class TestLLMServers:
         r1_client = LLMClient("r1")
         print(f"R1客户端创建成功: {r1_client.server_name}")
     
-    def test_v3_sync_api(self):
+    async def test_v3_sync_api(self):
         """测试V3同步API调用"""
         try:
             client = LLMClient("v3")
-            response = client.call_sync("你好，这是一个V3同步测试。", max_tokens=100)
+            async with aiohttp.ClientSession() as session:
+                response = await client.call_async_with_format_validation(
+                    session,
+                    "你好，这是一个V3同步测试。", 
+                    validator=validate_json_format,
+                    max_tokens=100
+                )
             if response:
                 print(f"✅ V3同步API调用成功: {response}")
             else:
@@ -76,11 +83,17 @@ class TestLLMServers:
             print(f"❌ V3同步API调用失败: {str(e)}")
             pytest.skip(f"V3同步API不可用: {str(e)}")
     
-    def test_r1_sync_api(self):
+    async def test_r1_sync_api(self):
         """测试R1同步API调用"""
         try:
             client = LLMClient("r1")
-            response = client.call_sync("你好，这是一个R1同步测试。", max_tokens=100)
+            async with aiohttp.ClientSession() as session:
+                response = await client.call_async_with_format_validation(
+                    session,
+                    "你好，这是一个R1同步测试。", 
+                    validator=validate_json_format,
+                    max_tokens=100
+                )
             if response:
                 print(f"✅ R1同步API调用成功: {response}")
             else:
@@ -89,11 +102,17 @@ class TestLLMServers:
             print(f"❌ R1同步API调用失败: {str(e)}")
             pytest.skip(f"R1同步API不可用: {str(e)}")
     
-    def test_v3_openai_api(self):
+    async def test_v3_openai_api(self):
         """测试V3 OpenAI库调用"""
         try:
             client = LLMClient("v3")
-            response = client.call_openai("Hello, this is a V3 OpenAI test.", max_tokens=50)
+            async with aiohttp.ClientSession() as session:
+                response = await client.call_async_with_format_validation(
+                    session,
+                    "Hello, this is a V3 OpenAI test.", 
+                    validator=validate_json_format,
+                    max_tokens=50
+                )
             if response:
                 print(f"✅ V3 OpenAI调用成功: {response}")
             else:
@@ -102,11 +121,17 @@ class TestLLMServers:
             print(f"❌ V3 OpenAI调用失败: {str(e)}")
             pytest.skip(f"V3 OpenAI不可用: {str(e)}")
     
-    def test_r1_openai_api(self):
+    async def test_r1_openai_api(self):
         """测试R1 OpenAI库调用"""
         try:
             client = LLMClient("r1")
-            response = client.call_openai("Hello, this is a R1 OpenAI test.", max_tokens=50)
+            async with aiohttp.ClientSession() as session:
+                response = await client.call_async_with_format_validation(
+                    session,
+                    "Hello, this is a R1 OpenAI test.", 
+                    validator=validate_json_format,
+                    max_tokens=50
+                )
             if response:
                 print(f"✅ R1 OpenAI调用成功: {response}")
             else:
@@ -119,7 +144,12 @@ class TestLLMServers:
         """异步测试V3 API"""
         async with aiohttp.ClientSession() as session:
             client = LLMClient("v3")
-            response = await client.call_async(session, "你好，这是一个V3异步测试。", max_tokens=100)
+            response = await client.call_async_with_format_validation(
+                session, 
+                "你好，这是一个V3异步测试。", 
+                validator=validate_json_format,
+                max_tokens=100
+            )
             if response:
                 print(f"✅ V3异步API调用成功: {response}")
             else:
@@ -129,7 +159,12 @@ class TestLLMServers:
         """异步测试R1 API"""
         async with aiohttp.ClientSession() as session:
             client = LLMClient("r1")
-            response = await client.call_async(session, "你好，这是一个R1异步测试。", max_tokens=100)
+            response = await client.call_async_with_format_validation(
+                session, 
+                "你好，这是一个R1异步测试。", 
+                validator=validate_json_format,
+                max_tokens=100
+            )
             if response:
                 print(f"✅ R1异步API调用成功: {response}")
             else:
@@ -151,24 +186,7 @@ class TestLLMServers:
             print(f"❌ R1异步API调用失败: {str(e)}")
             pytest.skip(f"R1异步API不可用: {str(e)}")
     
-    def test_llm_client_manager(self):
-        """测试LLM客户端管理器"""
-        manager = LLMClientManager()
-        
-        # 测试获取客户端
-        v3_client = manager.get_client("v3")
-        r1_client = manager.get_client("r1")
-        
-        print(f"✅ 管理器获取V3客户端: {v3_client.server_name}")
-        print(f"✅ 管理器获取R1客户端: {r1_client.server_name}")
-        
-        # 测试单例模式
-        v3_client2 = manager.get_client("v3")
-        print(f"✅ 单例模式验证: {v3_client is v3_client2}")
-        
-        # 测试列出服务器
-        servers = manager.list_available_servers()
-        print(f"✅ 可用服务器: {servers}")
+
     
     def test_list_servers(self):
         """测试列出所有服务器"""
@@ -196,25 +214,23 @@ if __name__ == "__main__":
     test_instance.test_llm_client_creation()
     print("✅ LLM客户端创建测试通过")
     
-    print("\n🔧 测试LLM客户端管理器...")
-    test_instance.test_llm_client_manager()
-    print("✅ LLM客户端管理器测试通过")
+
     
     print("\n🔧 测试服务器列表...")
     test_instance.test_list_servers()
     print("✅ 服务器列表测试通过")
     
     print("\n🔗 测试V3同步API...")
-    test_instance.test_v3_sync_api()
+    asyncio.run(test_instance.test_v3_sync_api())
     
     print("\n🔗 测试R1同步API...")
-    test_instance.test_r1_sync_api()
+    asyncio.run(test_instance.test_r1_sync_api())
     
     print("\n🌐 测试V3 OpenAI库...")
-    test_instance.test_v3_openai_api()
+    asyncio.run(test_instance.test_v3_openai_api())
     
     print("\n🌐 测试R1 OpenAI库...")
-    test_instance.test_r1_openai_api()
+    asyncio.run(test_instance.test_r1_openai_api())
     
     print("\n⚡ 测试V3异步API...")
     test_instance.test_v3_async_api()

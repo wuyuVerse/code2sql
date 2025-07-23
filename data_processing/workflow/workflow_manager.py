@@ -29,7 +29,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 try:
-    from config.data_clean.keyword_processing_prompt import KEYWORD_PROCESSING_PROMPT
+    from config.data_processing.cleaning.keyword_processing_prompt import KEYWORD_PROCESSING_PROMPT
 except ImportError:
     # Fallback if the new prompt file is not found, to maintain compatibility
     KEYWORD_PROCESSING_PROMPT = "Legacy or default prompt here, if any."
@@ -267,13 +267,18 @@ class WorkflowManager:
         
         try:
             from utils.llm_client import LLMClient
-            from config.data_clean.sql_completeness_check_prompt import get_sql_completeness_check_prompt  # type: ignore
+            from config.data_processing.cleaning.sql_completeness_check_prompt import get_sql_completeness_check_prompt  # type: ignore
         except ImportError as e:
             logger.error(f"无法导入LLM相关模块: {e}")
             raise ValueError("LLM模块不可用，无法执行SQL完整性检查")
         
+        # 获取LLM服务器配置
+        from config.data_processing.workflow.workflow_config import get_workflow_config
+        workflow_config = get_workflow_config()
+        llm_server = workflow_config.get_llm_server("workflow", "sql_completeness_check")
+        
         # 创建LLM客户端
-        llm_client = LLMClient("v3")
+        llm_client = LLMClient(llm_server)
         
         # 并发处理的函数
         async def check_single_record(session: aiohttp.ClientSession, record: Dict[str, Any]) -> Dict[str, Any]:
@@ -300,8 +305,15 @@ class WorkflowManager:
                     sql_statements=sql_statements
                 )
                 
-                # 调用LLM
-                response = await llm_client.call_async(session, prompt, max_tokens=100, temperature=0.0, max_retries=1000)
+                # 使用格式验证调用LLM
+                from utils.format_validators import validate_sql_completeness_response
+                
+                response = await llm_client.call_async_with_format_validation(
+                    session, prompt, 
+                    validator=validate_sql_completeness_response,
+                    max_tokens=100, temperature=0.0,
+                    module="workflow", component="sql_completeness_check"
+                )
                 
                 # 处理响应
                 is_complete = True
@@ -355,7 +367,7 @@ class WorkflowManager:
                 return error_record
         
         # 动态获取并发数
-        from config.data_clean.workflow_config import get_workflow_config
+        from config.data_processing.workflow.workflow_config import get_workflow_config
         workflow_config = get_workflow_config()
         concurrency = workflow_config.get_concurrency('sql_completeness_check')
         semaphore = asyncio.Semaphore(concurrency)
@@ -499,12 +511,17 @@ class WorkflowManager:
         
         try:
             from utils.llm_client import LLMClient
-            from config.data_clean.sql_completeness_check_prompt import get_sql_correctness_check_prompt, get_sql_correctness_check_prompt
+            from config.data_processing.cleaning.sql_completeness_check_prompt import get_sql_correctness_check_prompt, get_sql_correctness_check_prompt
         except ImportError as e:
             logger.error(f"无法导入LLM相关模块: {e}")
             raise ValueError("LLM模块不可用，无法执行SQL正确性检查")
         
-        llm_client = LLMClient("v3")
+        # 获取LLM服务器配置
+        from config.data_processing.workflow.workflow_config import get_workflow_config
+        workflow_config = get_workflow_config()
+        llm_server = workflow_config.get_llm_server("workflow", "sql_correctness_check")
+        
+        llm_client = LLMClient(llm_server)
 
         async def check_single_record(session: aiohttp.ClientSession, record: Dict[str, Any]) -> Dict[str, Any]:
             """检查单条记录的SQL正确性"""
@@ -526,7 +543,15 @@ class WorkflowManager:
                     sql_statements=str(record.get('sql_statement_list', []))
                 )
                 
-                response = await llm_client.call_async(session, prompt, max_tokens=100, temperature=0.0, max_retries=1000)
+                # 使用格式验证调用LLM
+                from utils.format_validators import validate_sql_correctness_response
+                
+                response = await llm_client.call_async_with_format_validation(
+                    session, prompt, 
+                    validator=validate_sql_correctness_response,
+                    max_tokens=100, temperature=0.0,
+                    module="workflow", component="sql_correctness_check"
+                )
                 
                 is_correct = True
                 reason = ""
@@ -564,7 +589,7 @@ class WorkflowManager:
                 return error_record
 
         # 动态获取并发数
-        from config.data_clean.workflow_config import get_workflow_config  # type: ignore
+        from config.data_processing.workflow.workflow_config import get_workflow_config  # type: ignore
         workflow_config = get_workflow_config()
         concurrency = workflow_config.get_concurrency('sql_correctness_check')
         semaphore = asyncio.Semaphore(concurrency)
@@ -711,11 +736,11 @@ class WorkflowManager:
         logger.info(f"读取到 {len(llm_candidates)} 个LLM验证候选项")
         
         # 2️⃣ 调用新版验证器
-        from data_processing.cleaning.redundant_sql_validator import RedundantSQLValidator
+        from data_processing.validation.redundant_sql_validator import RedundantSQLValidator
         validation_output_dir = self.workflow_dir / "redundant_sql_validation"
-        validator = RedundantSQLValidator(output_dir=str(validation_output_dir), llm_server="v3")
+        validator = RedundantSQLValidator(output_dir=str(validation_output_dir))
         # 动态获取并发数
-        from config.data_clean.workflow_config import get_workflow_config  # type: ignore
+        from config.data_processing.workflow.workflow_config import get_workflow_config  # type: ignore
         workflow_config = get_workflow_config()
         concurrency = workflow_config.get_concurrency('redundant_sql_validation')
         validation_result = await validator.validate_llm_candidates(llm_candidates, max_concurrent=concurrency)
@@ -1137,9 +1162,9 @@ class WorkflowManager:
         
         # 创建临时的DataReader来使用其提取功能
         try:
-            from ..data_reader import FunctionRecord, CodeMetaData
+            from ..data_reader import DataReader
         except ImportError:
-            from data_reader import FunctionRecord, CodeMetaData
+            from data_reader import DataReader
         
         # 转换回FunctionRecord格式
         temp_records = []
@@ -1150,7 +1175,7 @@ class WorkflowManager:
                     code_start_line=meta['code_start_line'],
                     code_end_line=meta['code_end_line'],
                     code_key=meta['code_key'],
-                    code_value=meta['code_value'],
+                    code_value=meta.get('code_value', ''),
                     code_label=meta['code_label'],
                     code_type=meta['code_type'],
                     code_version=meta['code_version']
@@ -1225,7 +1250,7 @@ class WorkflowManager:
         try:
             # 延迟导入避免循环依赖
             from utils.llm_client import LLMClient
-            from config.data_clean.fix_review_prompts import REMOVAL_REVIEW_PROMPT, ADDITION_REVIEW_PROMPT  # type: ignore
+            from config.data_processing.cleaning.fix_review_prompts import REMOVAL_REVIEW_PROMPT, ADDITION_REVIEW_PROMPT  # type: ignore
             import aiohttp
             import json
             import re
@@ -1238,14 +1263,26 @@ class WorkflowManager:
             
             client = LLMClient("v3")
             
-            # 使用异步调用
+            # 使用格式验证调用LLM
+            from utils.format_validators import validate_fix_review_response
+            from config.data_processing.workflow.workflow_config import get_workflow_config
+            
+            # 从配置获取参数
+            workflow_config = get_workflow_config()
+            max_tokens = workflow_config.get_max_tokens("workflow", "fix_review")
+            max_retries = workflow_config.get_max_retries("workflow", "fix_review")
+            retry_delay = workflow_config.get_retry_delay("workflow", "fix_review")
+            
             async with aiohttp.ClientSession() as session:
-                response = await client.call_async(
+                response = await client.call_async_with_format_validation(
                     session, 
                     prompt, 
-                    max_tokens=300, 
+                    validator=validate_fix_review_response,
+                    max_tokens=max_tokens, 
                     temperature=0.0,
-                    max_retries=5
+                    max_retries=max_retries,
+                    retry_delay=retry_delay,
+                    module="workflow", component="fix_review"
                 )
                 
                 if response:
@@ -1290,7 +1327,7 @@ class WorkflowManager:
             
             # 延迟导入关键词列表
             try:
-                from config.data_clean.special_keyword_prompt import SPECIAL_KEYWORDS
+                from config.data_processing.cleaning.special_keyword_prompt import SPECIAL_KEYWORDS
             except ImportError:
                 # 如果导入失败，使用默认关键词列表
                 SPECIAL_KEYWORDS = [
@@ -1341,9 +1378,14 @@ class WorkflowManager:
 
         # 延迟导入避免循环依赖
         from utils.llm_client import LLMClient
-        from config.data_clean.special_keyword_prompt import SPECIAL_KEYWORD_PROMPT, SPECIAL_KEYWORDS
+        from config.data_processing.cleaning.special_keyword_prompt import SPECIAL_KEYWORD_PROMPT, SPECIAL_KEYWORDS
+        
+        # 获取LLM服务器配置
+        from config.data_processing.workflow.workflow_config import get_workflow_config
+        workflow_config = get_workflow_config()
+        llm_server = workflow_config.get_llm_server("workflow", "keyword_processing")
 
-        llm_client = LLMClient("v3")
+        llm_client = LLMClient(llm_server)
 
         async with aiohttp.ClientSession() as session:
             async def process_single_record(record: Dict[str, Any]) -> Dict[str, Any]:
@@ -1357,13 +1399,16 @@ class WorkflowManager:
                         prompt = prompt.replace('{sql_statements}', json.dumps(record.get('sql_statement_list', []), ensure_ascii=False, indent=2))
 
                         
-                        # 调用LLM
-                        response = await llm_client.call_async(
+                        # 使用格式验证调用LLM
+                        from utils.format_validators import validate_keyword_extraction_response
+                        
+                        response = await llm_client.call_async_with_format_validation(
                             session, 
                             prompt, 
+                            validator=validate_keyword_extraction_response,
                             max_tokens=200, 
                             temperature=0.0,
-                            max_retries=1000
+                            module="workflow", component="keyword_processing"
                         )
                         
                         if response:
@@ -1652,6 +1697,27 @@ class WorkflowManager:
             json.dump(summary, f, ensure_ascii=False, indent=2)
         
         logger.info(f"工作流摘要已保存: {summary_file}")
+        
+        # 自动生成可视化图表
+        try:
+            from utils.workflow_visualizer import generate_workflow_visualization
+            visualization_dir = self.workflow_dir / "visualizations"
+            visualization_results = generate_workflow_visualization(
+                str(summary_file), 
+                str(visualization_dir), 
+                self.workflow_timestamp
+            )
+            
+            if visualization_results:
+                logger.info("📊 工作流可视化图表已生成:")
+                for chart_type, filepath in visualization_results.items():
+                    logger.info(f"   📈 {chart_type}: {filepath}")
+            else:
+                logger.warning("⚠️ 可视化图表生成失败")
+                
+        except Exception as e:
+            logger.warning(f"⚠️ 生成可视化图表时出错: {e}")
+        
         return str(summary_file)
     
     def export_final_data(self, output_file: str = "final_processed_data.json") -> str:
@@ -2014,7 +2080,7 @@ class WorkflowManager:
 
     async def remove_no_sql_records(self, step_name: str = "remove_no_sql_records_step", 
                              reanalyze_no_sql: bool = False,
-                             validator_config_path: str = "config/validation/rerun_config.yaml") -> Dict[str, Any]:
+                             validator_config_path: str = "config/data_processing/validation/rerun_config.yaml") -> Dict[str, Any]:
         """
         删除所有包含 <NO SQL GENERATE> 的记录
         
@@ -2279,17 +2345,17 @@ class WorkflowManager:
         sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
         
         try:
-            from data_processing.cleaning.control_flow_validator import ControlFlowValidator
+            from data_processing.validation.control_flow_validator import ControlFlowValidator
         except ImportError as e:
             logger.error(f"无法导入控制流验证器: {e}")
             raise ValueError("控制流验证器不可用，无法执行验证")
         
         # 创建控制流验证器
         validation_output_dir = self.workflow_dir / "control_flow_validation"
-        validator = ControlFlowValidator(str(validation_output_dir), llm_server="v3")
+        validator = ControlFlowValidator(str(validation_output_dir))
         
         # 动态获取并发数
-        from config.data_clean.workflow_config import get_workflow_config
+        from config.data_processing.workflow.workflow_config import get_workflow_config
         workflow_config = get_workflow_config()
         concurrency = workflow_config.get_concurrency('control_flow_validation')
         
@@ -2340,12 +2406,14 @@ class WorkflowManager:
         prompt_template = KEYWORD_PROCESSING_PROMPT
 
         from utils.llm_client import LLMClient
-        from config.data_clean.workflow_config import get_workflow_config
+        from config.data_processing.workflow.workflow_config import get_workflow_config
         import aiohttp
         from tqdm.asyncio import tqdm_asyncio
 
-        llm_client = LLMClient("v3")
+        # 获取LLM服务器配置
         workflow_config = get_workflow_config()
+        llm_server = workflow_config.get_llm_server("workflow", "keyword_processing")
+        llm_client = LLMClient(llm_server)
         concurrency = workflow_config.get_concurrency('keyword_data_processing')
         semaphore = asyncio.Semaphore(concurrency)
 
@@ -2366,7 +2434,15 @@ class WorkflowManager:
                 for placeholder, value in replacements.items():
                     prompt = prompt.replace(placeholder, value)
 
-                response = await llm_client.call_async(session, prompt, temperature=0.0, max_retries=1000)
+                # 使用格式验证调用LLM
+                from utils.format_validators import validate_keyword_extraction_response
+                
+                response = await llm_client.call_async_with_format_validation(
+                    session, prompt,
+                    validator=validate_keyword_extraction_response,
+                    temperature=0.0,
+                    module="workflow", component="keyword_processing"
+                )
 
                 # 使用新的、更健壮的解析器
                 from utils.response_parser import parse_model_response
@@ -2476,77 +2552,500 @@ class WorkflowManager:
         logger.info(f"关键词数据处理完成 - 输入 {input_record_count} 条, 输出 {len(processed_records)} 条, 成功处理 {success_count} 条, 失败 {failure_count} 条.")
         return step_info
 
+    async def generate_synthetic_data(self, 
+                               scenarios: Optional[List[str]] = None,
+                               count_per_scenario: int = 1,
+                               llm_server: str = None,
+                               temperature: float = 0.7,
+                               max_tokens: int = 4096,
+                               parallel: bool = True,
+                               max_workers: int = 4,
+                               validate: bool = True,
+                               step_name: str = "synthetic_data_generation") -> Dict[str, Any]:
+        """
+            使用合成数据生成器生成ORM场景数据
+        
+        Args:
+                scenarios: 要生成的场景列表，如果为None则生成所有场景
+                count_per_scenario: 每个场景生成的数据包数量
+                llm_server: LLM服务器名称
+                temperature: LLM温度参数
+                max_tokens: 最大token数
+                parallel: 是否启用并行模式
+                max_workers: 并行worker数量
+                validate: 是否验证生成的数据
+                step_name: 步骤名称
+            
+        Returns:
+                生成结果信息
+        """
+        logger.info(f"开始使用合成数据生成器生成ORM场景数据: {step_name}")
+        
+        try:
+            # 导入合成数据生成器
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            
+            try:
+                from config.data_processing.synthetic_data_generator.config import SyntheticDataConfig
+                from data_processing.synthetic_data_generator.generator import SyntheticDataGenerator
+            except ImportError:
+                # 尝试绝对导入
+                from config.data_processing.synthetic_data_generator.config import SyntheticDataConfig
+                from data_processing.synthetic_data_generator.generator import SyntheticDataGenerator
+            
+            # 创建配置
+            config = SyntheticDataConfig(
+                llm_server=llm_server,
+                full_scenario_path="datasets/full_scenario.json",
+                output_path="synthetic_scenarios.json",
+                max_workers=max_workers,
+                temperature=temperature,
+                top_p=0.8,
+                max_tokens=max_tokens
+            )
+        
+            # 创建生成器
+            generator = SyntheticDataGenerator(config)
+            
+            # 确定要生成的场景
+            if scenarios is None:
+                scenarios = config.list_scenarios()
+                if scenarios is None:
+                    # 使用硬编码的默认场景列表
+                    scenarios = [
+                        "对象var+chunk", "caller+global variable", "caller+chunk", 
+                        "caller的callee+caller", "单chunk", "单chunk+meta(global var)",
+                        "preload特殊函数", "association特殊函数", "单chunk+meta(local var)",
+                        "单chunk+meta(对象var)", "一度caller+chunk", "二度caller+chunk",
+                        "对象const+chunk"
+                    ]
+            
+            logger.info(f"将生成以下场景的数据: {scenarios}")
+            logger.info(f"每个场景生成 {count_per_scenario} 个数据包")
+            
+            # 准备生成任务
+            scenarios_and_counts = [(sc, count_per_scenario) for sc in scenarios]
+            
+            # 执行生成
+            if parallel:
+                logger.info(f"启用并行模式，使用 {max_workers} 个worker")
+                generated_packs = await generator.generate_multiple_packs_parallel(scenarios_and_counts)
+            else:
+                logger.info("使用串行模式生成")
+                generated_packs = {}
+                import asyncio
+                
+                async def generate_single_pack(scenario, i, count):
+                    try:
+                        pack = await generator.generate_pack(scenario)
+                        return pack
+                    except Exception as e:
+                        logger.warning(f"生成场景 {scenario} 的第 {i+1}/{count} 个包时出错: {e}")
+                        return None
+                
+                # 创建异步任务
+                async def generate_all_packs():
+                    tasks = []
+                    for scenario, count in scenarios_and_counts:
+                        for i in range(count):
+                            task = generate_single_pack(scenario, i, count)
+                            tasks.append(task)
+                    
+                    results = await asyncio.gather(*tasks, return_exceptions=True)
+                    
+                    for result in results:
+                        if isinstance(result, dict):
+                            generated_packs.update(result)
+                        elif isinstance(result, Exception):
+                            logger.error(f"生成任务失败: {result}")
+                
+                # 运行异步任务
+                asyncio.run(generate_all_packs())
+            
+            # 验证生成的数据（如果启用）
+            validation_results = {}
+            if validate:
+                logger.info("开始验证生成的数据...")
+                valid_count = 0
+                for key, pack_data in generated_packs.items():
+                    if generator.validate_pack({key: pack_data}):
+                        valid_count += 1
+                        validation_results[key] = "valid"
+                    else:
+                        validation_results[key] = "invalid"
+                
+                logger.info(f"验证完成: {valid_count}/{len(generated_packs)} 个包通过验证")
+        
+            # 保存生成的数据
+            synthetic_output_dir = self.workflow_dir / "synthetic_data_generation"
+            synthetic_output_dir.mkdir(exist_ok=True)
+            
+            output_file = synthetic_output_dir / f"{step_name}.json"
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(generated_packs, f, ensure_ascii=False, indent=2)
+        
+            # 保存验证结果（如果进行了验证）
+            if validate:
+                validation_file = synthetic_output_dir / f"{step_name}_validation.json"
+                with open(validation_file, 'w', encoding='utf-8') as f:
+                    json.dump(validation_results, f, ensure_ascii=False, indent=2)
+        
+            # 记录工作流步骤
+            step_info = {
+                'step_name': step_name,
+                'step_type': 'synthetic_data_generation',
+                'timestamp': datetime.now().isoformat(),
+                'scenarios': scenarios,
+                'count_per_scenario': count_per_scenario,
+                'total_packs_generated': len(generated_packs),
+                'llm_server': llm_server,
+                'temperature': temperature,
+                'max_tokens': max_tokens,
+                'parallel': parallel,
+                'max_workers': max_workers,
+                'validate': validate,
+                'output_file': str(output_file),
+                'validation_file': str(validation_file) if validate else None,
+                'validation_results': validation_results if validate else None
+            }
+            
+            # 添加统计信息
+            if validate:
+                valid_count = sum(1 for result in validation_results.values() if result == "valid")
+                step_info.update({
+                    'valid_packs': valid_count,
+                    'invalid_packs': len(generated_packs) - valid_count,
+                    'validation_rate': valid_count / len(generated_packs) * 100 if generated_packs else 0.0
+                })
+            
+            self.workflow_steps.append(step_info)
+            
+            # 显示统计信息
+            if parallel:
+                generator.print_generation_stats()
+            
+            logger.info(f"合成数据生成完成 - 生成了 {len(generated_packs)} 个数据包")
+            if validate:
+                valid_count = sum(1 for result in validation_results.values() if result == "valid")
+                logger.info(f"验证结果: {valid_count}/{len(generated_packs)} 个包通过验证")
+            
+            return step_info
+            
+        except ImportError as e:
+            logger.error(f"无法导入合成数据生成器模块: {e}")
+            error_step_info = {
+                'step_name': step_name,
+                'step_type': 'synthetic_data_generation',
+                'timestamp': datetime.now().isoformat(),
+                'status': 'failed',
+                'error': f"Import error: {str(e)}"
+            }
+            self.workflow_steps.append(error_step_info)
+            return error_step_info
+        
+        except Exception as e:
+                logger.error(f"合成数据生成失败: {e}")
+                error_step_info = {
+                    'step_name': step_name,
+                    'step_type': 'synthetic_data_generation',
+                    'timestamp': datetime.now().isoformat(),
+                    'status': 'failed',
+                    'error': str(e)
+                }
+                self.workflow_steps.append(error_step_info)
+                return error_step_info
 
-def run_complete_workflow_from_raw_data(data_dir: str, keywords: Optional[List[str]] = None, base_output_dir: str = "workflow_output") -> Dict[str, Any]:
-    """
-    运行完整的数据处理工作流（新架构：清洗 -> 标签 -> 提取 -> 处理 -> 合并）
-    
-    Args:
-        data_dir: 原始数据目录
-        keywords: 关键词列表，如果为None则使用GORM关键词
-        base_output_dir: 输出基目录
+    async def generate_reverse_sql_data(self, 
+                               scenarios: Optional[List[str]] = None,
+                               count_per_scenario: int = 1,
+                               llm_server: str = None,
+                               temperature: float = 0.7,
+                               max_tokens: int = 4096,
+                               parallel: bool = True,
+                               max_workers: int = 4,
+                               validate: bool = True,
+                               step_name: str = "reverse_sql_generation") -> Dict[str, Any]:
+        """
+        使用反向SQL生成器生成数据（SQL → ORM → Caller）
         
-    Returns:
-        工作流结果信息
-    """
-    logger.info("开始新架构的完整数据处理工作流")
-    
-    # 创建工作流管理器
-    workflow = WorkflowManager(base_output_dir)
-    
-    try:
-        # 步骤1: 加载原始数据集
-        load_result = workflow.load_raw_dataset(data_dir)
+        Args:
+            scenarios: 要生成的场景列表，如果为None则生成所有场景
+            count_per_scenario: 每个场景生成的数据包数量
+            llm_server: LLM服务器名称
+            temperature: LLM温度参数
+            max_tokens: 最大token数
+            parallel: 是否启用并行模式
+            max_workers: 并行worker数量
+            validate: 是否验证生成的数据
+            step_name: 步骤名称
+            
+        Returns:
+            生成结果信息
+        """
+        logger.info(f"开始使用反向SQL生成器生成数据: {step_name}")
         
-        # 步骤2: 对全体数据进行SQL清洗
-        cleaning_result = workflow.run_sql_cleaning("sql_cleaning_step1")
+        try:
+            # 导入反向SQL生成器
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            
+            try:
+                from config.data_processing.reverse_sql_generator.config import ReverseSQLConfig
+                from data_processing.reverse_sql_generator.generator import ReverseSQLGenerator
+            except ImportError:
+                # 尝试绝对导入
+                from config.data_processing.reverse_sql_generator.config import ReverseSQLConfig
+                from data_processing.reverse_sql_generator.generator import ReverseSQLGenerator
+            
+            # 创建配置
+            config = ReverseSQLConfig(
+                llm_server=llm_server,
+                output_path="reverse_sql_cases.json",
+                max_workers=max_workers,
+                temperature=temperature,
+                top_p=0.8,
+                max_tokens=max_tokens
+            )
         
-        # 步骤2.5: 使用LLM检查SQL完整性并标记缺少信息的数据
-        logger.info("开始执行SQL完整性检查和数据标记...")
-        tagging_result = asyncio.run(workflow.tag_lack_information_data("sql_completeness_check_step2"))
+            # 创建生成器
+            generator = ReverseSQLGenerator(config)
+            
+            # 确定要生成的场景
+            if scenarios is None:
+                scenarios = config.list_scenarios()
+                if scenarios is None:
+                    # 使用硬编码的默认场景列表
+                    scenarios = [
+                        "if-else+caller", "if-else+orm", "switch", 
+                        "dynamic_query", "fixed_params", "complex_control"
+                    ]
+            
+            logger.info(f"将生成以下场景的数据: {scenarios}")
+            logger.info(f"每个场景生成 {count_per_scenario} 个数据包")
+            
+            # 准备生成任务
+            scenarios_and_complexities = []
+            for sc in scenarios:
+                for i in range(count_per_scenario):
+                    # 根据场景选择复杂度
+                    if "complex" in sc:
+                        complexity = "complex"
+                    elif "dynamic" in sc or "switch" in sc:
+                        complexity = "medium"
+                    else:
+                        complexity = "simple"
+                    scenarios_and_complexities.append((sc, complexity))
+            
+            # 执行生成
+            if parallel:
+                logger.info(f"启用并行模式，使用 {max_workers} 个worker")
+                generated_cases = await generator.generate_multiple_cases(scenarios_and_complexities)
+            else:
+                logger.info("使用串行模式生成")
+                generated_cases = {}
+                
+                for scenario, complexity in scenarios_and_complexities:
+                    try:
+                        case = await generator.generate_complete_case(scenario, complexity)
+                        generated_cases.update(case)
+                        logger.info(f"完成场景 {scenario} ({complexity}) 的生成")
+                    except Exception as e:
+                        logger.warning(f"生成场景 {scenario} ({complexity}) 时出错: {e}")
+                        continue
+            
+            # 验证生成的数据
+            if validate:
+                logger.info("开始验证生成的数据...")
+                valid_count = 0
+                total_count = len(generated_cases)
+                
+                for case_key, case_data in generated_cases.items():
+                    if generator.validate_case(case_data):
+                        valid_count += 1
+                    else:
+                        logger.warning(f"案例 {case_key} 验证失败")
+                
+                logger.info(f"数据验证完成: {valid_count}/{total_count} 个案例通过验证")
+            
+            # 保存生成的数据
+            output_file = self.output_dir / f"{step_name}.json"
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(generated_cases, f, ensure_ascii=False, indent=2)
+            
+            logger.info(f"反向SQL数据已保存到: {output_file}")
+            
+            # 更新工作流状态
+            self.workflow_steps[step_name] = {
+                "status": "completed",
+                "timestamp": datetime.now().isoformat(),
+                "output_file": str(output_file),
+                "generated_count": len(generated_cases),
+                "scenarios": scenarios,
+                "count_per_scenario": count_per_scenario
+            }
+            
+            return {
+                "status": "success",
+                "generated_cases": generated_cases,
+                "output_file": str(output_file),
+                "total_count": len(generated_cases),
+                "valid_count": valid_count if validate else len(generated_cases)
+            }
+            
+        except Exception as e:
+            logger.error(f"反向SQL数据生成失败: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            
+            # 更新工作流状态
+            self.workflow_steps[step_name] = {
+                "status": "failed",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e)
+            }
+            
+            return {
+                "status": "error",
+                "error": str(e)
+            }
+
+    async def generate_sql_from_synthetic_data(self, 
+                                        input_file: str = None,
+                                        concurrency: int = 80,
+                                        step_name: str = "sql_generation") -> Dict[str, Any]:
+        """
+        从合成数据生成SQL语句
         
-        # 步骤2.6: 使用LLM检查SQL正确性
-        logger.info("开始执行SQL正确性检查...")
-        correctness_result = asyncio.run(workflow.check_sql_correctness("sql_correctness_check_step2.6"))
+        Args:
+            input_file: 输入文件路径，如果为None则使用最新的合成数据文件
+            concurrency: 并发数量
+            step_name: 步骤名称
+            
+        Returns:
+            SQL生成结果信息
+        """
+        logger.info(f"开始从合成数据生成SQL: {step_name}")
         
-        # 步骤3: 从清洗后的数据中提取关键词数据
-        extraction_result = workflow.extract_keyword_data(keywords, "keyword_extraction_step3")
+        try:
+            # 导入SQL生成模块
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            
+            try:
+                from data_processing.synthetic_data_generator.get_sql import process_json_file_async
+            except ImportError:
+                # 尝试绝对导入
+                from data_processing.synthetic_data_generator.get_sql import process_json_file_async
+            
+            # 确定输入文件
+            if input_file is None:
+                # 查找最新的合成数据文件
+                synthetic_output_dir = self.workflow_dir / "synthetic_data_generation"
+                if synthetic_output_dir.exists():
+                    json_files = list(synthetic_output_dir.glob("*.json"))
+                    if json_files:
+                        # 按修改时间排序，取最新的
+                        json_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                        input_file = str(json_files[0])
+                        logger.info(f"使用最新的合成数据文件: {input_file}")
+                    else:
+                        raise FileNotFoundError("未找到合成数据文件")
+                else:
+                    raise FileNotFoundError("未找到合成数据目录")
+            
+            # 创建输出目录
+            sql_output_dir = self.workflow_dir / "sql_generation"
+            sql_output_dir.mkdir(exist_ok=True)
+            
+            # 确定输出文件
+            output_file = sql_output_dir / f"{step_name}.json"
+            
+            # 执行SQL生成
+            logger.info(f"开始处理文件: {input_file}")
+            logger.info(f"输出文件: {output_file}")
+            logger.info(f"并发数量: {concurrency}")
+            
+            # 调用SQL生成函数
+            valid_count, invalid_count = await process_json_file_async(
+                input_file=str(input_file),
+                output_file=str(output_file),
+                concurrency=concurrency
+            )
+            
+            # 记录工作流步骤
+            step_info = {
+                'step_name': step_name,
+                'step_type': 'sql_generation',
+                'timestamp': datetime.now().isoformat(),
+                'input_file': input_file,
+                'output_file': str(output_file),
+                'concurrency': concurrency,
+                'valid_count': valid_count,
+                'invalid_count': invalid_count,
+                'total_count': valid_count + invalid_count,
+                'success_rate': valid_count / (valid_count + invalid_count) * 100 if (valid_count + invalid_count) > 0 else 0.0
+            }
+            
+            self.workflow_steps.append(step_info)
+            
+            logger.info(f"SQL生成完成 - 有效: {valid_count}, 无效: {invalid_count}")
+            logger.info(f"成功率: {step_info['success_rate']:.1f}%")
+            
+            return step_info
+            
+        except ImportError as e:
+            logger.error(f"无法导入SQL生成模块: {e}")
+            error_step_info = {
+                'step_name': step_name,
+                'step_type': 'sql_generation',
+                'timestamp': datetime.now().isoformat(),
+                'status': 'failed',
+                'error': f"Import error: {str(e)}"
+            }
+            self.workflow_steps.append(error_step_info)
+            return error_step_info
         
-        # 步骤4: 对提取的数据进行特殊处理
-        processing_result = workflow.process_extracted_data("special_processing_step4")
-        
-        # 步骤5: 将处理后的数据合并回原数据集
-        merge_result = workflow.merge_processed_data_back("merge_back_step5")
-        
-        # 导出最终数据
-        final_data_path = workflow.export_final_data("final_processed_dataset.json")
-        
-        # 保存工作流摘要
-        summary_path = workflow.save_workflow_summary()
-        
-        # 打印摘要
-        workflow.print_workflow_summary()
-        
-        result = {
-            'workflow_completed': True,
-            'workflow_directory': str(workflow.workflow_dir),
-            'final_data_path': final_data_path,
-            'summary_path': summary_path,
-            'load_result': load_result,
-            'cleaning_result': cleaning_result,
-            'tagging_result': tagging_result,
-            'correctness_result': correctness_result,
-            'extraction_result': extraction_result,
-            'processing_result': processing_result,
-            'merge_result': merge_result
-        }
-        
-        logger.info("新架构的完整数据处理工作流执行成功")
-        return result
-        
-    except Exception as e:
-        logger.error(f"工作流执行失败: {e}")
-        raise
+        except Exception as e:
+            logger.error(f"SQL生成失败: {e}")
+            error_step_info = {
+                'step_name': step_name,
+                'step_type': 'sql_generation',
+                'timestamp': datetime.now().isoformat(),
+                'status': 'failed',
+                'error': str(e)
+            }
+            self.workflow_steps.append(error_step_info)
+            return error_step_info
+
+    async def extract_keywords_from_file_and_export_all(self, input_file: str, output_file: str = "final_processed_data.json") -> str:
+        """
+        从指定文件加载数据，经过LLM关键词分析（含关键词和不含关键词的都保留），并导出所有分析后的数据。
+        Args:
+            input_file: 输入数据文件（JSON，记录列表）
+            output_file: 输出文件名（默认final_processed_data.json）
+        Returns:
+            输出文件路径
+        """
+        import json
+        from pathlib import Path
+        # 1. 读取数据
+        with open(input_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not isinstance(data, list):
+            raise ValueError(f"输入文件{input_file}内容不是记录列表")
+        self.current_data = data
+        # 2. LLM关键词分析
+        await self.extract_keyword_data(keywords=None, step_name="keyword_extraction_llm_export", use_llm=True)
+        # 3. 导出所有分析后的数据（含关键词和不含关键词）
+        export_path = self.workflow_dir / output_file
+        with open(export_path, 'w', encoding='utf-8') as f:
+            json.dump(self.current_data, f, ensure_ascii=False, indent=2)
+        logger.info(f"所有LLM分析后的数据已导出: {export_path}")
+        return str(export_path)
 
 
 
@@ -2851,3 +3350,164 @@ def run_resume_workflow(args):
             shutil.rmtree(temp_dir)
         except Exception as e:
             print(f"⚠️ 清理临时目录失败: {e}")
+
+async def run_reverse_sql_generation_workflow(base_output_dir: str = "workflow_output",
+                                         scenarios: Optional[List[str]] = None,
+                                         count_per_scenario: int = 1,
+                                         llm_server: str = None,
+                                         temperature: float = 0.7,
+                                         max_tokens: int = 4096,
+                                         parallel: bool = True,
+                                         max_workers: int = 4,
+                                         validate: bool = True) -> Dict[str, Any]:
+    """
+    运行反向SQL生成器完整工作流
+    
+    Args:
+        base_output_dir: 基础输出目录
+        scenarios: 要生成的场景列表
+        count_per_scenario: 每个场景生成的数据包数量
+        llm_server: LLM服务器名称
+        temperature: LLM温度参数
+        max_tokens: 最大token数
+        parallel: 是否启用并行模式
+        max_workers: 并行worker数量
+        validate: 是否验证生成的数据
+        
+    Returns:
+        工作流执行结果
+    """
+    print("🔄 开始反向SQL生成器完整工作流")
+    print("=" * 60)
+    
+    # 创建工作流管理器
+    workflow_manager = WorkflowManager(base_output_dir=base_output_dir)
+    
+    try:
+        # 执行反向SQL数据生成
+        print("步骤1: 生成反向SQL数据...")
+        result = await workflow_manager.generate_reverse_sql_data(
+            scenarios=scenarios,
+            count_per_scenario=count_per_scenario,
+            llm_server=llm_server,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            parallel=parallel,
+            max_workers=max_workers,
+            validate=validate,
+            step_name="reverse_sql_generation"
+        )
+        
+        if result["status"] != "success":
+            print(f"❌ 反向SQL数据生成失败: {result.get('error', '未知错误')}")
+            return result
+        
+        print("✅ 反向SQL数据生成完成!")
+        print(f"  - 生成案例数: {result['total_count']}")
+        print(f"  - 验证通过数: {result['valid_count']}")
+        print(f"  - 输出文件: {result['output_file']}")
+        
+        # 保存工作流摘要
+        summary_file = workflow_manager.save_workflow_summary()
+        print(f"工作流摘要已保存到: {summary_file}")
+        
+        # 打印工作流摘要
+        workflow_manager.print_workflow_summary()
+        
+        return {
+            "status": "success",
+            "workflow_summary": summary_file,
+            "generated_cases": result["generated_cases"],
+            "total_count": result["total_count"],
+            "valid_count": result["valid_count"]
+        }
+        
+    except Exception as e:
+        print(f"❌ 反向SQL生成器工作流执行失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+async def run_synthetic_data_generation_workflow(base_output_dir: str = "workflow_output",
+                                         scenarios: Optional[List[str]] = None,
+                                         count_per_scenario: int = 1,
+                                         llm_server: str = None,
+                                         temperature: float = 0.7,
+                                         max_tokens: int = 4096,
+                                         parallel: bool = True,
+                                         max_workers: int = 4,
+                                         validate: bool = True,
+                                         generate_sql: bool = True,
+                                         sql_concurrency: int = 80) -> Dict[str, Any]:
+    """
+    运行合成数据生成工作流
+    
+    Args:
+        base_output_dir: 输出基目录
+        scenarios: 要生成的场景列表，如果为None则生成所有场景
+        count_per_scenario: 每个场景生成的数据包数量
+        llm_server: LLM服务器名称
+        temperature: LLM温度参数
+        max_tokens: 最大token数
+        parallel: 是否启用并行模式
+        max_workers: 并行worker数量
+        validate: 是否验证生成的数据
+        generate_sql: 是否生成SQL语句
+        sql_concurrency: SQL生成的并发数量
+        
+    Returns:
+        工作流结果信息
+    """
+    logger.info("开始运行合成数据生成工作流")
+    
+    # 创建工作流管理器
+    workflow = WorkflowManager(base_output_dir)
+    
+    try:
+        # 执行合成数据生成
+        generation_result = await workflow.generate_synthetic_data(
+            scenarios=scenarios,
+            count_per_scenario=count_per_scenario,
+            llm_server=llm_server,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            parallel=parallel,
+            max_workers=max_workers,
+            validate=validate,
+            step_name="synthetic_data_generation_step"
+        )
+        
+        # 如果启用SQL生成，执行SQL生成步骤
+        sql_generation_result = None
+        if generate_sql:
+            logger.info("开始执行SQL生成步骤...")
+            sql_generation_result = await workflow.generate_sql_from_synthetic_data(
+                input_file=None,  # 使用最新的合成数据文件
+                concurrency=sql_concurrency,
+                step_name="sql_generation_step"
+        )
+        
+        # 保存工作流摘要
+        summary_path = workflow.save_workflow_summary()
+        
+        # 打印摘要
+        workflow.print_workflow_summary()
+        
+        result = {
+            'workflow_completed': True,
+            'workflow_directory': str(workflow.workflow_dir),
+            'summary_path': summary_path,
+            'generation_result': generation_result,
+            'sql_generation_result': sql_generation_result
+        }
+        
+        logger.info("合成数据生成工作流执行成功")
+        return result
+        
+    except Exception as e:
+        logger.error(f"合成数据生成工作流执行失败: {e}")
+        raise
+

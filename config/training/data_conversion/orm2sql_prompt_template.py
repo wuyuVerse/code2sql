@@ -11,6 +11,7 @@ PROMPT_TEMPLATE =     """
 - 被完全注释掉的代码不会生成SQL
 - 如果代码不会生成任何SQL，请返回：`NO_SQL_GENERATE: 具体原因`，格式要求见下
 - 如果信息不完整但可推测，请返回：`LACK_INFORMATION: 缺失描述，推测SQL，`，格式要求见下
+- 如果代码中没有传入任何筛选条件，即 `filter` 为空，没有caller，或者 `Where` 条件没有被动态构建（没有筛选条件），即没有任何过滤条件的查询。这种情况下SQL的WHERE子句应该为 `WHERE ?``
 
 **分析步骤：**
 
@@ -67,6 +68,7 @@ PROMPT_TEMPLATE =     """
 
 边界条件格式：
 - 信息缺失：[{{"type": "LACK_INFORMATION", "variants": [{{"scenario": "缺失描述", "sql": "推测SQL"}}]}}]
+- 缺少筛选条件的情况：[{{"type": "LACK_INFORMATION", "variants": [{{"scenario": "缺少筛选条件", "sql": "WHERE子句为WHERE ？的sql语句"}}]}}]
 - 无法生成：[{{"type": "NO_SQL_GENERATE", "variants": [{{"scenario": "原因", "sql": ""}}]}}]
 
 **严格要求：**

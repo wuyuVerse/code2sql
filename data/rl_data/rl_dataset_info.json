@@ -1,0 +1,19 @@
+{
+  "dataset_name": "rl_orm2sql_training_data_20250721_201529",
+  "description": "ORM到SQL转换的RL训练数据集，基于真实代码分析生成",
+  "data_source": "code2sql_orm",
+  "ability": "code_generation",
+  "train": {
+    "file_name": "rl_orm2sql_training_data_20250721_201529_train.parquet",
+    "num_samples": 101,
+    "size_mb": "0.2"
+  },
+  "val": {
+    "file_name": "rl_orm2sql_training_data_20250721_201529_val.parquet",
+    "num_samples": 11,
+    "size_mb": "0.0"
+  },
+  "total_samples": 112,
+  "reward_model_style": "rule",
+  "format": "RLHF parquet format with chat template"
+}

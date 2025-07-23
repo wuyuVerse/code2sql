@@ -61,8 +61,19 @@ def basename_filter(path):
     """提取文件路径的文件名"""
     return Path(path).name
 
+def datetime_filter(timestamp):
+    """将时间戳转换为可读的日期时间格式"""
+    if timestamp is not None:
+        try:
+            dt = datetime.fromtimestamp(float(timestamp))
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        except (ValueError, TypeError, OSError):
+            return str(timestamp)
+    return ""
+
 # 注册过滤器
 templates.env.filters["basename"] = basename_filter
+templates.env.filters["datetime"] = datetime_filter
 
 def get_template_resources() -> dict:
     """从模板中提取所有外部资源，提供多个CDN源"""
@@ -1288,7 +1299,8 @@ def scan_for_reports():
     """扫描所有评估结果目录，生成报告列表"""
     reports = {
         'fingerprint_eval': [],
-        'comparative_eval': []
+        'comparative_eval': [],
+        'reward_logs': []
     }
     
     # 扫描指纹评估结果
@@ -1322,6 +1334,18 @@ def scan_for_reports():
                         "path": f"/reports/comparative/{run_dir.name}",
                         "display_name": f"对比评估 - {run_dir.name}"
                     })
+    
+    # 扫描reward日志文件
+    reward_logs_dir = BASE_DIR / "model" / "rl" / "reward_logs"
+    if reward_logs_dir.exists():
+        for jsonl_file in sorted(reward_logs_dir.glob("*.jsonl"), key=os.path.getmtime, reverse=True):
+            if jsonl_file.is_file():
+                reports['reward_logs'].append({
+                    "timestamp": jsonl_file.stem,  # 文件名（不含扩展名）
+                    "path": f"/reward_viewer/{jsonl_file.stem}",
+                    "display_name": f"Reward日志 - {jsonl_file.stem}",
+                    "filename": jsonl_file.name
+                })
     
     return reports
 
@@ -1855,6 +1879,70 @@ async def export_dataset_html(path: str = "datasets/claude_output"):
     except Exception as e:
         logger.error(f"导出HTML时出错: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"导出HTML时出错: {str(e)}")
+
+@app.get("/reward_viewer", response_class=HTMLResponse)
+async def reward_viewer(request: Request):
+    """展示reward日志列表页面"""
+    logger.info("请求reward日志列表页面")
+    all_reports = scan_for_reports()
+    return templates.TemplateResponse(
+        "reward_list.html",
+        {
+            "request": request,
+            "reports": all_reports
+        }
+    )
+
+@app.get("/reward_viewer/{filename:path}", response_class=HTMLResponse)
+async def reward_viewer_detail(request: Request, filename: str):
+    """展示指定reward日志文件的详细内容"""
+    try:
+        # 读取指定的reward日志文件
+        reward_file_path = BASE_DIR / "model" / "rl" / "reward_logs" / f"{filename}.jsonl"
+        
+        if not reward_file_path.exists():
+            raise HTTPException(status_code=404, detail=f"Reward日志文件 {filename}.jsonl 不存在")
+        
+        reward_data = []
+        with open(reward_file_path, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                if line.strip():
+                    try:
+                        data = json.loads(line.strip())
+                        data['line_number'] = line_num
+                        reward_data.append(data)
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"解析第{line_num}行JSON失败: {e}")
+                        continue
+        
+        # 计算统计信息
+        total_records = len(reward_data)
+        valid_scores = [item.get('score', 0) for item in reward_data if item.get('score') is not None]
+        avg_score = sum(valid_scores) / len(valid_scores) if valid_scores else 0
+        
+        # 按分数分组统计
+        score_ranges = {
+            '优秀 (0.8-1.0)': len([item for item in reward_data if item.get('score') is not None and 0.8 <= item.get('score', 0) <= 1.0]),
+            '良好 (0.6-0.8)': len([item for item in reward_data if item.get('score') is not None and 0.6 <= item.get('score', 0) < 0.8]),
+            '一般 (0.4-0.6)': len([item for item in reward_data if item.get('score') is not None and 0.4 <= item.get('score', 0) < 0.6]),
+            '较差 (0.0-0.4)': len([item for item in reward_data if item.get('score') is not None and 0.0 <= item.get('score', 0) < 0.4])
+        }
+        
+        # 获取模板资源
+        resources = get_template_resources()
+        
+        return templates.TemplateResponse("reward_viewer_enhanced.html", {
+            "request": request,
+            "reward_data": reward_data,
+            "total_records": total_records,
+            "avg_score": round(avg_score, 3),
+            "score_ranges": score_ranges,
+            "filename": filename
+        })
+        
+    except Exception as e:
+        logger.error(f"加载reward日志失败: {e}")
+        raise HTTPException(status_code=500, detail=f"加载reward日志失败: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

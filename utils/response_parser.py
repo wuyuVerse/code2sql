@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "parse_model_response",
     "recursively_extract_sql",
+    "validate_sql_output_format",
 ]
 
 
@@ -139,6 +140,13 @@ def recursively_extract_sql(data: Any) -> List[str]:
 
     if isinstance(data, str):
         if data.strip():
+            # 1) 尝试将字符串解析为JSON，如果成功则递归处理其内容，避免把JSON整体当作SQL
+            try:
+                parsed_json = json.loads(data)
+                return recursively_extract_sql(parsed_json)
+            except (json.JSONDecodeError, TypeError):
+                pass  # 解析失败继续按普通字符串处理
+
             # 检查字符串是否包含 SQL 语句
             sql_keywords = [
                 # DML (数据操作语言)
@@ -187,8 +195,8 @@ def recursively_extract_sql(data: Any) -> List[str]:
                 if not sql_list:
                     sql_list.append(data.strip())
             else:
-                # 普通字符串，直接添加
-                sql_list.append(data.strip())
+                # 普通字符串，直接忽略（不视为SQL），防止误判
+                pass
     elif isinstance(data, list):
         for item in data:
             sql_list.extend(recursively_extract_sql(item))
@@ -204,4 +212,93 @@ def recursively_extract_sql(data: Any) -> List[str]:
             for value in data.values():
                 sql_list.extend(recursively_extract_sql(value))
 
-    return sql_list 
+
+    return sql_list
+
+
+def validate_sql_output_format(sql_output: Any) -> tuple[bool, str]:
+    """
+    验证SQL输出格式是否符合要求
+    
+    Args:
+        sql_output: 要验证的SQL输出（可以是列表、字典或字符串）
+        
+    Returns:
+        tuple[bool, str]: (是否有效, 错误信息)
+    """
+    allowed_types = {"param_dependent", "LACK_INFORMATION", "NO_SQL_GENERATE"}
+    
+    def validate_item(item):
+        """验证单个SQL项"""
+        if isinstance(item, str):
+            # 字符串类型的SQL语句是允许的
+            return True, ""
+        
+        elif isinstance(item, dict):
+            # 检查是否有type字段
+            if "type" not in item:
+                return False, f"缺少type字段: {item}"
+            
+            item_type = item.get("type")
+            if item_type not in allowed_types:
+                return False, f"不支持的type类型: {item_type}，只允许: {allowed_types}"
+            
+            # 检查是否有variants字段
+            if "variants" not in item:
+                return False, f"缺少variants字段: {item}"
+            
+            # 验证variants是列表
+            if not isinstance(item["variants"], list):
+                return False, f"variants必须是列表: {item}"
+            
+            # 验证每个variant
+            for i, variant in enumerate(item["variants"]):
+                if not isinstance(variant, dict):
+                    return False, f"variant {i} 必须是字典: {variant}"
+                
+                # 检查必要的字段
+                if "scenario" not in variant:
+                    return False, f"variant {i} 缺少scenario字段: {variant}"
+                
+                if "sql" not in variant:
+                    return False, f"variant {i} 缺少sql字段: {variant}"
+                
+                # 对于LACK_INFORMATION和NO_SQL_GENERATE，sql字段可以为空字符串
+                if item_type in ["LACK_INFORMATION", "NO_SQL_GENERATE"]:
+                    if not isinstance(variant["sql"], str):
+                        return False, f"variant {i} 的sql字段必须是字符串: {variant}"
+                else:
+                    # 对于param_dependent，sql字段不能为空
+                    if not variant["sql"] or not isinstance(variant["sql"], str):
+                        return False, f"variant {i} 的sql字段不能为空且必须是字符串: {variant}"
+            
+            return True, ""
+        
+        else:
+            return False, f"不支持的项类型: {type(item)}"
+    
+    # 处理输入
+    if isinstance(sql_output, list):
+        for i, item in enumerate(sql_output):
+            is_valid, error_msg = validate_item(item)
+            if not is_valid:
+                return False, f"第{i}项验证失败: {error_msg}"
+        return True, ""
+    
+    elif isinstance(sql_output, dict):
+        return validate_item(sql_output)
+    
+    elif isinstance(sql_output, str):
+        # 尝试解析为JSON
+        try:
+            parsed = json.loads(sql_output)
+            return validate_sql_output_format(parsed)
+        except json.JSONDecodeError:
+            # 如果无法解析为JSON，检查是否为纯SQL字符串
+            if sql_output.strip():
+                return True, ""
+            else:
+                return False, "空字符串"
+    
+    else:
+        return False, f"不支持的输出类型: {type(sql_output)}" 

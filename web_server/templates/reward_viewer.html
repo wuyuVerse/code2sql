@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reward日志查看器</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="{{ resources.bootstrap_css[0] }}" rel="stylesheet">
+    <link href="{{ resources.bootstrap_icons[0] }}" rel="stylesheet">
+    
+    <!-- Prism CSS for syntax highlighting -->
+    <link href="{{ resources.prism_css[0] }}" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+        }
+        
+        .stats-card {
+            transition: transform 0.2s;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .score-badge {
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .score-excellent { background-color: #198754; }
+        .score-good { background-color: #0d6efd; }
+        .score-average { background-color: #ffc107; color: #000; }
+        .score-poor { background-color: #dc3545; }
+        
+        .function-name {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        
+        .orm-code {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .dimension-scores {
+            font-size: 0.875rem;
+        }
+        
+        .dimension-item {
+            padding: 0.25rem 0.5rem;
+            margin: 0.125rem;
+            border-radius: 0.25rem;
+            background-color: #e9ecef;
+            display: inline-block;
+        }
+        
+        .search-box {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background-color: #f8f9fa;
+            padding: 1rem 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .reward-item {
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+        
+        .reward-item:hover {
+            border-left-color: #0d6efd;
+            background-color: #f8f9fa;
+        }
+        
+        .reward-item.excellent { border-left-color: #198754; }
+        .reward-item.good { border-left-color: #0d6efd; }
+        .reward-item.average { border-left-color: #ffc107; }
+        .reward-item.poor { border-left-color: #dc3545; }
+        
+        .chart-container {
+            height: 300px;
+        }
+        
+        .back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-graph-up"></i> 模型评估系统
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="bi bi-house"></i> 仪表盘
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/reward_viewer">
+                            <i class="bi bi-bar-chart"></i> Reward日志
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dataset_viewer">
+                            <i class="bi bi-database"></i> 数据集查看器
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h2 mb-1">
+                            <i class="bi bi-bar-chart text-primary"></i> Reward日志查看器
+                        </h1>
+                        <p class="text-muted mb-0">查看和分析模型reward评估结果</p>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">文件: reward_20250721_2020_v2.jsonl</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mt-4">
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-list-ul text-primary" style="font-size: 2rem;"></i>
+                        <h3 class="mt-2 mb-1">{{ total_records }}</h3>
+                        <p class="text-muted mb-0">总记录数</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-graph-up text-success" style="font-size: 2rem;"></i>
+                        <h3 class="mt-2 mb-1">{{ avg_score }}</h3>
+                        <p class="text-muted mb-0">平均分数</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-award text-warning" style="font-size: 2rem;"></i>
+                        <h3 class="mt-2 mb-1">{{ score_ranges['优秀 (0.8-1.0)'] }}</h3>
+                        <p class="text-muted mb-0">优秀结果</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
+                        <h3 class="mt-2 mb-1">{{ score_ranges['较差 (0.0-0.4)'] }}</h3>
+                        <p class="text-muted mb-0">需要改进</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Score Distribution Chart -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-pie-chart"></i> 分数分布
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for range_name, count in score_ranges.items() %}
+                            <div class="col-md-3 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        {% if '优秀' in range_name %}
+                                            <div class="bg-success rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                <i class="bi bi-award text-white"></i>
+                                            </div>
+                                        {% elif '良好' in range_name %}
+                                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                <i class="bi bi-check-circle text-white"></i>
+                                            </div>
+                                        {% elif '一般' in range_name %}
+                                            <div class="bg-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                <i class="bi bi-exclamation-circle text-white"></i>
+                                            </div>
+                                        {% else %}
+                                            <div class="bg-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                <i class="bi bi-x-circle text-white"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-1">{{ range_name }}</h6>
+                                        <p class="mb-0 text-muted">{{ count }} 条记录</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="search-box">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="搜索函数名或ORM代码...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="scoreFilter">
+                        <option value="">所有分数</option>
+                        <option value="excellent">优秀 (0.8-1.0)</option>
+                        <option value="good">良好 (0.6-0.8)</option>
+                        <option value="average">一般 (0.4-0.6)</option>
+                        <option value="poor">较差 (0.0-0.4)</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-secondary w-100" id="sortBtn">
+                        <i class="bi bi-sort-down"></i> 按分数排序
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reward Data List -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div id="rewardList">
+                    {% for item in reward_data %}
+                    <div class="card mb-3 reward-item 
+                        {% if item.score >= 0.8 %}excellent
+                        {% elif item.score >= 0.6 %}good
+                        {% elif item.score >= 0.4 %}average
+                        {% else %}poor{% endif %}" 
+                        data-function="{{ item.function_name }}" 
+                        data-score="{{ item.score }}">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="function-name mb-0">{{ item.function_name }}</h6>
+                                        <span class="score-badge badge 
+                                            {% if item.score >= 0.8 %}score-excellent
+                                            {% elif item.score >= 0.6 %}score-good
+                                            {% elif item.score >= 0.4 %}score-average
+                                            {% else %}score-poor{% endif %}">
+                                            {{ "%.3f"|format(item.score) }}
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock"></i> 
+                                            {% if item.timestamp %}{{ item.timestamp|datetime }}{% else %}N/A{% endif %}
+                                            <span class="ms-3">
+                                                <i class="bi bi-hash"></i> 
+                                                索引: {{ item.index }}
+                                            </span>
+                                        </small>
+                                    </div>
+
+                                    <div class="orm-code mb-3">
+                                        <strong>ORM代码:</strong><br>
+                                        <code>{{ item.orm_code[:200] }}{% if item.orm_code|length > 200 %}...{% endif %}</code>
+                                    </div>
+
+                                    <div class="dimension-scores">
+                                        <strong>维度评分:</strong><br>
+                                        {% if item.dimension_scores %}
+                                            {% for dimension, score in item.dimension_scores.items() %}
+                                                {% if dimension != 'penalty_severity' and dimension != 'penalty_amount' %}
+                                                <span class="dimension-item">
+                                                    {{ dimension.replace('_score', '').title() }}: {{ "%.2f"|format(score) }}
+                                                </span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="d-flex flex-column">
+                                        <button class="btn btn-sm btn-outline-primary mb-2" 
+                                                onclick="showDetails({{ loop.index0 }})">
+                                            <i class="bi bi-eye"></i> 查看详情
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" 
+                                                onclick="showSolution({{ loop.index0 }})">
+                                            <i class="bi bi-code-slash"></i> 查看SQL
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back to Top Button -->
+    <button class="btn btn-primary back-to-top" onclick="scrollToTop()" style="display: none;">
+        <i class="bi bi-arrow-up"></i>
+    </button>
+
+    <!-- Bootstrap JS -->
+    <script src="{{ resources.bootstrap_js[0] }}"></script>
+    <script src="{{ resources.prism_js[0] }}"></script>
+    <script src="{{ resources.prism_sql[0] }}"></script>
+    
+    <script>
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const items = document.querySelectorAll('.reward-item');
+            
+            items.forEach(item => {
+                const functionName = item.querySelector('.function-name').textContent.toLowerCase();
+                const ormCode = item.querySelector('.orm-code').textContent.toLowerCase();
+                
+                if (functionName.includes(searchTerm) || ormCode.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+
+        // Score filter
+        document.getElementById('scoreFilter').addEventListener('change', function() {
+            const filterValue = this.value;
+            const items = document.querySelectorAll('.reward-item');
+            
+            items.forEach(item => {
+                const score = parseFloat(item.dataset.score);
+                let shouldShow = true;
+                
+                if (filterValue === 'excellent') shouldShow = score >= 0.8;
+                else if (filterValue === 'good') shouldShow = score >= 0.6 && score < 0.8;
+                else if (filterValue === 'average') shouldShow = score >= 0.4 && score < 0.6;
+                else if (filterValue === 'poor') shouldShow = score < 0.4;
+                
+                item.style.display = shouldShow ? 'block' : 'none';
+            });
+        });
+
+        // Sort functionality
+        let sortAscending = true;
+        document.getElementById('sortBtn').addEventListener('click', function() {
+            const items = Array.from(document.querySelectorAll('.reward-item'));
+            const container = document.getElementById('rewardList');
+            
+            items.sort((a, b) => {
+                const scoreA = parseFloat(a.dataset.score);
+                const scoreB = parseFloat(b.dataset.score);
+                return sortAscending ? scoreB - scoreA : scoreA - scoreB;
+            });
+            
+            items.forEach(item => container.appendChild(item));
+            sortAscending = !sortAscending;
+            
+            this.innerHTML = sortAscending ? 
+                '<i class="bi bi-sort-down"></i> 按分数排序' : 
+                '<i class="bi bi-sort-up"></i> 按分数排序';
+        });
+
+        // Show details modal
+        function showDetails(index) {
+            const item = document.querySelectorAll('.reward-item')[index];
+            const data = {{ reward_data|tojson }};
+            const itemData = data[index];
+            
+            // Create modal content
+            let modalContent = `
+                <div class="modal fade" id="detailsModal" tabindex="-1">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">详细信息 - ${itemData.function_name}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>基本信息</h6>
+                                        <ul class="list-unstyled">
+                                            <li><strong>函数名:</strong> ${itemData.function_name}</li>
+                                            <li><strong>分数:</strong> ${itemData.score}</li>
+                                            <li><strong>索引:</strong> ${itemData.index}</li>
+                                            <li><strong>时间戳:</strong> ${new Date(itemData.timestamp * 1000).toLocaleString()}</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>维度评分详情</h6>
+                                        <div class="dimension-scores">
+                                            ${Object.entries(itemData.dimension_scores || {}).map(([key, value]) => 
+                                                `<div class="dimension-item">${key}: ${value}</div>`
+                                            ).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <h6>完整ORM代码</h6>
+                                    <pre class="orm-code"><code class="language-go">${itemData.orm_code}</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal and add new one
+            const existingModal = document.getElementById('detailsModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalContent);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
+            modal.show();
+            
+            // Highlight syntax
+            Prism.highlightAll();
+        }
+
+        // Show solution modal
+        function showSolution(index) {
+            const data = {{ reward_data|tojson }};
+            const itemData = data[index];
+            
+            let solutionContent = '';
+            if (itemData.solution_preview) {
+                try {
+                    const solutions = JSON.parse(itemData.solution_preview);
+                    if (Array.isArray(solutions)) {
+                        solutionContent = solutions.map(sql => `<code class="language-sql">${sql}</code>`).join('<br>');
+                    } else {
+                        solutionContent = `<code class="language-sql">${solutions}</code>`;
+                    }
+                } catch (e) {
+                    solutionContent = `<code class="language-sql">${itemData.solution_preview}</code>`;
+                }
+            }
+            
+            let modalContent = `
+                <div class="modal fade" id="solutionModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">SQL解决方案 - ${itemData.function_name}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <h6>生成的SQL:</h6>
+                                <div class="orm-code">
+                                    ${solutionContent || '暂无SQL解决方案'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal and add new one
+            const existingModal = document.getElementById('solutionModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalContent);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('solutionModal'));
+            modal.show();
+            
+            // Highlight syntax
+            Prism.highlightAll();
+        }
+
+        // Back to top functionality
+        window.onscroll = function() {
+            const btn = document.querySelector('.back-to-top');
+            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+                btn.style.display = 'block';
+            } else {
+                btn.style.display = 'none';
+            }
+        };
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html> 

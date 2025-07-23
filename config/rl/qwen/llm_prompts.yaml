@@ -397,6 +397,19 @@ consistency_config:
   # 关键词契合度评估的权重
   keyword_weight: 0.5
 
+# ============================= V2版本统一权重配置 =============================
+# 重构后的奖励权重配置（新增）
+reward_weights:
+  validity_weight: 0.3      # SQL有效性权重
+  consistency_weight: 0.2   # LLM一致性权重  
+  keyword_weight: 0.5       # 关键词对齐权重
+
+# 控制流惩罚配置（新增）
+control_flow_penalty:
+  enabled: false            # 是否启用控制流惩罚
+  penalty_cap: 0.3          # 惩罚上限
+  llm_timeout: 8            # LLM调用超时时间
+
 # 预处理配置
 preprocessing:
   # 是否在预处理阶段丢弃包含LACK INFORMATION的样本

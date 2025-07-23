@@ -28,7 +28,7 @@ fi
 TRAIN_SCRIPT="$SCRIPT_DIR/train_qwen3_ft.py"
 
 # 配置文件路径
-CONFIG_1="qwen3_14b_ft.yaml"
+CONFIG_1="qwen3_14b_ft_full.yaml"
 CONFIG_2="qwen3_14b_ft_gpu4567.yaml"
 
 # 创建日志目录（在同级 logs/ 文件夹）
@@ -38,16 +38,26 @@ mkdir -p "$LOG_DIR"
 # 获取当前时间戳
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
-# --- 任务1: 使用GPU 0,1,2,3 ---
-LOG_FILE_1="${LOG_DIR}/train_gpus0123_${TIMESTAMP}.log"
-echo "Starting training task 1 on GPUs 0,1,2,3..."
+LOG_FILE_1="${LOG_DIR}/train_gpus01234567_${TIMESTAMP}.log"
+echo "Starting training task on GPUs 0-7..."
 echo "Config: ${CONFIG_1}"
 echo "Log file: ${LOG_FILE_1}"
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 nohup python -u "$TRAIN_SCRIPT" --config "$CONFIG_1" > "$LOG_FILE_1" 2>&1 &
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 nohup python -u "$TRAIN_SCRIPT" --config "$CONFIG_1" > "$LOG_FILE_1" 2>&1 &
 PID_1=$!
-echo "Task 1 started with PID: $PID_1"
+echo "Task started with PID: $PID_1"
 echo "-----------------------------------------------------"
+
+# --- 任务1: 使用GPU 0,1,2,3 ---
+# LOG_FILE_1="${LOG_DIR}/train_gpus0123_${TIMESTAMP}.log"
+# echo "Starting training task 1 on GPUs 0,1,2,3..."
+# echo "Config: ${CONFIG_1}"
+# echo "Log file: ${LOG_FILE_1}"
+
+# CUDA_VISIBLE_DEVICES=0,1,2,3, nohup python -u "$TRAIN_SCRIPT" --config "$CONFIG_1" > "$LOG_FILE_1" 2>&1 &
+# PID_1=$!
+# echo "Task 1 started with PID: $PID_1"
+# echo "-----------------------------------------------------"
 
 
 # --- 任务2: 使用GPU 4,5,6,7 ---
