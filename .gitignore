@@ -148,6 +148,10 @@ cursor-chat/
 saves/
 nohup.out
 
+# 大型数据输出文件夹 - 不应提交到仓库
+synthetic_output/
+data/rl_data/
+
 # 环境变量文件
 .env
 .env.local
