@@ -81,8 +81,10 @@ def load_rl_config() -> Dict[str, Any]:
 
 # 动态构造调试日志文件路径：优先读取 REWARD_DUMP_FILE；否则按日期+版本命名写入指定目录
 def _build_default_dump_path() -> str:
-    """始终写入项目根目录下 ./reward_logs/，文件名含日期时间"""
-    base_dir = "./reward_logs"
+    """写入model/rl/reward_logs/目录，文件名含日期时间"""
+    # 获取当前文件所在目录的reward_logs子目录
+    current_dir = os.path.dirname(__file__)
+    base_dir = os.path.join(current_dir, "reward_logs")
     try:
         os.makedirs(base_dir, exist_ok=True)
     except Exception:
@@ -90,7 +92,7 @@ def _build_default_dump_path() -> str:
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M")
     return os.path.join(base_dir, f"reward_{ts}_v2.jsonl")
 
-# 固定写入 ./reward_logs，不再依赖环境变量
+# 固定写入 model/rl/reward_logs，不再依赖环境变量
 DEBUG_DUMP_FILE = _build_default_dump_path()
 _dump_lock = Lock()
 
