@@ -1,0 +1,22 @@
+{
+  "workflow_id": "workflow_20250724_204851",
+  "start_time": "2025-07-24T20:56:44.424319",
+  "end_time": "2025-07-24T20:56:44.424356",
+  "total_steps": 1,
+  "steps": [
+    {
+      "step_name": "reverse_sql_generation",
+      "status": "completed",
+      "timestamp": "2025-07-24T20:56:44.424319",
+      "output_file": "multi_branch_test_output/workflow_20250724_204851/reverse_sql_generation.json",
+      "generated_count": 3,
+      "scenarios": [
+        "multi_branch_transaction"
+      ],
+      "count_per_scenario": 3
+    }
+  ],
+  "final_data_count": 0,
+  "extracted_data_count": 0,
+  "workflow_directory": "multi_branch_test_output/workflow_20250724_204851"
+}

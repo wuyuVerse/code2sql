@@ -5,8 +5,10 @@ import json
 import random
 from typing import Dict, List, Optional
 from utils.llm_client import LLMClient
+from utils.format_validators import validate_reverse_sql_response, validate_reverse_sql_variants_response
 from config.data_processing.reverse_sql_generator.config import ReverseSQLConfig
 from config.data_processing.reverse_sql_generator.prompts import SQL_GENERATION_PROMPTS
+import asyncio
 
 
 class SQLGenerator:
@@ -39,37 +41,69 @@ class SQLGenerator:
             complexity: 复杂度级别
             
         Returns:
-            完整的SQL查询数据
+            SQL查询数据
         """
-        # 获取随机变量名
-        var_names = self.config.get_random_names()
+        print(f"  - 开始生成SQL: {scenario} ({complexity})")
         
-        # 构建SQL生成提示词
-        prompt = self._build_sql_generation_prompt(scenario, complexity, var_names)
+        max_retries = self.config.max_retries  # 从配置获取最大重试次数
         
-        # 调用LLM生成SQL
-        response = await self.llm_client.call_async_with_format_validation(
-            self.session,
-            prompt,
-            validator=lambda x: self._validate_sql_response(x),
-            max_tokens=self.config.max_tokens,
-            temperature=self.config.temperature,
-            module="reverse_sql_generator"
-        )
-        
-        # 解析响应
-        if isinstance(response, dict) and 'valid' in response:
-            if response['valid']:
-                sql_data = json.loads(response.get('content', '{}'))
-            else:
-                raise ValueError(f"SQL生成失败: {response.get('error', '未知错误')}")
-        else:
-            sql_data = json.loads(str(response))
-        
-        # 验证SQL数据
-        self._validate_sql_data(sql_data)
-        
-        return sql_data
+        for attempt in range(max_retries):
+            try:
+                print(f"    🔄 SQL生成尝试 {attempt + 1}/{max_retries}")
+                
+                # 获取随机变量名
+                var_names = self.config.get_random_names()
+                print(f"    - 使用变量名: {var_names}")
+                
+                # 构建SQL生成提示词
+                prompt = SQL_GENERATION_PROMPTS['complete_sql'].format(
+                    scenario=scenario,
+                    complexity=complexity,
+                    table_examples=var_names['table_examples'],
+                    field_examples=var_names['field_examples']
+                )
+                print(f"    - 提示词长度: {len(prompt)} 字符")
+                
+                # 调用LLM生成SQL
+                response = self.llm_client.call_sync(
+                    prompt,
+                    max_tokens=self.config.max_tokens,
+                    temperature=self.config.temperature
+                )
+                
+                print(f"    - LLM响应类型: {type(response)}")
+                
+                # 解析响应
+                if isinstance(response, str):
+                    import re
+                    # 尝试从markdown中提取JSON
+                    json_match = re.search(r'```json\s*({.*?})\s*```', response, re.DOTALL)
+                    if json_match:
+                        json_content = json_match.group(1)
+                        sql_data = json.loads(json_content)
+                        print(f"    - 从markdown提取JSON成功")
+                    else:
+                        sql_data = json.loads(response)
+                        print(f"    - 直接解析成功")
+                else:
+                    sql_data = json.loads(str(response))
+                    print(f"    - 字符串转换后解析成功")
+                
+                # 验证SQL数据
+                self._validate_sql_data(sql_data)
+                print(f"    - 数据验证通过")
+                print(f"    - SQL生成完成: {sql_data.get('query', '')[:50]}...")
+                
+                return sql_data
+                
+            except Exception as e:
+                print(f"    ❌ SQL生成尝试 {attempt + 1} 失败: {e}")
+                if attempt < max_retries - 1:
+                    print(f"    ⏳ 等待 1 秒后重试...")
+                    await asyncio.sleep(1)
+                else:
+                    print(f"    ❌ SQL生成失败: 已重试 {max_retries} 次")
+                    raise
     
     def _build_sql_generation_prompt(self, scenario: str, complexity: str, var_names: Dict) -> str:
         """构建SQL生成提示词
@@ -132,30 +166,31 @@ class SQLGenerator:
         
         return configs.get(complexity, configs["simple"])
     
-    def _validate_sql_response(self, response: str) -> Dict:
-        """验证SQL响应格式
+    def _validate_sql_data(self, sql_data: Dict):
+        """验证SQL数据完整性
         
         Args:
-            response: LLM响应
+            sql_data: SQL数据
             
-        Returns:
-            验证结果
+        Raises:
+            ValueError: 数据验证失败
         """
-        try:
-            data = json.loads(response)
-            required_fields = ['query', 'table', 'fields', 'conditions']
-            
-            if not all(field in data for field in required_fields):
-                return {'valid': False, 'error': '缺少必需字段'}
-            
-            # 验证SQL语法
-            if not self._validate_sql_syntax(data['query']):
-                return {'valid': False, 'error': 'SQL语法错误'}
-            
-            return {'valid': True, 'content': response}
-            
-        except json.JSONDecodeError:
-            return {'valid': False, 'error': 'JSON格式错误'}
+        required_fields = ['query', 'table', 'fields', 'conditions']
+        
+        for field in required_fields:
+            if field not in sql_data:
+                raise ValueError(f"缺少必需字段: {field}")
+        
+        # 验证字段类型
+        if not isinstance(sql_data['fields'], list):
+            raise ValueError("fields必须是列表")
+        
+        if not isinstance(sql_data['conditions'], list):
+            raise ValueError("conditions必须是列表")
+        
+        # 验证SQL语法
+        if not self._validate_sql_syntax(sql_data['query']):
+            raise ValueError("SQL语法错误")
     
     def _validate_sql_syntax(self, sql: str) -> bool:
         """验证SQL语法（简单验证）
@@ -183,107 +218,139 @@ class SQLGenerator:
         
         return True
     
-    def _validate_sql_data(self, sql_data: Dict):
-        """验证SQL数据完整性
-        
-        Args:
-            sql_data: SQL数据
-            
-        Raises:
-            ValueError: 数据验证失败
-        """
-        required_fields = ['query', 'table', 'fields', 'conditions']
-        
-        for field in required_fields:
-            if field not in sql_data:
-                raise ValueError(f"缺少必需字段: {field}")
-        
-        # 验证字段类型
-        if not isinstance(sql_data['fields'], list):
-            raise ValueError("fields必须是列表")
-        
-        if not isinstance(sql_data['conditions'], list):
-            raise ValueError("conditions必须是列表")
-        
-        # 验证SQL不为空
-        if not sql_data['query'].strip():
-            raise ValueError("SQL查询不能为空")
+    async def close(self):
+        """关闭会话"""
+        if self._session:
+            await self._session.close()
+            self._session = None
     
-    async def generate_sql_variants(self, base_sql: Dict, variant_type: str) -> List[Dict]:
+    async def generate_sql_variants(self, base_sql: Dict, variant_type: str, scenario: str = None, complexity: str = "simple") -> List[Dict]:
         """生成SQL变体
         
         Args:
-            base_sql: 基础SQL
+            base_sql: 基础SQL数据
             variant_type: 变体类型 (if_else, switch, dynamic)
+            scenario: 场景类型（用于确定变体数量）
+            complexity: 复杂度级别（用于确定变体数量）
             
         Returns:
             SQL变体列表
         """
-        var_names = self.config.get_random_names()
+        print(f"  - 开始生成{variant_type} SQL变体...")
         
-        # 构建变体生成提示词
-        prompt = SQL_GENERATION_PROMPTS[f'{variant_type}_variants'].format(
+        max_retries = self.config.max_retries  # 从配置获取最大重试次数
+        
+        for attempt in range(max_retries):
+            try:
+                print(f"    🔄 SQL变体生成尝试 {attempt + 1}/{max_retries}")
+                
+                # 获取随机变量名
+                var_names = self.config.get_random_names()
+                print(f"    - 使用变量名: {var_names}")
+                
+                # 获取动态变体数量
+                variants_count = self.config.get_sql_variants_count(scenario or variant_type, complexity)
+                print(f"    - 目标变体数量: {variants_count}")
+                
+                # 构建SQL变体生成提示词
+                prompt = self._build_sql_variants_prompt(base_sql, variant_type, var_names, variants_count)
+                print(f"    - 提示词长度: {len(prompt)} 字符")
+                
+                # 调用LLM生成SQL变体（不使用格式验证）
+                print(f"    - 调用LLM生成{variant_type}变体...")
+                response = self.llm_client.call_sync(
+                    prompt,
+                    max_tokens=self.config.max_tokens,
+                    temperature=self.config.temperature
+                )
+                
+                print(f"    - LLM响应类型: {type(response)}")
+                print(f"    - LLM响应长度: {len(str(response))} 字符")
+                
+                # 解析响应
+                sql_variants = []
+                if isinstance(response, str):
+                    import re
+                    # 尝试从markdown中提取JSON
+                    json_match = re.search(r'```json\s*(\[.*?\])\s*```', response, re.DOTALL)
+                    if json_match:
+                        json_content = json_match.group(1)
+                        print(f"    - 从markdown提取JSON成功")
+                        try:
+                            sql_variants = json.loads(json_content)
+                            print(f"    - JSON解析成功")
+                        except json.JSONDecodeError as e:
+                            print(f"    - JSON解析失败: {e}")
+                            # 尝试直接解析
+                            try:
+                                sql_variants = json.loads(response)
+                                print(f"    - 直接解析成功")
+                            except json.JSONDecodeError:
+                                print(f"    - 所有解析方法都失败")
+                                raise ValueError(f"无法解析LLM响应: {response[:200]}...")
+                    else:
+                        # 尝试直接解析
+                        try:
+                            sql_variants = json.loads(response)
+                            print(f"    - 直接解析成功")
+                        except json.JSONDecodeError as e:
+                            print(f"    - 直接解析失败: {e}")
+                            raise ValueError(f"无法解析LLM响应: {response[:200]}...")
+                else:
+                    try:
+                        sql_variants = json.loads(str(response))
+                        print(f"    - 字符串转换后解析成功")
+                    except json.JSONDecodeError as e:
+                        print(f"    - 字符串转换后解析失败: {e}")
+                        raise ValueError(f"无法解析LLM响应: {str(response)[:200]}...")
+                
+                print(f"    - 生成 {len(sql_variants)} 个{variant_type}变体")
+                
+                # 验证SQL变体数据
+                for i, sql_variant in enumerate(sql_variants):
+                    try:
+                        self._validate_sql_data(sql_variant)
+                        print(f"    - 变体 {i+1} 验证通过")
+                    except Exception as e:
+                        print(f"    - 变体 {i+1} 验证失败: {e}")
+                        raise
+                
+                return sql_variants
+                
+            except Exception as e:
+                print(f"    ❌ SQL变体生成尝试 {attempt + 1} 失败: {e}")
+                if attempt < max_retries - 1:
+                    print(f"    ⏳ 等待 2 秒后重试...")
+                    await asyncio.sleep(2)
+                else:
+                    print(f"    ❌ SQL变体生成失败: 已重试 {max_retries} 次")
+                    raise
+    
+    def _build_sql_variants_prompt(self, base_sql: Dict, variant_type: str, var_names: Dict, variants_count: int) -> str:
+        """构建SQL变体生成提示词
+        
+        Args:
+            base_sql: 基础SQL数据
+            variant_type: 变体类型
+            var_names: 随机变量名
+            variants_count: 目标变体数量
+            
+        Returns:
+            提示词字符串
+        """
+        # 获取变体类型对应的提示词模板
+        # 将variant_type转换为提示词模板中的键名格式
+        template_key = f"{variant_type}_variants"
+        prompt_template = SQL_GENERATION_PROMPTS.get(template_key)
+        if not prompt_template:
+            raise ValueError(f"不支持的变体类型: {variant_type}，模板键: {template_key}")
+        
+        # 构建提示词
+        prompt = prompt_template.format(
             base_sql=json.dumps(base_sql, ensure_ascii=False),
             table_name=var_names['table_examples'],
-            field_examples=var_names['field_examples']
+            field_examples=var_names['field_examples'],
+            variants_count=variants_count
         )
         
-        # 调用LLM生成变体
-        response = await self.llm_client.call_async_with_format_validation(
-            self.session,
-            prompt,
-            validator=lambda x: self._validate_sql_variants_response(x),
-            max_tokens=self.config.max_tokens,
-            temperature=self.config.temperature,
-            module="reverse_sql_generator"
-        )
-        
-        # 解析响应
-        if isinstance(response, dict) and 'valid' in response:
-            if response['valid']:
-                variants = json.loads(response.get('content', '[]'))
-            else:
-                raise ValueError(f"SQL变体生成失败: {response.get('error', '未知错误')}")
-        else:
-            variants = json.loads(str(response))
-        
-        return variants if isinstance(variants, list) else [variants]
-    
-    def _validate_sql_variants_response(self, response: str) -> Dict:
-        """验证SQL变体响应格式
-        
-        Args:
-            response: LLM响应
-            
-        Returns:
-            验证结果
-        """
-        try:
-            data = json.loads(response)
-            
-            if isinstance(data, list):
-                # 验证列表中的每个SQL
-                for sql_variant in data:
-                    if not self._validate_sql_data_structure(sql_variant):
-                        return {'valid': False, 'error': 'SQL变体格式错误'}
-            else:
-                # 单个SQL变体
-                if not self._validate_sql_data_structure(data):
-                    return {'valid': False, 'error': 'SQL变体格式错误'}
-            
-            return {'valid': True, 'content': response}
-            
-        except json.JSONDecodeError:
-            return {'valid': False, 'error': 'JSON格式错误'}
-    
-    def _validate_sql_data_structure(self, sql_data: Dict) -> bool:
-        """验证SQL数据结构
-        
-        Args:
-            sql_data: SQL数据
-            
-        Returns:
-            结构是否正确
-        """
-        required_fields = ['query', 'table', 'fields', 'conditions']
-        return all(field in sql_data for field in required_fields) 
+        return prompt 

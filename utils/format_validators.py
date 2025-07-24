@@ -840,6 +840,378 @@ def validate_meta_response(data: Any) -> Union[bool, Dict[str, Any]]:
     return True
 
 
+def validate_reverse_sql_response(response: str) -> Union[bool, Dict[str, Any]]:
+    """验证反向SQL生成响应
+    
+    Args:
+        response: LLM响应内容
+        
+    Returns:
+        True表示格式正确，Dict包含验证结果
+    """
+    # 首先验证JSON格式
+    json_result = validate_json_format(response)
+    if json_result is True:
+        try:
+            # 尝试解析JSON对象
+            if '```json' in response:
+                json_match = re.search(r'```json\s*(\{.*?\})\s*```', response, re.DOTALL)
+                if json_match:
+                    data = json.loads(json_match.group(1))
+                else:
+                    return {
+                        'valid': False,
+                        'error': '未找到JSON对象内容',
+                        'response': response[:200]
+                    }
+            else:
+                data = json.loads(response)
+            
+            if not isinstance(data, dict):
+                return {
+                    'valid': False,
+                    'error': '响应不是JSON对象格式',
+                    'data': data
+                }
+            
+            # 验证必需字段
+            required_fields = ['query', 'table', 'fields', 'conditions']
+            missing_fields = []
+            for field in required_fields:
+                if field not in data:
+                    missing_fields.append(field)
+            
+            if missing_fields:
+                return {
+                    'valid': False,
+                    'error': f'缺少必需字段: {missing_fields}',
+                    'data': data
+                }
+            
+            # 验证字段类型
+            if not isinstance(data['fields'], list):
+                return {
+                    'valid': False,
+                    'error': 'fields字段必须是数组',
+                    'data': data
+                }
+            
+            if not isinstance(data['conditions'], list):
+                return {
+                    'valid': False,
+                    'error': 'conditions字段必须是数组',
+                    'data': data
+                }
+            
+            # 验证SQL语法
+            sql_query = data['query']
+            if not sql_query.strip().lower().startswith('select'):
+                return {
+                    'valid': False,
+                    'error': 'SQL查询必须以SELECT开头',
+                    'data': data
+                }
+            
+            return True
+        except Exception as e:
+            return {
+                'valid': False,
+                'error': f'解析反向SQL响应失败: {str(e)}',
+                'response': response[:200]
+            }
+    else:
+        return json_result
+
+
+def validate_reverse_sql_variants_response(response: str) -> Union[bool, Dict[str, Any]]:
+    """验证反向SQL变体生成响应
+    
+    Args:
+        response: LLM响应内容
+        
+    Returns:
+        True表示格式正确，Dict包含验证结果
+    """
+    # 首先验证JSON格式
+    json_result = validate_json_format(response)
+    if json_result is True:
+        try:
+            # 尝试解析JSON数组
+            if '```json' in response:
+                json_match = re.search(r'```json\s*(\[.*?\])\s*```', response, re.DOTALL)
+                if json_match:
+                    data = json.loads(json_match.group(1))
+                else:
+                    return {
+                        'valid': False,
+                        'error': '未找到JSON数组内容',
+                        'response': response[:200]
+                    }
+            else:
+                data = json.loads(response)
+            
+            if not isinstance(data, list):
+                return {
+                    'valid': False,
+                    'error': '响应不是JSON数组格式',
+                    'data': data
+                }
+            
+            # 验证数组中的每个元素
+            for i, item in enumerate(data):
+                if not isinstance(item, dict):
+                    return {
+                        'valid': False,
+                        'error': f'数组元素 {i} 不是对象格式',
+                        'item': item
+                    }
+                
+                # 验证必需字段（根据提示词模板）
+                required_fields = ['query', 'table', 'fields', 'conditions', 'branch', 'description']
+                missing_fields = []
+                for field in required_fields:
+                    if field not in item:
+                        missing_fields.append(field)
+                
+                if missing_fields:
+                    return {
+                        'valid': False,
+                        'error': f'数组元素 {i} 缺少必需字段: {missing_fields}',
+                        'item': item
+                    }
+                
+                # 验证字段类型
+                if not isinstance(item['fields'], list):
+                    return {
+                        'valid': False,
+                        'error': f'数组元素 {i} 的fields字段必须是数组',
+                        'item': item
+                    }
+                
+                if not isinstance(item['conditions'], list):
+                    return {
+                        'valid': False,
+                        'error': f'数组元素 {i} 的conditions字段必须是数组',
+                        'item': item
+                    }
+                
+                # 验证branch和description字段
+                if not isinstance(item['branch'], str) or not item['branch'].strip():
+                    return {
+                        'valid': False,
+                        'error': f'数组元素 {i} 的branch字段不能为空',
+                        'item': item
+                    }
+                
+                if not isinstance(item['description'], str) or not item['description'].strip():
+                    return {
+                        'valid': False,
+                        'error': f'数组元素 {i} 的description字段不能为空',
+                        'item': item
+                    }
+                
+                # 验证SQL语法
+                sql_query = item['query']
+                if not sql_query.strip().lower().startswith('select'):
+                    return {
+                        'valid': False,
+                        'error': f'数组元素 {i} 的SQL查询必须以SELECT开头',
+                        'item': item
+                    }
+            
+            return True
+        except Exception as e:
+            return {
+                'valid': False,
+                'error': f'解析反向SQL变体响应失败: {str(e)}',
+                'response': response[:200]
+            }
+    else:
+        return json_result
+
+
+def validate_reverse_orm_response(response: str) -> Union[bool, Dict[str, Any]]:
+    """验证反向ORM映射响应
+    
+    Args:
+        response: LLM响应内容
+        
+    Returns:
+        True表示格式正确，Dict包含验证结果
+    """
+    # 首先验证JSON格式
+    json_result = validate_json_format(response)
+    if json_result is True:
+        try:
+            # 尝试解析JSON对象
+            if '```json' in response:
+                json_match = re.search(r'```json\s*(\{.*?\})\s*```', response, re.DOTALL)
+                if json_match:
+                    data = json.loads(json_match.group(1))
+                else:
+                    return {
+                        'valid': False,
+                        'error': '未找到JSON对象内容',
+                        'response': response[:200]
+                    }
+            else:
+                data = json.loads(response)
+            
+            if not isinstance(data, dict):
+                return {
+                    'valid': False,
+                    'error': '响应不是JSON对象格式',
+                    'data': data
+                }
+            
+            # 验证必需字段（根据提示词模板）
+            required_fields = ['method_name', 'code', 'parameters', 'return_type', 'table', 'fields', 'conditions']
+            missing_fields = []
+            for field in required_fields:
+                if field not in data:
+                    missing_fields.append(field)
+            
+            if missing_fields:
+                return {
+                    'valid': False,
+                    'error': f'缺少必需字段: {missing_fields}',
+                    'data': data
+                }
+            
+            # 验证字段类型
+            if not isinstance(data['parameters'], list):
+                return {
+                    'valid': False,
+                    'error': 'parameters字段必须是数组',
+                    'data': data
+                }
+            
+            if not isinstance(data['fields'], list):
+                return {
+                    'valid': False,
+                    'error': 'fields字段必须是数组',
+                    'data': data
+                }
+            
+            if not isinstance(data['conditions'], list):
+                return {
+                    'valid': False,
+                    'error': 'conditions字段必须是数组',
+                    'data': data
+                }
+            
+            # 验证代码不为空
+            if not data['code'].strip():
+                return {
+                    'valid': False,
+                    'error': 'code字段不能为空',
+                    'data': data
+                }
+            
+            # 验证Go代码格式
+            code_lower = data['code'].lower()
+            if 'func' not in code_lower or 'return' not in code_lower:
+                return {
+                    'valid': False,
+                    'error': '代码必须包含func和return关键字',
+                    'data': data
+                }
+            
+            return True
+        except Exception as e:
+            return {
+                'valid': False,
+                'error': f'解析反向ORM响应失败: {str(e)}',
+                'response': response[:200]
+            }
+    else:
+        return json_result
+
+
+def validate_reverse_caller_response(response: str) -> Union[bool, Dict[str, Any]]:
+    """验证反向Caller生成响应
+    
+    Args:
+        response: LLM响应内容
+        
+    Returns:
+        True表示格式正确，Dict包含验证结果
+    """
+    # 首先验证JSON格式
+    json_result = validate_json_format(response)
+    if json_result is True:
+        try:
+            # 尝试解析JSON对象
+            if '```json' in response:
+                json_match = re.search(r'```json\s*(\{.*?\})\s*```', response, re.DOTALL)
+                if json_match:
+                    data = json.loads(json_match.group(1))
+                else:
+                    return {
+                        'valid': False,
+                        'error': '未找到JSON对象内容',
+                        'response': response[:200]
+                    }
+            else:
+                data = json.loads(response)
+            
+            if not isinstance(data, dict):
+                return {
+                    'valid': False,
+                    'error': '响应不是JSON对象格式',
+                    'data': data
+                }
+            
+            # 验证必需字段
+            required_fields = ['method_name', 'code', 'parameters', 'return_type']
+            missing_fields = []
+            for field in required_fields:
+                if field not in data:
+                    missing_fields.append(field)
+            
+            if missing_fields:
+                return {
+                    'valid': False,
+                    'error': f'缺少必需字段: {missing_fields}',
+                    'data': data
+                }
+            
+            # 验证字段类型
+            if not isinstance(data['parameters'], list):
+                return {
+                    'valid': False,
+                    'error': 'parameters字段必须是数组',
+                    'data': data
+                }
+            
+            # 验证代码不为空
+            if not data['code'].strip():
+                return {
+                    'valid': False,
+                    'error': 'code字段不能为空',
+                    'data': data
+                }
+            
+            # 验证Go代码格式
+            code_lower = data['code'].lower()
+            if 'func' not in code_lower or 'return' not in code_lower:
+                return {
+                    'valid': False,
+                    'error': '代码必须包含func和return关键字',
+                    'data': data
+                }
+            
+            return True
+        except Exception as e:
+            return {
+                'valid': False,
+                'error': f'解析反向Caller响应失败: {str(e)}',
+                'response': response[:200]
+            }
+    else:
+        return json_result
+
+
 # 验证器映射表
 VALIDATORS = {
     'json': validate_json_format,
@@ -856,6 +1228,11 @@ VALIDATORS = {
     'fix_review': validate_fix_review_response,
     'precheck': validate_precheck_response,
     'synthetic_data': validate_synthetic_data_response,
+    # 反向SQL生成器验证器
+    'reverse_sql': validate_reverse_sql_response,
+    'reverse_sql_variants': validate_reverse_sql_variants_response,
+    'reverse_orm': validate_reverse_orm_response,
+    'reverse_caller': validate_reverse_caller_response,
 }
 
 

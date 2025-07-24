@@ -384,4 +384,145 @@ PROMPT_CALLER_NO_WHERE = """
 ```
 
 说明：no-where场景的ORM方法是独立的，不需要外部调用者。虽然ORM方法需要接收部分where条件参数，但当前没有caller来提供这些条件。
+"""
+
+# table_mapping_incomplete场景专用ORM提示词
+PROMPT_ORM_TABLE_MAPPING_INCOMPLETE = """
+你需要根据"table_mapping_incomplete"场景生成一个真实的Go语言ORM方法。
+
+场景标签: "table_mapping_incomplete"
+场景描述: ORM方法中模型将结构体名错误理解为表名，而真实表名通过常量定义。需要明确区分结构体名和真实表名，避免模型错误地将结构体名当作表名使用
+
+参考以下真实样例（但生成完全不同的内容）:
+{example}
+
+请严格按照以下JSON格式输出，确保字段完整：
+```json
+{{
+    "scenario": "table_mapping_incomplete",
+    "code_key": "方法名（使用{method_examples}等不同命名）",
+    "code_value": "完整的Go代码（使用{entity_examples}等实体，{table_examples}等表名）",
+    "sql_pattern_cnt": 1,
+    "callers": []
+}}
+```
+
+代码要求：
+1. 使用多样化的变量名，避免重复使用User、Order等常见名词
+2. 实体名使用：{entity_examples}
+3. 表名使用：{table_examples}  
+4. 方法名使用：{method_examples}
+5. 字段名使用：{field_examples}
+6. 代码必须是完整可运行的Go代码，使用GORM框架
+7. 代码长度控制在25行以内
+8. **关键要求**：必须定义常量来表示真实表名，如 `const TableName = "actual_table_name"`
+9. **关键要求**：ORM方法必须使用 `.Table(TableName)` 来明确指定表名，而不是依赖结构体名
+10. **关键要求**：结构体名和表名必须不同，避免模型错误地将结构体名当作表名
+11. 包含适当的错误处理
+12. 生成的内容必须与参考样例完全不同，使用不同的业务域、变量名、逻辑结构
+13. **重要**：确保代码中明确区分了结构体名和表名，避免表名映射不完善的问题
+
+只返回JSON格式，不要包含markdown标记或其他文本。
+"""
+
+# table_mapping_incomplete场景专用Caller提示词
+PROMPT_CALLER_TABLE_MAPPING_INCOMPLETE = """
+你需要为以下ORM代码块编写一个调用者函数，该函数调用具有表名映射不完善特征的ORM方法。
+
+ORM代码块:
+{orm_block}
+
+参考以下真实样例（但生成完全不同的内容）:
+{example_caller}
+
+请严格按照以下JSON格式输出：
+```json
+{{
+    "code_key": "调用者方法名",
+    "code_value": "完整的Go调用者代码"
+}}
+```
+
+调用者代码要求：
+1. 方法名与ORM方法不同，使用{caller_examples}等命名
+2. 正确创建和初始化ORM对象（注意结构体名和表名的区别）
+3. 调用ORM方法并传递必要的参数
+4. 包含适当的参数验证和错误处理
+5. 代码长度控制在30行以内
+6. 变量名要多样化，避免重复
+7. 生成的内容必须与参考样例完全不同
+8. **重要**：确保调用者代码理解结构体名和表名的区别，正确使用表名常量
+
+只返回JSON格式，不要包含markdown标记或其他文本。
+"""
+
+# 表名映射不完善场景专用ORM提示词
+PROMPT_ORM_TABLE_MAPPING = """
+你需要根据"表名映射不完善"场景生成一个真实的Go语言ORM方法。
+
+场景标签: "表名映射不完善"
+场景描述: ORM方法中模型将结构体名错误理解为表名，而真实表名通过常量定义。需要明确区分结构体名和真实表名，避免模型错误地将结构体名当作表名使用
+
+参考以下真实样例（但生成完全不同的内容）:
+{example}
+
+请严格按照以下JSON格式输出，确保字段完整：
+```json
+{{
+    "scenario": "表名映射不完善",
+    "code_key": "方法名（使用{method_examples}等不同命名）",
+    "code_value": "完整的Go代码（使用{entity_examples}等实体，{table_examples}等表名）",
+    "sql_pattern_cnt": 1,
+    "callers": []
+}}
+```
+
+代码要求：
+1. 使用多样化的变量名，避免重复使用User、Order等常见名词
+2. 实体名使用：{entity_examples}
+3. 表名使用：{table_examples}  
+4. 方法名使用：{method_examples}
+5. 字段名使用：{field_examples}
+6. 代码必须是完整可运行的Go代码，使用GORM框架
+7. 代码长度控制在25行以内
+8. **关键要求**：必须定义结构体名和真实表名的映射关系
+9. 结构体名应该与真实表名不同，避免模型错误理解
+10. 使用常量定义真实表名，如：const RealTableName = "real_table_name"
+11. 在ORM方法中明确使用真实表名，而不是依赖结构体名
+12. 包含适当的错误处理
+13. 生成的内容必须与参考样例完全不同，使用不同的业务域、变量名、逻辑结构
+14. **重要**：确保结构体名和表名有明显的区别，避免模型混淆
+
+只返回JSON格式，不要包含markdown标记或其他文本。
+"""
+
+# 表名映射不完善场景专用Caller提示词
+PROMPT_CALLER_TABLE_MAPPING = """
+你需要为以下ORM代码块编写一个调用者函数，该函数调用包含表名映射的ORM方法。
+
+ORM代码块:
+{orm_block}
+
+参考以下真实样例（但生成完全不同的内容）:
+{example_caller}
+
+请严格按照以下JSON格式输出：
+```json
+{{
+    "code_key": "调用者方法名",
+    "code_value": "完整的Go调用者代码"
+}}
+```
+
+调用者代码要求：
+1. 方法名与ORM方法不同，使用{caller_examples}等命名
+2. 正确创建和初始化ORM对象
+3. 调用ORM方法并处理返回结果
+4. 包含适当的参数验证和错误处理
+5. 代码长度控制在30行以内
+6. 变量名要多样化，避免重复
+7. 生成的内容必须与参考样例完全不同
+8. 确保正确使用结构体对象，而不是直接操作表名
+
+只返回JSON格式，不要包含markdown标记或其他文本。
 """ 

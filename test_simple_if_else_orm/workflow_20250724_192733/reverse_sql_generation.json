@@ -1,0 +1,100 @@
+{
+  "if-else+switch_mixed_simple": {
+    "function_name": "QueryByFilter",
+    "orm_code": "func QueryByFilter(db *gorm.DB, minLength float64, maxWidth float64, categories []string, minPrice float64, maxPrice float64) ([]Class, error) {\nvar results []Class\nquery := db.Table(\"publication_schedule\").\nSelect(\"id, name, length, width, height, price, category, is_active, created_at\").\nWhere(\"(length > ? OR width <= ?) AND category IN (?) AND is_active = ? AND price BETWEEN ? AND ?\",\nminLength, maxWidth, categories, true, minPrice, maxPrice).\nOrder(\"created_at DESC, price ASC\").\nLimit(20)\nif err := query.Find(&results).Error; err != nil {\nreturn nil, err\n}\nreturn results, nil\n}",
+    "caller": "func GetByName(db *gorm.DB, name string, filterType string, value float64, categories []string, priceRange []float64) ([]Schedule, error) {\nif db == nil {\nreturn nil, fmt.Errorf(\"database connection is required\")\n}\nif len(categories) == 0 {\nreturn nil, fmt.Errorf(\"at least one category is required\")\n}\nif len(priceRange) != 2 {\nreturn nil, fmt.Errorf(\"price range must have exactly 2 values\")\n}\nvar results []Schedule\nvar err error\nswitch filterType {\ncase \"length_or_height\":\nresults, err = QueryByFilter(db, value, 8, categories, priceRange[0], priceRange[1])\nif err != nil {\nreturn nil, fmt.Errorf(\"query failed: %v\", err)\n}\ncase \"width_range\":\nresults, err = QueryByFilter(db, 0, 7, []string{\"electronics\"}, 100, math.MaxFloat64)\nif err != nil {\nreturn nil, fmt.Errorf(\"query failed: %v\", err)\n}\ncase \"art_crafts\":\nresults, err = QueryByFilter(db, 0, 10, []string{\"art\", \"craft\"}, priceRange[0], priceRange[1])\nif err != nil {\nreturn nil, fmt.Errorf(\"query failed: %v\", err)\n}\ndefault:\nreturn nil, fmt.Errorf(\"invalid filter type: %s\", filterType)\n}\nreturn results, nil\n}",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "查找长度大于15或高度小于8的书籍或服装类已验证商品，价格范围75-300",
+            "sql": "SELECT parent_id, display_name, item_length, item_width, item_height, item_price, item_category, is_verified, registration_date FROM author_profiles WHERE (item_length > 15 OR item_height < 8) AND (item_category = 'books' OR item_category = 'clothing') AND is_verified = TRUE AND item_price BETWEEN 75 AND 300 ORDER BY registration_date DESC, item_price ASC LIMIT 20;"
+          },
+          {
+            "scenario": "查找宽度3-7的未验证电子类商品，价格大于100，限制15条",
+            "sql": "SELECT parent_id, display_name, item_length, item_width, item_height, item_price, item_category, is_verified, registration_date FROM author_profiles WHERE (item_width BETWEEN 3 AND 7) AND item_category = 'electronics' AND is_verified = FALSE AND item_price > 100 ORDER BY registration_date ASC, item_price DESC LIMIT 15;"
+          },
+          {
+            "scenario": "查找长度<=20且宽度>=10的艺术/工艺品类商品，注册日期在2023年后",
+            "sql": "SELECT parent_id, display_name, item_length, item_width, item_height, item_price, item_category, is_verified, registration_date FROM author_profiles WHERE item_length <= 20 AND item_width >= 10 AND (item_category LIKE '%art%' OR item_category LIKE '%craft%') AND registration_date > '2023-01-01' ORDER BY item_price ASC LIMIT 10;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "QueryByFilter",
+        "code_value": "type QueryByFilter struct {\n    // 实体结构定义\n}"
+      }
+    ]
+  },
+  "if-else+switch_mixed_medium": {
+    "function_name": "FindByStatus",
+    "orm_code": "func FindByStatus(db *gorm.DB, currencies []string, minAmount float64, maxAmount float64, statuses []string, priorities []string, startDate time.Time) ([]Dispatch, error) {\nvar dispatches []Dispatch\nerr := db.Table(\"class_schedules\").\nSelect(\"resource_id, currency, volume as allocation_amount, project_name, allocation_date, status, priority_level\").\nWhere(\"currency IN ?\", currencies).\nWhere(\"volume BETWEEN ? AND ?\", minAmount, maxAmount).\nWhere(\"status IN ?\", statuses).\nWhere(\"priority_level IN ?\", priorities).\nWhere(\"allocation_date >= ?\", startDate).\nOrder(\"allocation_date DESC, priority_level ASC\").\nLimit(100).\nFind(&dispatches).Error\nif err != nil {\nreturn nil, err\n}\nreturn dispatches, nil\n}",
+    "caller": "func QueryByCondition(db *gorm.DB, width float64, rating int, sentiment string, helpfulness []string, startDate time.Time, endDate time.Time) ([]Tracking, error) {\n// 参数验证\nif db == nil {\nreturn nil, fmt.Errorf(\"database connection cannot be nil\")\n}\nif len(helpfulness) == 0 {\nreturn nil, fmt.Errorf(\"helpfulness cannot be empty\")\n}\n// 条件分支判断\nif width >= 10 && width <= 50 && rating >= 3 && (sentiment == \"positive\" || sentiment == \"neutral\") {\n// 分支1: 筛选中等宽度、评分3分以上、正面或中性情感的记录\nreturn FindByStatus(db, []string{\"USD\"}, width, width*2, []string{sentiment}, helpfulness, startDate)\n} else if width > 50 && rating == 5 && sentiment == \"positive\" && len(helpfulness) == 1 && helpfulness[0] == \"high\" {\n// 分支2: 筛选大宽度、5星评价、正面情感且高有用性的记录\nreturn FindByStatus(db, []string{\"USD\", \"EUR\"}, width, width*3, []string{\"active\"}, []string{\"high\"}, startDate)\n} else if (width < 10 || width > 100) && rating <= 2 && sentiment == \"negative\" && len(helpfulness) == 1 && helpfulness[0] == \"low\" {\n// 分支3: 筛选异常宽度、低评分、负面情感且低有用性的记录\nreturn FindByStatus(db, []string{\"USD\"}, 0, width, []string{\"pending\"}, []string{\"low\"}, startDate)\n} else {\n// 默认分支: 返回空结果\nreturn []Tracking{}, nil\n}\n}",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "筛选宽度在10-50之间，评分3分以上，情感为正面或中性，且有用性为高或中等的近期评论",
+            "sql": "SELECT review_id, width, rating, product_name, review_date, sentiment, helpfulness FROM customer_reviews WHERE (width BETWEEN 10 AND 50) AND (rating >= 3) AND (sentiment = 'positive' OR sentiment = 'neutral') AND (helpfulness IN ('high', 'medium')) AND (review_date >= '2023-01-01') ORDER BY review_date DESC, helpfulness ASC LIMIT 100;"
+          },
+          {
+            "scenario": "筛选宽度大于50，5星评价，正面情感，且有用性高的2023年评论",
+            "sql": "SELECT review_id, width, rating, product_name, review_date, sentiment, helpfulness FROM customer_reviews WHERE (width > 50) AND (rating = 5) AND (sentiment = 'positive') AND (helpfulness = 'high') AND (review_date BETWEEN '2023-01-01' AND '2023-12-31') ORDER BY review_date DESC, rating DESC LIMIT 100;"
+          },
+          {
+            "scenario": "筛选异常宽度(小于10或大于100)，低评分(2分及以下)，负面情感且无用性低的评论",
+            "sql": "SELECT review_id, width, rating, product_name, review_date, sentiment, helpfulness FROM customer_reviews WHERE (width < 10 OR width > 100) AND (rating <= 2) AND (sentiment = 'negative') AND (helpfulness = 'low') ORDER BY review_date ASC, rating ASC LIMIT 100;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "FindByStatus",
+        "code_value": "type FindByStatus struct {\n    // 实体结构定义\n}"
+      }
+    ]
+  },
+  "if-else+switch_mixed_complex": {
+    "function_name": "EditByDate",
+    "orm_code": "func EditByDate(db *gorm.DB, latMin, latMax, longMin, longMax float64, startDate, endDate time.Time, grades []string, status string, courseIDs []uint) ([]Deal, error) {\nvar deals []Deal\nquery := db.Table(\"game_statistics\").\nSelect(\"student_id\", \"first_name\", \"last_name\", \"email\", \"latitude\", \"longitude\", \"enrollment_date\", \"course_id\", \"grade\", \"status\").\nWhere(\"(latitude BETWEEN ? AND ? OR longitude NOT BETWEEN ? AND ?)\", latMin, latMax, longMin, longMax).\nWhere(\"(enrollment_date >= ? OR enrollment_date <= ?)\", startDate, endDate).\nWhere(\"(grade IN (?) OR status = ?)\", grades, status).\nWhere(\"course_id IN (?)\", courseIDs).\nOrder(\"enrollment_date DESC, grade ASC\").\nLimit(100)\nif err := query.Find(&deals).Error; err != nil {\nreturn nil, err\n}\nreturn deals, nil\n}",
+    "caller": "func CountByName(db *gorm.DB, areaMin, areaMax string, status string, startDate, endDate time.Time, prices []float64, supplierIDs []uint, category string, quantityMin, quantityMax int, lastRestockedStart, lastRestockedEnd time.Time, manufacturer string) ([]Session, error) {\nvar sessions []Session\nvar err error\nif (areaMin != \"\" && areaMax != \"\") || status != \"\" {\n// 第一个分支条件: 区域、状态、有效期、价格和供应商\nif len(prices) > 0 && len(supplierIDs) > 0 {\nsessions, err = EditByDate(db, 0, 0, 0, 0, startDate, endDate, nil, status, supplierIDs)\nif err != nil {\nreturn nil, fmt.Errorf(\"failed to query by area/status: %v\", err)\n}\nreturn sessions, nil\n}\n} else if category != \"\" || (quantityMin > 0 && quantityMax > 0) {\n// 第二个分支条件: 药品类别、库存量、补货日期、制造商和供应商\nif manufacturer != \"\" && len(supplierIDs) > 0 {\nsessions, err = EditByDate(db, 0, 0, 0, 0, lastRestockedStart, lastRestockedEnd, nil, status, supplierIDs)\nif err != nil {\nreturn nil, fmt.Errorf(\"failed to query by category/quantity: %v\", err)\n}\nreturn sessions, nil\n}\n}\n// 默认查询\nsessions, err = EditByDate(db, 0, 0, 0, 0, time.Time{}, time.Time{}, nil, \"\", nil)\nif err != nil {\nreturn nil, fmt.Errorf(\"failed to execute default query: %v\", err)\n}\nreturn sessions, nil\n}",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "查询满足特定区域、状态、有效期、价格和供应商条件的药品库存",
+            "sql": "SELECT item_id, area, category, manufacturer, quantity, expiration_date, price, supplier_id, status, last_restocked FROM medication_inventory WHERE (area BETWEEN 'North' AND 'East' OR status NOT BETWEEN 'active' AND 'inactive') AND (expiration_date >= '2023-01-01' OR expiration_date <= '2022-12-31') AND (price IN (10.99, 15.99, 20.99) OR status = 'active') AND (supplier_id = 101 OR supplier_id = 202) ORDER BY expiration_date DESC, price ASC LIMIT 100;"
+          },
+          {
+            "scenario": "查询满足特定药品类别、库存量、补货日期、制造商和供应商条件的药品库存",
+            "sql": "SELECT item_id, area, category, manufacturer, quantity, expiration_date, price, supplier_id, status, last_restocked FROM medication_inventory WHERE (category IN ('Painkiller', 'Antibiotic', 'Vitamin') OR quantity NOT BETWEEN 50 AND 100) AND (last_restocked >= '2022-06-01' OR last_restocked <= '2022-05-31') AND (manufacturer = 'Pfizer' OR status = 'active') AND (supplier_id = 303 OR supplier_id = 404) ORDER BY last_restocked DESC, quantity ASC LIMIT 100;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "EditByDate",
+        "code_value": "type EditByDate struct {\n    // 实体结构定义\n}"
+      }
+    ]
+  }
+}

@@ -249,6 +249,12 @@ class SyntheticDataGenerator:
                 example=example_str,
                 **var_names
             )
+        elif scenario == "table_mapping_incomplete":
+            from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_TABLE_MAPPING_INCOMPLETE
+            orm_prompt = PROMPT_ORM_TABLE_MAPPING_INCOMPLETE.format(
+                example=example_str,
+                **var_names
+            )
         else:
             orm_prompt = PROMPT_ORM.format(
                 scenario=scenario,
@@ -316,6 +322,13 @@ class SyntheticDataGenerator:
             elif scenario == "if-else+orm":
                 from config.data_processing.synthetic_data_generator.prompts import PROMPT_CALLER_IF_ELSE_ORM
                 caller_prompt = PROMPT_CALLER_IF_ELSE_ORM.format(
+                    orm_block=json.dumps(orm_block, ensure_ascii=False),
+                    example_caller=example_caller,
+                    **var_names
+                )
+            elif scenario == "table_mapping_incomplete":
+                from config.data_processing.synthetic_data_generator.prompts import PROMPT_CALLER_TABLE_MAPPING_INCOMPLETE
+                caller_prompt = PROMPT_CALLER_TABLE_MAPPING_INCOMPLETE.format(
                     orm_block=json.dumps(orm_block, ensure_ascii=False),
                     example_caller=example_caller,
                     **var_names
@@ -461,6 +474,12 @@ class SyntheticDataGenerator:
                 example=example_str,
                 **var_names
             )
+        elif scenario == "table_mapping_incomplete":
+            from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_TABLE_MAPPING_INCOMPLETE
+            orm_prompt = PROMPT_ORM_TABLE_MAPPING_INCOMPLETE.format(
+                example=example_str,
+                **var_names
+            )
         else:
             orm_prompt = PROMPT_ORM.format(
                 scenario=scenario,
@@ -526,6 +545,13 @@ class SyntheticDataGenerator:
             elif scenario == "if-else+orm":
                 from config.data_processing.synthetic_data_generator.prompts import PROMPT_CALLER_IF_ELSE_ORM
                 caller_prompt = PROMPT_CALLER_IF_ELSE_ORM.format(
+                    orm_block=json.dumps(orm_block, ensure_ascii=False),
+                    example_caller=example_caller,
+                    **var_names
+                )
+            elif scenario == "table_mapping_incomplete":
+                from config.data_processing.synthetic_data_generator.prompts import PROMPT_CALLER_TABLE_MAPPING_INCOMPLETE
+                caller_prompt = PROMPT_CALLER_TABLE_MAPPING_INCOMPLETE.format(
                     orm_block=json.dumps(orm_block, ensure_ascii=False),
                     example_caller=example_caller,
                     **var_names

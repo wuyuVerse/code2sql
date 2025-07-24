@@ -9,7 +9,7 @@ input:
   # 是否使用最新的workflow输出（如果为false需要指定specific_workflow_dir）
   use_latest_workflow: false
   # 指定的workflow目录名（当use_latest_workflow为false时使用）
-  specific_workflow_dir: "/home/wuyu/code2sql/workflow_output/workflow_v4_rl"
+  specific_workflow_dir: "/home/wuyu/code2sql/workflow_output/workflow_v5_rl"
 
 # 输出数据配置
 output:

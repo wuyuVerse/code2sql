@@ -1,0 +1,144 @@
+{
+  "if-else+caller_simple": {
+    "function_name": "AverageByName",
+    "orm_code": "func AverageByName(db *gorm.DB, age int, gender string, bloodTypes []string, startDate, endDate string) ([]Chapter, error) {\nvar results []Chapter\nquery := db.Table(\"like_records\").\nSelect(\"color\").\nWhere(\"(age > ? OR gender = ?)\", age, gender).\nWhere(\"blood_type IN ?\", bloodTypes).\nWhere(\"admission_date BETWEEN ? AND ?\", startDate, endDate).\nWhere(\"discharge_date IS NOT NULL\").\nOrder(\"admission_date DESC\").\nOrder(\"age ASC\").\nLimit(100)\nif err := query.Find(&results).Error; err != nil {\nreturn nil, err\n}\nreturn results, nil\n}",
+    "caller": "func RemoveByID(db *gorm.DB, id int, status string, projects []string, startDate, endDate string) ([]Share, error) {\nvar results []Share\nif status == \"Completed\" || id >= 1000 {\n// 调用分支1: 查询高分或已完成的项目评价，限制在特定日期范围内\nquery := db.Table(\"blog_posts\").\nSelect(\"remark\").\nWhere(\"(id > ? OR status = ?)\", id, status).\nWhere(\"project IN ?\", projects).\nWhere(\"review_date BETWEEN ? AND ?\", startDate, endDate).\nWhere(\"status IS NOT NULL\").\nOrder(\"review_date DESC\").\nOrder(\"id ASC\").\nLimit(100)\nif err := query.Find(&results).Error; err != nil {\nreturn nil, err\n}\n} else if status == \"Pending\" && id < 1000 {\n// 调用分支2: 查询低分且待处理的早期项目评价，排除特定项目\nquery := db.Table(\"blog_posts\").\nSelect(\"remark\").\nWhere(\"(id < ? AND status = ?)\", id, status).\nWhere(\"project NOT IN ?\", projects).\nWhere(\"review_date < ?\", startDate).\nOrder(\"review_date ASC\").\nOrder(\"id DESC\").\nLimit(50)\nif err := query.Find(&results).Error; err != nil {\nreturn nil, err\n}\n} else {\nreturn nil, fmt.Errorf(\"invalid parameters\")\n}\nreturn results, nil\n}",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "查询高分或已完成的项目评价，限制在2023年下半年",
+            "sql": "SELECT version, review_id, reviewer_name, review_score, review_date, project_name, status FROM performance_reviews WHERE (review_score >= 4 OR status = 'Completed') AND (project_name IN ('ProjectA', 'ProjectB', 'ProjectC')) AND (review_date BETWEEN '2023-06-01' AND '2023-12-31') AND (status IS NOT NULL) ORDER BY review_date DESC, review_score ASC LIMIT 100;"
+          },
+          {
+            "scenario": "查询低分且待处理的早期项目评价，排除特定项目",
+            "sql": "SELECT version, review_id, reviewer_name, review_score, review_date, project_name, status FROM performance_reviews WHERE (review_score < 3 AND status = 'Pending') AND (project_name NOT IN ('ProjectX', 'ProjectY')) AND (review_date < '2023-01-01') ORDER BY review_date ASC, review_score DESC LIMIT 50;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "AverageByName",
+        "code_value": "type AverageByName struct {\n    ID        uint      `gorm:\"primaryKey\"`\n    Name      string    `gorm:\"column:name\"`\n    Status    string    `gorm:\"column:status\"`\n    CreatedAt time.Time `gorm:\"column:created_at\"`\n    UpdatedAt time.Time `gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "StatusActive",
+        "code_value": "const StatusActive = \"active\""
+      },
+      {
+        "code_key": "StatusPending",
+        "code_value": "const StatusPending = \"pending\""
+      },
+      {
+        "code_key": "TableName",
+        "code_value": "const TableName = \"like_records\""
+      },
+      {
+        "code_key": "DefaultLimit",
+        "code_value": "const DefaultLimit = 100"
+      }
+    ]
+  },
+  "if-else+caller_medium": {
+    "function_name": "RetrieveByStatus",
+    "orm_code": "func RetrieveByStatus(db *gorm.DB, coordinate interface{}, startDate, endDate string, namePatterns []string, courseCodes []string, statuses []string, minGrade, maxGrade int) ([]Diagnostic, error) {\nvar diagnostics []Diagnostic\nquery := db.Table(\"progress_tracking\").\nSelect(\"id, image, enrollment_date, student_name, course_code, status, grade\").\nWhere(\"(image IS NOT NULL OR image = ?)\", \"\").\nWhere(\"enrollment_date BETWEEN ? AND ?\", startDate, endDate).\nWhere(\"(student_name LIKE ? OR student_name LIKE ?)\", \"%\"+namePatterns[0]+\"%\", \"%\"+namePatterns[1]+\"%\").\nWhere(\"course_code IN (?)\", courseCodes).\nWhere(\"(status = ? OR status = ?)\", statuses[0], statuses[1]).\nWhere(\"grade BETWEEN ? AND ?\", minGrade, maxGrade).\nOrder(\"enrollment_date DESC, grade ASC\").\nLimit(100)\nif err := query.Find(&diagnostics).Error; err != nil {\nreturn nil, err\n}\nreturn diagnostics, nil\n}",
+    "caller": "func UpdateByStatus(db *gorm.DB, coordinate interface{}, startDate, endDate string, namePatterns []string, courseCodes []string, statuses []string, minGrade, maxGrade int) ([]Recommendation, error) {\n// Validate required parameters\nif db == nil {\nreturn nil, fmt.Errorf(\"database connection cannot be nil\")\n}\nif len(namePatterns) < 2 {\nreturn nil, fmt.Errorf(\"namePatterns must contain at least 2 elements\")\n}\nif len(statuses) < 1 {\nreturn nil, fmt.Errorf(\"statuses must contain at least 1 element\")\n}\nif minGrade > maxGrade {\nreturn nil, fmt.Errorf(\"minGrade cannot be greater than maxGrade\")\n}\n// Branch 1: Query for active students with high grades and null coordinates\nif coordinate == nil && statuses[0] == \"active\" && minGrade > 80 {\nreturn RetrieveByStatus(db, coordinate, startDate, endDate,\n[]string{\"%Smith%\", \"%Lee%\"},\n[]string{\"CHEM103\", \"BIO205\"},\n[]string{\"active\"},\n81, 100)\n// Branch 2: Query for pending/completed students with coordinates and passing grades\n} else if coordinate != nil && statuses[0] == \"pending\" {\nreturn RetrieveByStatus(db, coordinate, \"2023-01-01\", \"2023-06-30\",\n[]string{\"%\", \"%Test%\"},\n[]string{\"PHYS202\"},\n[]string{\"pending\", \"completed\"},\n60, 100)\n// Default branch: Use all provided parameters\n} else {\nreturn RetrieveByStatus(db, coordinate, startDate, endDate,\nnamePatterns,\ncourseCodes,\nstatuses,\nminGrade, maxGrade)\n}\n}",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "查询下半年活跃且成绩优秀的学生记录，坐标为空且课程为化学或生物",
+            "sql": "SELECT id, coordinate, time, student_name, course_code, status, grade FROM diagnostic_results WHERE (coordinate IS NULL) AND (time BETWEEN '2023-06-01' AND '2023-12-31') AND (student_name LIKE '%Smith%' OR student_name LIKE '%Lee%') AND (course_code IN ('CHEM103', 'BIO205')) AND (status = 'active') AND (grade > 80 AND grade <= 100) ORDER BY time DESC, grade ASC LIMIT 100;"
+          },
+          {
+            "scenario": "查询上半年物理课程的非测试学生记录，坐标非空且状态为待处理或已完成，成绩及格以上",
+            "sql": "SELECT id, coordinate, time, student_name, course_code, status, grade FROM diagnostic_results WHERE (coordinate IS NOT NULL) AND (time < '2023-07-01') AND (student_name NOT LIKE '%Test%') AND (course_code = 'PHYS202') AND (status IN ('pending', 'completed')) AND (grade >= 60) ORDER BY time ASC, grade DESC LIMIT 50;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "RetrieveByStatus",
+        "code_value": "type RetrieveByStatus struct {\n    ID        uint      `gorm:\"primaryKey\"`\n    Name      string    `gorm:\"column:name\"`\n    Status    string    `gorm:\"column:status\"`\n    CreatedAt time.Time `gorm:\"column:created_at\"`\n    UpdatedAt time.Time `gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "StatusActive",
+        "code_value": "const StatusActive = \"active\""
+      },
+      {
+        "code_key": "StatusPending",
+        "code_value": "const StatusPending = \"pending\""
+      },
+      {
+        "code_key": "TableName",
+        "code_value": "const TableName = \"progress_tracking\""
+      },
+      {
+        "code_key": "DefaultLimit",
+        "code_value": "const DefaultLimit = 100"
+      }
+    ]
+  },
+  "if-else+caller_complex": {
+    "function_name": "DeleteByStatus",
+    "orm_code": "func DeleteByStatus(db *gorm.DB, vehicleID *string, latMin *float64, latMax *float64, lonMin *float64, lonMax *float64, fuelLevelMin *float64, consumptionRateMax *float64, timeStart *time.Time, timeEnd *time.Time, odometerMin *float64, odometerMax *float64, driverID *string, tempMin *float64, tempMax *float64, altitudeMin *float64) error {\nquery := db.Model(&Department{}).Table(\"investment_portfolios\")\nif vehicleID != nil {\nquery = query.Where(\"vehicle_id = ?\", *vehicleID)\n}\nif latMin != nil && latMax != nil {\nquery = query.Where(\"latitude BETWEEN ? AND ?\", *latMin, *latMax)\n}\nif lonMin != nil && lonMax != nil {\nquery = query.Where(\"longitude BETWEEN ? AND ?\", *lonMin, *lonMax)\n}\nif fuelLevelMin != nil {\nquery = query.Where(\"fuel_level >= ?\", *fuelLevelMin)\n}\nif consumptionRateMax != nil {\nquery = query.Where(\"consumption_rate <= ?\", *consumptionRateMax)\n}\nif timeStart != nil {\nquery = query.Where(\"timestamp >= ?\", *timeStart)\n}\nif timeEnd != nil {\nquery = query.Where(\"timestamp <= ?\", *timeEnd)\n}\nif odometerMin != nil && odometerMax != nil {\nquery = query.Where(\"odometer_reading BETWEEN ? AND ?\", *odometerMin, *odometerMax)\n}\nif driverID != nil {\nquery = query.Where(\"driver_id = ?\", *driverID)\n}\nif tempMin != nil {\nquery = query.Where(\"temperature >= ?\", *tempMin)\n}\nif tempMax != nil {\nquery = query.Where(\"temperature <= ?\", *tempMax)\n}\nif altitudeMin != nil {\nquery = query.Where(\"altitude >= ?\", *altitudeMin)\n}\nquery = query.Order(\"timestamp DESC, odometer_reading ASC\").Limit(100)\nresult := query.Delete(&Department{})\nif result.Error != nil {\nreturn result.Error\n}\nreturn nil\n}",
+    "caller": "func RetrieveByName(db *gorm.DB, vehicleID *string, cost *float64, tempMin *float64, tempMax *float64, timeStart *time.Time, driverID *string, fuelLevelMax *float64, altMin *float64, altMax *float64, odometerMin *float64, consumptionRateMin *float64, lonMin *float64, lonMax *float64, latMin *float64, latMax *float64, timeEnd *time.Time) ([]Inventory, error) {\nvar inventories []Inventory\nvar err error\nif (vehicleID != nil || cost != nil || (tempMin != nil && tempMax != nil) || timeStart != nil) &&\n(driverID == nil && fuelLevelMax == nil && (altMin == nil || altMax == nil) && odometerMin == nil) {\n// 分支1：只检查车辆ID、成本、温度和最近时间戳的条件\nerr = db.Model(&Inventory{}).Table(\"user_profiles\").\nWhere(\"(vehicle_id = ? OR ? IS NULL)\", vehicleID, vehicleID).\nWhere(\"(quantity >= ? OR ? IS NULL)\", cost, cost).\nWhere(\"(temperature BETWEEN ? AND ? OR ? IS NULL)\", tempMin, tempMax, tempMin).\nWhere(\"(timestamp >= ? OR ? IS NULL)\", timeStart, timeStart).\nOrder(\"timestamp DESC, quantity ASC\").Limit(100).Find(&inventories).Error\n} else if (driverID != nil || fuelLevelMax != nil || (altMin != nil && altMax != nil) || odometerMin != nil) &&\n(vehicleID == nil && cost == nil && (tempMin == nil || tempMax == nil) && timeStart == nil) {\n// 分支2：只检查驾驶员ID、燃油水平、海拔高度和里程表读数的条件\nerr = db.Model(&Inventory{}).Table(\"user_profiles\").\nWhere(\"(driver_id = ? OR ? IS NULL)\", driverID, driverID).\nWhere(\"(quantity <= ? OR ? IS NULL)\", fuelLevelMax, fuelLevelMax).\nWhere(\"(altitude BETWEEN ? AND ? OR ? IS NULL)\", altMin, altMax, altMin).\nWhere(\"(odometer_reading >= ? OR ? IS NULL)\", odometerMin, odometerMin).\nOrder(\"timestamp DESC, quantity ASC\").Limit(100).Find(&inventories).Error\n} else if (consumptionRateMin != nil || (lonMin != nil && lonMax != nil) || (latMin != nil && latMax != nil) || timeEnd != nil) &&\n(vehicleID == nil && cost == nil && driverID == nil && fuelLevelMax == nil) {\n// 分支3：只检查油耗率、经纬度范围和截止时间戳的条件\nerr = db.Model(&Inventory{}).Table(\"user_profiles\").\nWhere(\"(quantity >= ? OR ? IS NULL)\", consumptionRateMin, consumptionRateMin).\nWhere(\"(longitude BETWEEN ? AND ? OR ? IS NULL)\", lonMin, lonMax, lonMin).\nWhere(\"(latitude BETWEEN ? AND ? OR ? IS NULL)\", latMin, latMax, latMin).\nWhere(\"(timestamp <= ? OR ? IS NULL)\", timeEnd, timeEnd).\nOrder(\"timestamp DESC, quantity ASC\").Limit(100).Find(&inventories).Error\n} else {\n// 默认查询\nerr = db.Model(&Inventory{}).Table(\"user_profiles\").\nOrder(\"timestamp DESC, quantity ASC\").Limit(100).Find(&inventories).Error\n}\nif err != nil {\nreturn nil, err\n}\nreturn inventories, nil\n}",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "分支1：只检查车辆ID、成本、温度和最近时间戳的条件",
+            "sql": "SELECT vehicle_id, latitude, longitude, fuel_level, consumption_rate, timestamp, odometer_reading, driver_id, temperature, altitude FROM guild_memberships WHERE (vehicle_id = ? OR ? IS NULL) AND (cost >= ? OR ? IS NULL) AND (temperature BETWEEN ? AND ? OR ? IS NULL) AND (timestamp >= ? OR ? IS NULL) ORDER BY timestamp DESC, odometer_reading ASC LIMIT 100 OFFSET 0"
+          },
+          {
+            "scenario": "分支2：只检查驾驶员ID、燃油水平、海拔高度和里程表读数的条件",
+            "sql": "SELECT vehicle_id, latitude, longitude, fuel_level, consumption_rate, timestamp, odometer_reading, driver_id, temperature, altitude FROM guild_memberships WHERE (driver_id = ? OR ? IS NULL) AND (fuel_level <= ? OR ? IS NULL) AND (altitude BETWEEN ? AND ? OR ? IS NULL) AND (odometer_reading >= ? OR ? IS NULL) ORDER BY timestamp DESC, odometer_reading ASC LIMIT 100 OFFSET 0"
+          },
+          {
+            "scenario": "分支3：只检查油耗率、经纬度范围和截止时间戳的条件",
+            "sql": "SELECT vehicle_id, latitude, longitude, fuel_level, consumption_rate, timestamp, odometer_reading, driver_id, temperature, altitude FROM guild_memberships WHERE (consumption_rate >= ? OR ? IS NULL) AND (longitude BETWEEN ? AND ? OR ? IS NULL) AND (latitude BETWEEN ? AND ? OR ? IS NULL) AND (timestamp <= ? OR ? IS NULL) ORDER BY timestamp DESC, odometer_reading ASC LIMIT 100 OFFSET 0"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "DeleteByStatus",
+        "code_value": "type DeleteByStatus struct {\n    ID        uint      `gorm:\"primaryKey\"`\n    Name      string    `gorm:\"column:name\"`\n    Status    string    `gorm:\"column:status\"`\n    CreatedAt time.Time `gorm:\"column:created_at\"`\n    UpdatedAt time.Time `gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "StatusActive",
+        "code_value": "const StatusActive = \"active\""
+      },
+      {
+        "code_key": "StatusPending",
+        "code_value": "const StatusPending = \"pending\""
+      },
+      {
+        "code_key": "TableName",
+        "code_value": "const TableName = \"investment_portfolios\""
+      },
+      {
+        "code_key": "DefaultLimit",
+        "code_value": "const DefaultLimit = 100"
+      }
+    ]
+  }
+}

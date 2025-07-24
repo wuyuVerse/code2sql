@@ -7,7 +7,7 @@ data_conversion:
   # 数据转换配置文件路径
   conversion_config_path: "config/rl/data_conversion/conversion_config.yaml"
   # 是否在训练前自动进行数据转换
-  auto_convert: true
+  auto_convert: false
   # 数据转换输出目录
   output_dir: "model/data/orm2sql_rl_data"
   # 转换后的数据文件名前缀
@@ -16,11 +16,11 @@ data_conversion:
 # 数据配置
 data:
   # 数据文件路径（将由数据转换器自动生成）
-  train_files: "/home/wuyu/code2sql/model/data/orm2sql_rl_data/orm2sql_rl_20250708_162812_train.parquet"
-  val_files: "/home/wuyu/code2sql/model/data/orm2sql_rl_data/orm2sql_rl_20250708_162812_val.parquet"
+  train_files: " /home/wuyu/code2sql/model/data/orm2sql_rl_data/rl_orm2sql_training_data_20250723_222302_train.parquet"
+  val_files: " /home/wuyu/code2sql/model/data/orm2sql_rl_data/rl_orm2sql_training_data_20250723_222302_val.parquet"
   
   # 训练参数
-  train_batch_size: 64  # 调整为64，能被8整除
+  train_batch_size: 128  # 调整为64，能被8整除
   max_prompt_length: 8192
   max_response_length: 4096
   filter_overlong_prompts: true
@@ -35,7 +35,7 @@ algorithm:
 # Actor, Rollout, Reference 模型配置
 actor_rollout_ref:
   model:
-    path: "/home/wuyu/code2sql/saves/qwen3-14b-ft-v2"
+    path: "/home/wuyu/code2sql/saves/v5-tmp"
     use_remove_padding: true
     enable_gradient_checkpointing: true
     trust_remote_code: true
@@ -43,7 +43,7 @@ actor_rollout_ref:
   actor:
     optim:
       lr: 3e-6
-    ppo_mini_batch_size: 64  # 调整为64，与train_batch_size保持一致
+    ppo_mini_batch_size: 128  # 调整为64，与train_batch_size保持一致
     ppo_micro_batch_size_per_gpu: 2
     clip_ratio_low: 0.2
     clip_ratio_high: 0.28
@@ -60,7 +60,7 @@ actor_rollout_ref:
     log_prob_micro_batch_size_per_gpu: 1
     tensor_model_parallel_size: 2
     name: "vllm"
-    gpu_memory_utilization: 0.9
+    gpu_memory_utilization: 0.8
     n: 1
     enable_chunked_prefill: false
   
@@ -84,13 +84,14 @@ custom_reward_function:
 trainer:
   critic_warmup: 0
   logger: ["console", "swanlab"]
-  project_name: "verl_reinforce_plus_plus_formal"
-  experiment_name: "qwen3_32b_rl-0704-reinforce-plus-plus"
+  project_name: "verl_reinforce_plus_plus_formal_0724"
+  experiment_name: "qwen3_32b_rl-0724-reinforce-plus-plus"
   n_gpus_per_node: 8  # 使用8个GPU (0,1,2,3,4,5,6,7号卡)
-  nnodes: 2  # 单节点训练
+  nnodes: 4  # 单节点训练
+  resume_mode: disable
   save_freq: 20
   test_freq: 5
-  total_epochs: 20
+  total_epochs: 10
   # 模型保存路径设置
   default_local_dir: "/home/wuyu/code2sql/saves/rl/checkpoints"
 

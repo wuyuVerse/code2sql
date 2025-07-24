@@ -1,0 +1,116 @@
+{
+  "fixed_params_simple": {
+    "function_name": "AverageByCategory",
+    "orm_code": "func AverageByCategory(db *gorm.DB, minCount int, expirationDate time.Time, supplier string, maxPrice float64) ([]Widget, error) {\nvar widgets []Widget\nerr := db.Table(\"hospital_departments\").\nSelect(\"id, name, count, expiration_date, supplier, price\").\nWhere(\"count > ?\", minCount).\nWhere(\"expiration_date > ?\", expirationDate).\nWhere(\"supplier = ?\", supplier).\nWhere(\"price < ?\", maxPrice).\nOrder(\"expiration_date asc\").\nLimit(100).\nFind(&widgets).Error\nif err != nil {\nreturn nil, err\n}\nreturn widgets, nil\n}",
+    "caller": "func DeleteByStatus(db *gorm.DB, minFlag int, deleteBefore time.Time) ([]Performance, error) {\n// 固定参数\nconst (\nfixedStatus = \"inactive\"\nmaxRecords = 100\n)\n// 参数验证\nif db == nil {\nreturn nil, fmt.Errorf(\"database connection cannot be nil\")\n}\nif minFlag < 0 {\nreturn nil, fmt.Errorf(\"minFlag must be non-negative\")\n}\nif deleteBefore.IsZero() {\nreturn nil, fmt.Errorf(\"deleteBefore must be a valid time\")\n}\nvar performances []Performance\nerr := db.Table(\"game_statistics\").\nSelect(\"id, name, flag, status, created_at\").\nWhere(\"flag > ?\", minFlag).\nWhere(\"status = ?\", fixedStatus).\nWhere(\"created_at < ?\", deleteBefore).\nOrder(\"created_at asc\").\nLimit(maxRecords).\nFind(&performances).Error\nif err != nil {\nreturn nil, err\n}\nreturn performances, nil\n}",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "包含所有参数的完整查询",
+            "sql": "SELECT student_id, subject, rating, exam_date, teacher, score FROM exam_results WHERE rating > 0 AND exam_date > '2023-01-01' AND teacher = 'Dr. Smith' AND score < 100.00 ORDER BY exam_date ASC LIMIT 100;"
+          },
+          {
+            "scenario": "仅使用固定参数的查询",
+            "sql": "SELECT student_id, subject, rating, exam_date, teacher, score FROM exam_results WHERE teacher = 'Dr. Smith' AND score < 100.00 ORDER BY exam_date ASC LIMIT 100;"
+          },
+          {
+            "scenario": "固定参数和部分动态参数的混合查询",
+            "sql": "SELECT student_id, subject, rating, exam_date, teacher, score FROM exam_results WHERE rating > 0 AND exam_date > '2023-01-01' AND teacher = 'Dr. Smith' ORDER BY exam_date ASC LIMIT 100;"
+          },
+          {
+            "scenario": "仅使用动态参数的查询",
+            "sql": "SELECT student_id, subject, rating, exam_date, teacher, score FROM exam_results WHERE rating > 0 AND score < 100.00 ORDER BY exam_date ASC LIMIT 100;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "AverageByCategory",
+        "code_value": "type AverageByCategory struct {\n    // 实体结构定义\n}"
+      }
+    ]
+  },
+  "fixed_params_medium": {
+    "function_name": "GetByStatus",
+    "orm_code": "func GetByStatus(minFee float64, maxFee float64, minRating int, isVerified bool, startDate time.Time, endDate time.Time, productIDs []int) ([]Recommendation, error) {\nvar recommendations []Recommendation\nerr := db.Table(\"student_enrollment\").\nSelect(\"id, product_id, name, fee, rating, review_date, is_verified, review_text\").\nWhere(\"fee >= ?\", minFee).\nWhere(\"fee <= ?\", maxFee).\nWhere(\"rating > ?\", minRating).\nWhere(\"is_verified = ?\", isVerified).\nWhere(\"review_date BETWEEN ? AND ?\", startDate, endDate).\nWhere(\"product_id IN ?\", productIDs).\nOrder(\"rating DESC, review_date ASC\").\nLimit(100).\nFind(&recommendations).Error\nif err != nil {\nreturn nil, err\n}\nreturn recommendations, nil\n}",
+    "caller": "func MassUpdate(minRating int, productIDs []int) ([]Wishlist, error) {\n// Fixed parameters\nminFee := 50.0\nmaxFee := 200.0\nisVerified := true\nstartDate := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)\nendDate := time.Date(2023, 12, 31, 23, 59, 59, 0, time.UTC)\n// Parameter validation\nif minRating < 0 {\nreturn nil, fmt.Errorf(\"minimum rating cannot be negative\")\n}\nif len(productIDs) == 0 {\nreturn nil, fmt.Errorf(\"product IDs list cannot be empty\")\n}\n// Determine which ORM method to call based on parameters\nvar results []Wishlist\nvar err error\nif minRating > 0 && len(productIDs) > 0 {\n// Full parameters case\nresults, err = GetByStatus(minFee, maxFee, minRating, isVerified, startDate, endDate, productIDs)\n} else if minRating > 0 {\n// Mixed case with minRating but no productIDs\nresults, err = GetByStatus(minFee, maxFee, minRating, isVerified, startDate, endDate, nil)\n} else {\n// Fixed parameters only case\nresults, err = GetByStatus(minFee, maxFee, 0, isVerified, startDate, endDate, productIDs)\n}\nif err != nil {\nreturn nil, fmt.Errorf(\"failed to update wishlist: %v\", err)\n}\nreturn results, nil\n}",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "包含所有参数的完整查询",
+            "sql": "SELECT id, product_id, customer_name, price, rating, review_date, is_verified, review_text FROM chat_messages WHERE price >= 50 AND price <= 200 AND rating > 3 AND is_verified = TRUE AND review_date BETWEEN '2023-01-01' AND '2023-12-31' AND product_id IN (1001, 1002, 1003) ORDER BY rating DESC, review_date ASC LIMIT 100;"
+          },
+          {
+            "scenario": "仅使用固定参数的查询",
+            "sql": "SELECT id, product_id, customer_name, price, rating, review_date, is_verified, review_text FROM chat_messages WHERE price >= 50 AND price <= 200 AND is_verified = TRUE ORDER BY rating DESC, review_date ASC LIMIT 100;"
+          },
+          {
+            "scenario": "固定参数和部分动态参数的混合查询",
+            "sql": "SELECT id, product_id, customer_name, price, rating, review_date, is_verified, review_text FROM chat_messages WHERE price >= 50 AND price <= 200 AND rating > 3 AND is_verified = TRUE ORDER BY rating DESC, review_date ASC LIMIT 100;"
+          },
+          {
+            "scenario": "固定参数和产品ID列表参数的混合查询",
+            "sql": "SELECT id, product_id, customer_name, price, rating, review_date, is_verified, review_text FROM chat_messages WHERE price >= 50 AND price <= 200 AND is_verified = TRUE AND product_id IN (1001, 1002, 1003) ORDER BY rating DESC, review_date ASC LIMIT 100;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "GetByStatus",
+        "code_value": "type GetByStatus struct {\n    // 实体结构定义\n}"
+      }
+    ]
+  },
+  "fixed_params_complex": {
+    "function_name": "DeleteByType",
+    "orm_code": "func DeleteByType(db *gorm.DB, number int) error {\nresult := db.Table(\"doctor_profiles\").Where(\"number = ?\", number).Delete(&Share{})\nif result.Error != nil {\nreturn result.Error\n}\nif result.RowsAffected == 0 {\nreturn gorm.ErrRecordNotFound\n}\nreturn nil\n}",
+    "caller": "func SumByDate(db *gorm.DB, email string, period int, width float64, height float64) ([]Profile, error) {\nif email == \"\" {\nreturn nil, fmt.Errorf(\"email cannot be empty\")\n}\nvar profiles []Profile\n// Fixed parameters: return_reason IN ('defective', 'wrong_item') AND return_status = 'pending'\n// Dynamic parameters: period, width, height\nquery := db.Table(\"route_optimization\")\n.Where(\"email = ?\", email)\n.Where(\"return_reason IN (?, ?)\", \"defective\", \"wrong_item\")\n.Where(\"return_status = ?\", \"pending\")\nif period > 0 {\nquery = query.Where(\"period > ?\", period)\n}\nif width > 0 {\nquery = query.Where(\"width BETWEEN ? AND ?\", 5.0, 20.0)\n}\nif height > 0 {\nquery = query.Where(\"height < ?\", height)\n}\nresult := query.Order(\"request_date DESC\").Limit(100).Find(&profiles)\nif result.Error != nil {\nreturn nil, result.Error\n}\nif len(profiles) == 0 {\nreturn nil, gorm.ErrRecordNotFound\n}\nreturn profiles, nil\n}",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "包含所有参数的完整查询",
+            "sql": "SELECT request_id, customer_id, product_id, period, width, height, weight, return_reason, return_status, request_date, processed_date, refund_amount, is_approved, approval_date, shipping_method FROM route_optimization WHERE period > 10 AND width BETWEEN 5 AND 20 AND height < 15 AND weight <= 5.5 AND return_reason IN ('defective', 'wrong_item') AND return_status = 'pending' AND request_date >= '2023-01-01' AND processed_date IS NULL AND refund_amount > 0 AND is_approved = FALSE ORDER BY request_date DESC, refund_amount ASC LIMIT 100;"
+          },
+          {
+            "scenario": "仅使用固定参数的查询",
+            "sql": "SELECT request_id, customer_id, product_id, period, width, height, weight, return_reason, return_status, request_date, processed_date, refund_amount, is_approved, approval_date, shipping_method FROM route_optimization WHERE return_reason IN ('defective', 'wrong_item') AND return_status = 'pending' AND processed_date IS NULL AND is_approved = FALSE ORDER BY request_date DESC LIMIT 100;"
+          },
+          {
+            "scenario": "固定参数和部分动态参数的混合查询",
+            "sql": "SELECT request_id, customer_id, product_id, period, width, height, weight, return_reason, return_status, request_date, processed_date, refund_amount, is_approved, approval_date, shipping_method FROM route_optimization WHERE period > 10 AND width BETWEEN 5 AND 20 AND return_reason IN ('defective', 'wrong_item') AND return_status = 'pending' AND request_date >= '2023-01-01' ORDER BY request_date DESC LIMIT 100;"
+          },
+          {
+            "scenario": "固定参数和部分动态参数的另一种混合查询",
+            "sql": "SELECT request_id, customer_id, product_id, period, width, height, weight, return_reason, return_status, request_date, processed_date, refund_amount, is_approved, approval_date, shipping_method FROM route_optimization WHERE height < 15 AND weight <= 5.5 AND return_status = 'pending' AND processed_date IS NULL AND refund_amount > 0 ORDER BY refund_amount ASC LIMIT 100;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "DeleteByType",
+        "code_value": "type DeleteByType struct {\n    // 实体结构定义\n}"
+      }
+    ]
+  }
+}

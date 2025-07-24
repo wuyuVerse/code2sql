@@ -48,10 +48,10 @@ logging.basicConfig(
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 # 导入评估维度模块
-from .eval_dimensions.sql_validity import async_evaluate_sql_validity
-from .eval_dimensions.llm_consistency import async_evaluate_llm_consistency
-from .eval_dimensions.keyword_alignment import async_evaluate_keyword_alignment
-from .eval_dimensions.control_flow_penalty import async_evaluate_control_flow_penalty
+from eval_dimensions.sql_validity import async_evaluate_sql_validity
+from eval_dimensions.llm_consistency import async_evaluate_llm_consistency
+from eval_dimensions.keyword_alignment import async_evaluate_keyword_alignment
+from eval_dimensions.control_flow_penalty import async_evaluate_control_flow_penalty
 
 
 def load_rl_config() -> Dict[str, Any]:

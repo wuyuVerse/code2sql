@@ -1,0 +1,148 @@
+{
+  "if-else+caller_simple": {
+    "function_name": "SearchByPattern",
+    "orm_code": "package main\n\nimport (\n\t\"fmt\"\n\t\"time\"\n\t\"gorm.io/gorm\"\n)\n\ntype Record struct {\n\tID        uint      `gorm:\"column:id\"`\n\tImage     string    `gorm:\"column:image\"`\n\tContent   string    `gorm:\"column:content\"`\n\tUserID    int       `gorm:\"column:user_id\"`\n\tCreatedAt time.Time `gorm:\"column:created_at\"`\n\tUpdatedAt time.Time `gorm:\"column:updated_at\"`\n\tStatus    string    `gorm:\"column:status\"`\n\tLikes     int       `gorm:\"column:likes\"`\n}\n\nfunc (Record) TableName() string {\n\treturn \"delivery_routes\"\n}\n\nfunc SearchByPattern(db *gorm.DB, contentPattern string, minUserID int, status string, startDate, endDate time.Time, count int) ([]Record, error) {\n\tvar records []Record\n\n\terr := db.Where(\"image IS NOT NULL\").\n\t\tWhere(\"content LIKE ?\", contentPattern).\n\t\tWhere(\"user_id > ?\", minUserID).\n\t\tWhere(\"status = ?\", status).\n\t\tWhere(\"created_at BETWEEN ? AND ?\", startDate, endDate).\n\t\tOrder(\"likes DESC, created_at ASC\").\n\t\tLimit(count).\n\t\tFind(&records).Error\n\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"failed to query records: %v\", err)\n\t}\n\n\treturn records, nil\n}\n\n// Example usage:\n// func main() {\n// \t// Initialize your GORM DB connection\n// \t// db, err := gorm.Open(...)\n// \t// if err != nil { ... }\n// \n// \tstartDate, _ := time.Parse(\"2006-01-02\", \"2023-01-01\")\n// \tendDate, _ := time.Parse(\"2006-01-02\", \"2023-12-31\")\n// \tresults, err := SearchByPattern(db, \"%important%\", 1000, \"active\", startDate, endDate, 50)\n// \tif err != nil { ... }\n// \t// Handle results\n// }",
+    "caller": "package main\n\nimport (\n\t\"errors\"\n\t\"fmt\"\n\t\"time\"\n\t\"gorm.io/gorm\"\n)\n\ntype Brand struct {\n\tID        uint      `gorm:\"column:id\"`\n\tPhoto     string    `gorm:\"column:photo\"`\n\tDescription string  `gorm:\"column:description\"`\n\tCustomerID int      `gorm:\"column:customer_id\"`\n\tAddedAt   time.Time `gorm:\"column:added_at\"`\n\tModifiedAt time.Time `gorm:\"column:modified_at\"`\n\tState     string    `gorm:\"column:state\"`\n\tFrequency int       `gorm:\"column:frequency\"`\n}\n\nfunc (Brand) TableName() string {\n\treturn \"share_activities\"\n}\n\nfunc GetByGroup(db *gorm.DB, groupType string, pattern string, customerRange []int, states []string, dateRange []time.Time) ([]Brand, error) {\n\tif db == nil {\n\t\treturn nil, errors.New(\"database connection is nil\")\n\t}\n\n\tif len(customerRange) == 0 || len(states) == 0 || len(dateRange) < 2 {\n\t\treturn nil, errors.New(\"invalid parameters\")\n\t}\n\n\tvar results []Brand\n\tvar err error\n\n\tif groupType == \"urgent_active\" {\n\t\t// 查找包含'urgent'关键字的活跃购物车\n\t\tresults, err = SearchByPattern(db, pattern, customerRange[0], states[0], dateRange[0], dateRange[1], 50)\n\t} else if groupType == \"special_pending\" {\n\t\t// 查找不包含照片且描述含'special'的待处理购物车\n\t\terr = db.Where(\"photo IS NULL\").\n\t\t\tWhere(\"description LIKE ?\", pattern).\n\t\t\tWhere(\"customer_id BETWEEN ? AND ?\", customerRange[0], customerRange[1]).\n\t\t\tWhere(\"state = ?\", states[0]).\n\t\t\tWhere(\"added_at > ?\", dateRange[0]).\n\t\t\tOrder(\"frequency ASC, added_at DESC\").\n\t\t\tLimit(30).\n\t\t\tFind(&results).Error\n\t} else if groupType == \"test_excluded\" {\n\t\t// 查找描述不含'test'的活跃/已完成购物车\n\t\terr = db.Where(\"description NOT LIKE ?\", pattern).\n\t\t\tWhere(\"customer_id < ?\", customerRange[0]).\n\t\t\tWhere(\"state IN ?\", states).\n\t\t\tWhere(\"modified_at BETWEEN ? AND ?\", dateRange[0], dateRange[1]).\n\t\t\tOrder(\"modified_at DESC\").\n\t\t\tLimit(20).\n\t\t\tFind(&results).Error\n\t} else {\n\t\treturn nil, errors.New(\"invalid group type\")\n\t}\n\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"failed to query records: %v\", err)\n\t}\n\n\tif len(results) == 0 {\n\t\treturn nil, errors.New(\"no records found\")\n\t}\n\n\treturn results, nil\n}",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "查找包含'urgent'关键字的活跃购物车，客户ID大于500，且添加时间在2023年下半年",
+            "sql": "SELECT id, photo, description, customer_id, added_at, modified_at, state, favorites FROM shopping_carts WHERE photo IS NOT NULL AND description LIKE '%urgent%' AND customer_id > 500 AND state = 'active' AND added_at BETWEEN '2023-06-01' AND '2023-12-31' ORDER BY favorites DESC, added_at ASC LIMIT 50;"
+          },
+          {
+            "scenario": "查找不包含照片且描述含'special'的待处理购物车，客户ID在100-1000之间，添加时间在2023年后",
+            "sql": "SELECT id, photo, description, customer_id, added_at, modified_at, state, favorites FROM shopping_carts WHERE photo IS NULL AND description LIKE '%special%' AND customer_id BETWEEN 100 AND 1000 AND state = 'pending' AND added_at > '2023-01-01' ORDER BY favorites ASC, added_at DESC LIMIT 30;"
+          },
+          {
+            "scenario": "查找描述不含'test'且客户ID小于200的活跃/已完成购物车，修改时间在2023年Q2-Q3",
+            "sql": "SELECT id, photo, description, customer_id, added_at, modified_at, state, favorites FROM shopping_carts WHERE description NOT LIKE '%test%' AND customer_id < 200 AND state IN ('active', 'completed') AND modified_at BETWEEN '2023-03-01' AND '2023-09-30' ORDER BY modified_at DESC LIMIT 20;"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "SearchByPattern",
+        "code_value": "type SearchByPattern struct {\n    ID        uint      `gorm:\"primaryKey\"`\n    Name      string    `gorm:\"column:name\"`\n    Status    string    `gorm:\"column:status\"`\n    CreatedAt time.Time `gorm:\"column:created_at\"`\n    UpdatedAt time.Time `gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "StatusActive",
+        "code_value": "const StatusActive = \"active\""
+      },
+      {
+        "code_key": "StatusPending",
+        "code_value": "const StatusPending = \"pending\""
+      },
+      {
+        "code_key": "TableName",
+        "code_value": "const TableName = \"delivery_routes\""
+      },
+      {
+        "code_key": "DefaultLimit",
+        "code_value": "const DefaultLimit = 100"
+      }
+    ]
+  },
+  "if-else+caller_medium": {
+    "function_name": "BulkModify",
+    "orm_code": "package main\n\nimport (\n\t\"gorm.io/gorm\"\n\t\"time\"\n)\n\ntype Magazine struct {\n\tID         uint      `gorm:\"column:id\"`\n\tUserID     uint      `gorm:\"column:user_id\"`\n\tGuildID    uint      `gorm:\"column:guild_id\"`\n\tFrequency  int       `gorm:\"column:frequency\"`\n\tJoinDate   time.Time `gorm:\"column:join_date\"`\n\tLastActive time.Time `gorm:\"column:last_active\"`\n\tStatus     string    `gorm:\"column:status\"`\n\tRole       string    `gorm:\"column:role\"`\n}\n\nfunc (Magazine) TableName() string {\n\treturn \"credit_scores\"\n}\n\nfunc BulkModify(db *gorm.DB, minFrequency *int, userID *uint, guildID *uint, minJoinDate *time.Time, maxLastActive *time.Time, status *string, role *string, limit, offset int) ([]Magazine, error) {\n\tvar results []Magazine\n\n\tquery := db.Model(&Magazine{})\n\n\tif minFrequency != nil {\n\t\tquery = query.Where(\"frequency >= ? OR frequency IS NULL\", *minFrequency)\n\t} else {\n\t\tquery = query.Where(\"frequency IS NULL\")\n\t}\n\n\tif userID != nil {\n\t\tquery = query.Where(\"user_id = ? OR user_id IS NULL\", *userID)\n\t} else {\n\t\tquery = query.Where(\"user_id IS NULL\")\n\t}\n\n\tif guildID != nil {\n\t\tquery = query.Where(\"guild_id = ? OR guild_id IS NULL\", *guildID)\n\t} else {\n\t\tquery = query.Where(\"guild_id IS NULL\")\n\t}\n\n\tif minJoinDate != nil {\n\t\tquery = query.Where(\"join_date >= ? OR join_date IS NULL\", *minJoinDate)\n\t} else {\n\t\tquery = query.Where(\"join_date IS NULL\")\n\t}\n\n\tif maxLastActive != nil {\n\t\tquery = query.Where(\"last_active <= ? OR last_active IS NULL\", *maxLastActive)\n\t} else {\n\t\tquery = query.Where(\"last_active IS NULL\")\n\t}\n\n\tif status != nil {\n\t\tquery = query.Where(\"status = ? OR status IS NULL\", *status)\n\t} else {\n\t\tquery = query.Where(\"status IS NULL\")\n\t}\n\n\tif role != nil {\n\t\tquery = query.Where(\"role = ? OR role IS NULL\", *role)\n\t} else {\n\t\tquery = query.Where(\"role IS NULL\")\n\t}\n\n\terr := query.Order(\"last_active DESC, join_date ASC\").\n\t\tLimit(limit).\n\t\tOffset(offset).\n\t\tFind(&results).Error\n\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\treturn results, nil\n}",
+    "caller": "package main\n\nimport (\n\t\"errors\"\n\t\"gorm.io/gorm\"\n\t\"time\"\n)\n\ntype Order struct {\n\tID        uint      `gorm:\"column:id\"`\n\tUserID    uint      `gorm:\"column:user_id\"`\n\tGuildID   uint      `gorm:\"column:guild_id\"`\n\tType      int       `gorm:\"column:type\"`\n\tJoinDate  time.Time `gorm:\"column:join_date\"`\n\tLastActive time.Time `gorm:\"column:last_active\"`\n\tStatus    string    `gorm:\"column:status\"`\n\tRole      string    `gorm:\"column:role\"`\n}\n\nfunc (Order) TableName() string {\n\treturn \"exam_results\"\n}\n\nfunc BatchChange(db *gorm.DB, minType *int, userID *uint, guildID *uint, minJoinDate *time.Time, maxLastActive *time.Time, status *string, role *string, scenario string) ([]Order, error) {\n\tif db == nil {\n\t\treturn nil, errors.New(\"database connection cannot be nil\")\n\t}\n\n\tvar results []Order\n\tvar err error\n\n\tconst defaultLimit = 100\n\tconst defaultOffset = 0\n\n\tswitch scenario {\n\tcase \"scenario1\":\n\t\t// 基于type和时间的过滤条件\n\t\tresults, err = BulkModify(db, minType, userID, guildID, minJoinDate, maxLastActive, status, role, defaultLimit, defaultOffset)\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\tcase \"scenario2\":\n\t\t// 反向type条件和其他过滤\n\t\tif minType != nil {\n\t\t\treverseType := -*minType\n\t\t\tresults, err = BulkModify(db, &reverseType, userID, guildID, minJoinDate, maxLastActive, status, role, defaultLimit, defaultOffset)\n\t\t} else {\n\t\t\tresults, err = BulkModify(db, nil, userID, guildID, minJoinDate, maxLastActive, status, role, defaultLimit, defaultOffset)\n\t\t}\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\tcase \"scenario3\":\n\t\t// 严格过滤条件\n\t\tif minType != nil && minJoinDate != nil && maxLastActive != nil {\n\t\t\tstrictMinType := *minType + 5\n\t\t\tstrictMinJoinDate := minJoinDate.Add(-24 * time.Hour)\n\t\t\tstrictMaxLastActive := maxLastActive.Add(24 * time.Hour)\n\t\t\tresults, err = BulkModify(db, &strictMinType, userID, guildID, &strictMinJoinDate, &strictMaxLastActive, status, role, defaultLimit, defaultOffset)\n\t\t} else {\n\t\t\tresults, err = BulkModify(db, minType, userID, guildID, minJoinDate, maxLastActive, status, role, defaultLimit, defaultOffset)\n\t\t}\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\tdefault:\n\t\treturn nil, errors.New(\"invalid scenario specified\")\n\t}\n\n\tif len(results) == 0 {\n\t\treturn nil, errors.New(\"no records found matching criteria\")\n\t}\n\n\treturn results, nil\n}",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "基于点赞数、创建时间和更新时间的过滤条件",
+            "sql": "SELECT id, email, content, created_at, updated_at, likes_count, status, visibility FROM social_posts WHERE (likes_count >= ? OR likes_count IS NULL) AND (email = ? OR email IS NULL) AND (created_at >= ? OR created_at IS NULL) AND (updated_at <= ? OR updated_at IS NULL) AND (status = ? OR status IS NULL) AND (visibility = ? OR visibility IS NULL) ORDER BY updated_at DESC, created_at ASC LIMIT 100 OFFSET 0"
+          },
+          {
+            "scenario": "基于浏览量、发布日期和编辑日期的过滤条件",
+            "sql": "SELECT id, author_id, content, post_date, edit_date, views, privacy, category FROM social_posts WHERE (views <= ? OR views IS NULL) AND (author_id = ? OR author_id IS NULL) AND (post_date <= ? OR post_date IS NULL) AND (edit_date >= ? OR edit_date IS NULL) AND (privacy = ? OR privacy IS NULL) AND (category = ? OR category IS NULL) ORDER BY post_date DESC, edit_date ASC LIMIT 100 OFFSET 0"
+          },
+          {
+            "scenario": "基于分享量、发布时间和修改时间的严格过滤条件",
+            "sql": "SELECT id, user_email, title, publish_time, modify_time, shares, language, tags FROM social_posts WHERE (shares > ? OR shares IS NULL) AND (user_email = ? OR user_email IS NULL) AND (publish_time < ? OR publish_time IS NULL) AND (modify_time > ? OR modify_time IS NULL) AND (language = ? OR language IS NULL) AND (tags = ? OR tags IS NULL) ORDER BY publish_time DESC, modify_time ASC LIMIT 100 OFFSET 0"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "BulkModify",
+        "code_value": "type BulkModify struct {\n    ID        uint      `gorm:\"primaryKey\"`\n    Name      string    `gorm:\"column:name\"`\n    Status    string    `gorm:\"column:status\"`\n    CreatedAt time.Time `gorm:\"column:created_at\"`\n    UpdatedAt time.Time `gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "StatusActive",
+        "code_value": "const StatusActive = \"active\""
+      },
+      {
+        "code_key": "StatusPending",
+        "code_value": "const StatusPending = \"pending\""
+      },
+      {
+        "code_key": "TableName",
+        "code_value": "const TableName = \"credit_scores\""
+      },
+      {
+        "code_key": "DefaultLimit",
+        "code_value": "const DefaultLimit = 100"
+      }
+    ]
+  },
+  "if-else+caller_complex": {
+    "function_name": "CountByDate",
+    "orm_code": "func CountByDate(db *gorm.DB, startDate, endDate string, assessorName string, minScore int, productPrefix string) (int64, error) {\n    var count int64\n    err := db.Model(&Performance{}).\n        Where(\"payroll_data.flag LIKE ? OR payroll_data.flag IS NULL\", \"%urgent%\").\n        Where(\"payroll_data.flag IN ?\", []string{\"HIGH\", \"MEDIUM\"}).\n        Where(\"payroll_data.flag BETWEEN ? AND ?\", startDate, endDate).\n        Where(\"payroll_data.flag = ?\", assessorName).\n        Where(\"payroll_data.flag = ?\", \"COMPLETED\").\n        Where(\"payroll_data.flag >= ?\", minScore).\n        Where(\"payroll_data.flag IS NOT NULL\").\n        Where(\"payroll_data.flag LIKE ?\", productPrefix+\"%\").\n        Count(&count).Error\n    \n    if err != nil {\n        return 0, err\n    }\n    return count, nil\n}",
+    "caller": "func UpdateByStatus(db *gorm.DB, startDate, endDate string, evaluator string, minRating int, productPrefix string) (int64, error) {\n    if evaluator == \"Jane Smith\" && minRating >= 80 {\n        // 条件分支1: 高优先级场景\n        count, err := CountByDate(db, startDate, endDate, evaluator, minRating, productPrefix)\n        if err != nil {\n            return 0, fmt.Errorf(\"high priority query failed: %v\", err)\n        }\n        return count, nil\n    } else if (evaluator == \"Alex Brown\" || evaluator == \"Chris Lee\") && minRating >= 60 {\n        // 条件分支2: 中低优先级场景\n        count, err := CountByDate(db, startDate, endDate, evaluator, minRating, productPrefix)\n        if err != nil {\n            return 0, fmt.Errorf(\"medium/low priority query failed: %v\", err)\n        }\n        return count, nil\n    } else {\n        // 默认分支\n        return 0, fmt.Errorf(\"invalid parameters combination\")\n    }\n}",
+    "sql_statement_list": [
+      {
+        "type": "param_dependent",
+        "variants": [
+          {
+            "scenario": "筛选重要或空备注、高优先级、2023年第二季度至第三季度、由Jane Smith评估、已批准、评分80+且有客户引用的记录",
+            "sql": "SELECT root_id, remarks, priority, evaluation_date, evaluator, current_status, rating, client_ref, item_code FROM achievement_records WHERE (remarks LIKE '%important%' OR remarks IS NULL) AND priority = 'HIGH' AND evaluation_date BETWEEN '2023-04-01' AND '2023-09-30' AND evaluator = 'Jane Smith' AND current_status = 'APPROVED' AND rating >= 80 AND client_ref IS NOT NULL AND item_code LIKE 'ITEM%' ORDER BY evaluation_date DESC, rating ASC LIMIT 50 OFFSET 0"
+          },
+          {
+            "scenario": "排除含pending的备注、中低优先级、2023年下半年评估、由Alex或Chris处理、未拒绝、评分60-90且有客户引用的记录",
+            "sql": "SELECT root_id, remarks, priority, evaluation_date, evaluator, current_status, rating, client_ref, item_code FROM achievement_records WHERE remarks NOT LIKE '%pending%' AND priority IN ('MEDIUM', 'LOW') AND evaluation_date >= '2023-07-01' AND evaluator IN ('Alex Brown', 'Chris Lee') AND current_status != 'REJECTED' AND rating BETWEEN 60 AND 90 AND client_ref IS NOT NULL AND item_code LIKE 'PRD%' ORDER BY evaluation_date ASC, rating DESC LIMIT 75 OFFSET 25"
+          }
+        ]
+      }
+    ],
+    "sql_types": [
+      "PARAM_DEPENDENT"
+    ],
+    "sql_length_match": true,
+    "code_meta_data": [
+      {
+        "code_key": "CountByDate",
+        "code_value": "type CountByDate struct {\n    ID        uint      `gorm:\"primaryKey\"`\n    Name      string    `gorm:\"column:name\"`\n    Status    string    `gorm:\"column:status\"`\n    CreatedAt time.Time `gorm:\"column:created_at\"`\n    UpdatedAt time.Time `gorm:\"column:updated_at\"`\n}"
+      },
+      {
+        "code_key": "StatusActive",
+        "code_value": "const StatusActive = \"active\""
+      },
+      {
+        "code_key": "StatusPending",
+        "code_value": "const StatusPending = \"pending\""
+      },
+      {
+        "code_key": "TableName",
+        "code_value": "const TableName = \"payroll_data\""
+      },
+      {
+        "code_key": "DefaultLimit",
+        "code_value": "const DefaultLimit = 100"
+      }
+    ]
+  }
+}

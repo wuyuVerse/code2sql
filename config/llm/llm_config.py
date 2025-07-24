@@ -14,7 +14,7 @@ class ServerConfig(BaseModel):
     host: str
     port: int
     model_name: str
-    timeout: int = 45
+    timeout: int = 120  # 增加到120秒
     max_retries: int = 1000
     api_key: Optional[str] = None
     

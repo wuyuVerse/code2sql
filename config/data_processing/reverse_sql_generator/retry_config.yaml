@@ -1,0 +1,27 @@
+# 反向SQL生成器重试配置
+retry_config:
+  # 最大重试次数
+  max_retries: 10
+  
+  # 重试间隔（秒）
+  retry_delay: 2
+  
+  # 是否启用指数退避
+  exponential_backoff: true
+  
+  # 最大重试延迟（秒）
+  max_retry_delay: 30
+  
+  # 重试条件
+  retry_conditions:
+    - "网络错误"
+    - "LLM响应超时"
+    - "JSON解析失败"
+    - "格式验证失败"
+    - "空响应"
+  
+  # 不重试的条件
+  no_retry_conditions:
+    - "参数错误"
+    - "配置错误"
+    - "权限错误" 

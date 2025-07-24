@@ -2768,10 +2768,10 @@ class WorkflowManager:
                                validate: bool = True,
                                step_name: str = "reverse_sql_generation") -> Dict[str, Any]:
         """
-        使用反向SQL生成器生成数据（SQL → ORM → Caller）
+        使用反向SQL生成器生成数据
         
         Args:
-            scenarios: 要生成的场景列表，如果为None则生成所有场景
+            scenarios: 要生成的场景列表
             count_per_scenario: 每个场景生成的数据包数量
             llm_server: LLM服务器名称
             temperature: LLM温度参数
@@ -2788,97 +2788,83 @@ class WorkflowManager:
         
         try:
             # 导入反向SQL生成器
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-            
-            try:
-                from config.data_processing.reverse_sql_generator.config import ReverseSQLConfig
-                from data_processing.reverse_sql_generator.generator import ReverseSQLGenerator
-            except ImportError:
-                # 尝试绝对导入
-                from config.data_processing.reverse_sql_generator.config import ReverseSQLConfig
-                from data_processing.reverse_sql_generator.generator import ReverseSQLGenerator
+            from data_processing.reverse_sql_generator.generator import ReverseSQLGenerator
+            from config.data_processing.reverse_sql_generator.config import ReverseSQLConfig
+            from utils.llm_client import LLMClient
             
             # 创建配置
             config = ReverseSQLConfig(
-                llm_server=llm_server,
-                output_path="reverse_sql_cases.json",
-                max_workers=max_workers,
+                llm_server=llm_server or "v3",
                 temperature=temperature,
-                top_p=0.8,
                 max_tokens=max_tokens
             )
-        
-            # 创建生成器
+            
+            # 创建反向SQL生成器（只传递config，LLMClient在内部创建）
             generator = ReverseSQLGenerator(config)
             
             # 确定要生成的场景
             if scenarios is None:
-                scenarios = config.list_scenarios()
-                if scenarios is None:
-                    # 使用硬编码的默认场景列表
-                    scenarios = [
-                        "if-else+caller", "if-else+orm", "switch", 
-                        "dynamic_query", "fixed_params", "complex_control"
-                    ]
+                scenarios = [
+                    "if-else+caller", "if-else+orm", "switch", 
+                    "dynamic_query", "fixed_params", "complex_control"
+                ]
             
             logger.info(f"将生成以下场景的数据: {scenarios}")
             logger.info(f"每个场景生成 {count_per_scenario} 个数据包")
             
-            # 准备生成任务
+            # 构建场景和复杂度组合
             scenarios_and_complexities = []
-            for sc in scenarios:
+            for scenario in scenarios:
+                # 为每个场景生成指定数量的案例，使用不同的复杂度
                 for i in range(count_per_scenario):
-                    # 根据场景选择复杂度
-                    if "complex" in sc:
-                        complexity = "complex"
-                    elif "dynamic" in sc or "switch" in sc:
-                        complexity = "medium"
-                    else:
-                        complexity = "simple"
-                    scenarios_and_complexities.append((sc, complexity))
+                    # 轮换使用复杂度级别
+                    complexity = ["simple", "medium", "complex"][i % 3]
+                    scenarios_and_complexities.append((scenario, complexity))
             
-            # 执行生成
-            if parallel:
-                logger.info(f"启用并行模式，使用 {max_workers} 个worker")
-                generated_cases = await generator.generate_multiple_cases(scenarios_and_complexities)
-            else:
-                logger.info("使用串行模式生成")
-                generated_cases = {}
-                
-                for scenario, complexity in scenarios_and_complexities:
-                    try:
-                        case = await generator.generate_complete_case(scenario, complexity)
-                        generated_cases.update(case)
-                        logger.info(f"完成场景 {scenario} ({complexity}) 的生成")
-                    except Exception as e:
-                        logger.warning(f"生成场景 {scenario} ({complexity}) 时出错: {e}")
-                        continue
+            logger.info(f"启用{'并行' if parallel else '串行'}模式，使用 {max_workers} 个worker")
             
-            # 验证生成的数据
+            # 生成数据
+            print("开始批量生成 {} 个反向案例...".format(len(scenarios_and_complexities)))
+            generated_cases = await generator.generate_multiple_cases(
+                scenarios_and_complexities, 
+                parallel=parallel, 
+                max_workers=max_workers
+            )
+            
+            print("✅ 批量生成完成: {} 个案例".format(len(generated_cases)))
+            
+            # 验证数据
             if validate:
                 logger.info("开始验证生成的数据...")
                 valid_count = 0
                 total_count = len(generated_cases)
                 
                 for case_key, case_data in generated_cases.items():
-                    if generator.validate_case(case_data):
-                        valid_count += 1
-                    else:
-                        logger.warning(f"案例 {case_key} 验证失败")
+                    try:
+                        # 基本验证 - 反向生成器的输出格式
+                        required_fields = ['function_name', 'orm_code', 'caller', 'sql_statement_list', 'sql_types', 'code_meta_data']
+                        if all(field in case_data for field in required_fields):
+                            valid_count += 1
+                        else:
+                            missing_fields = [field for field in required_fields if field not in case_data]
+                            logger.warning(f"案例 {case_key} 缺少必需字段: {missing_fields}")
+                    except Exception as e:
+                        logger.warning(f"验证案例 {case_key} 时出错: {e}")
                 
                 logger.info(f"数据验证完成: {valid_count}/{total_count} 个案例通过验证")
+            else:
+                valid_count = len(generated_cases)
             
             # 保存生成的数据
-            output_file = self.output_dir / f"{step_name}.json"
+            output_file = self.workflow_dir / f"{step_name}.json"
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(generated_cases, f, ensure_ascii=False, indent=2)
             
             logger.info(f"反向SQL数据已保存到: {output_file}")
             
             # 更新工作流状态
-            self.workflow_steps[step_name] = {
+            step_info = {
+                "step_name": step_name,
                 "status": "completed",
                 "timestamp": datetime.now().isoformat(),
                 "output_file": str(output_file),
@@ -2886,6 +2872,7 @@ class WorkflowManager:
                 "scenarios": scenarios,
                 "count_per_scenario": count_per_scenario
             }
+            self.workflow_steps.append(step_info)
             
             return {
                 "status": "success",
@@ -2901,11 +2888,13 @@ class WorkflowManager:
             logger.error(traceback.format_exc())
             
             # 更新工作流状态
-            self.workflow_steps[step_name] = {
+            step_info = {
+                "step_name": step_name,
                 "status": "failed",
                 "timestamp": datetime.now().isoformat(),
                 "error": str(e)
             }
+            self.workflow_steps.append(step_info)
             
             return {
                 "status": "error",
@@ -3046,6 +3035,13 @@ class WorkflowManager:
             json.dump(self.current_data, f, ensure_ascii=False, indent=2)
         logger.info(f"所有LLM分析后的数据已导出: {export_path}")
         return str(export_path)
+
+    async def close(self):
+        """关闭工作流管理器，清理资源"""
+        logger.info("正在关闭工作流管理器...")
+        # 这里可以添加任何需要清理的资源
+        # 目前主要是日志记录
+        logger.info("工作流管理器已关闭")
 
 
 

@@ -28,6 +28,7 @@ SCENARIOS = {
     "if-else+caller": "Caller代码中包含if-else条件判断，根据不同的条件构建不同的filter参数传递给ORM方法，ORM方法根据传入的参数内容使用不同的筛选条件构建SQL查询",
     "if-else+orm": "ORM方法内部包含if-else条件判断，根据不同的分支使用不同的筛选条件构建SQL查询",
     "no-where": "ORM方法需要外部传入部分where条件，但当前没有caller，所以部分where条件无法确定。where条件包含外来传入的参数和固定的查询逻辑",
+    "table_mapping_incomplete": "ORM方法中模型将结构体名错误理解为表名，而真实表名通过常量定义。需要明确区分结构体名和真实表名，避免模型错误地将结构体名当作表名使用",
 }
 
 # 变量名词库 - 确保生成不同的变量名
