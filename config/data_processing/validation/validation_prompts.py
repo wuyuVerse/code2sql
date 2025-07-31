@@ -510,3 +510,73 @@ ORM代码：{code_value}
 - 如果代码不会生成SQL，返回 `yes`。
 - 如果代码能生成SQL，返回 `no`。
 """
+
+# 添加condition_field_mapping场景的专门提示词
+CONDITION_FIELD_MAPPING_PROMPT_TEMPLATE = '''你是一个专门处理ORM条件字段映射场景的SQL生成专家。
+
+**场景特征识别：**
+当前分析的是条件字段映射场景，其特征是：
+- ORM方法中的条件判断逻辑与实际添加到SQL WHERE条件中的字段名不同
+- 存在字段映射或转换关系
+- 例如：判断region字段但实际添加cluster_id条件，判断category字段但实际添加type_id条件等
+
+**分析重点：**
+
+1. **条件字段映射识别**：
+   - 仔细分析代码中的if/switch条件判断逻辑
+   - 识别条件判断中使用的字段名（如"BillingAddress"、"Subject"、"Zone"、"Publisher"）
+   - 识别实际SQL中使用的字段名（如location_id、topic_id、area_id、author_id）
+   - 建立条件字段到SQL字段的映射关系
+
+2. **动态SQL构建分析**：
+   - 分析循环遍历filter参数的逻辑
+   - 识别每个条件分支对应的SQL字段映射
+   - 考虑不同条件组合产生的SQL变体
+   - 特别注意字符串拼接构建SQL的逻辑
+
+3. **表名和字段名确定**：
+   - 优先使用元数据中的表名映射（如PublicationScheduleTable = "publication_schedule"）
+   - 字段名优先使用结构体tag中的column标签
+   - 直接写在SQL字符串中的字段名按原样保留
+   - 默认转换：驼峰转下划线
+
+4. **SQL变体生成**：
+   - 为每个条件字段生成对应的SQL变体
+   - 考虑单条件、多条件组合的情况
+   - 生成无条件的默认SQL
+   - 确保每个变体都是完整可执行的SQL
+
+**输出格式要求：**
+输出标准JSON数组，必须包含以下结构：
+[
+  {{
+    "type": "param_dependent", 
+    "variants": [
+      {{"scenario": "无过滤条件", "sql": "SELECT * FROM publication_schedule WHERE deleted_at IS NULL;"}},
+      {{"scenario": "仅BillingAddress条件", "sql": "SELECT * FROM publication_schedule WHERE deleted_at IS NULL AND location_id=?;"}},
+      {{"scenario": "仅Subject条件", "sql": "SELECT * FROM publication_schedule WHERE deleted_at IS NULL AND topic_id=?;"}},
+      {{"scenario": "仅Zone条件", "sql": "SELECT * FROM publication_schedule WHERE deleted_at IS NULL AND area_id IN (?);"}},
+      {{"scenario": "仅Publisher条件", "sql": "SELECT * FROM publication_schedule WHERE deleted_at IS NULL AND author_id=?;"}},
+      {{"scenario": "多条件组合", "sql": "SELECT * FROM publication_schedule WHERE deleted_at IS NULL AND location_id=? AND topic_id=? AND area_id IN (?) AND author_id=?;"}}
+    ]
+  }}
+]
+
+**严格要求：**
+- 仅输出纯JSON数组，无其他文字说明
+- SQL语句必须完整可执行，以分号结尾
+- 参数使用问号(?)表示
+- 必须包含所有可能的条件组合变体
+- 确保字段映射关系正确
+
+**分析目标代码：**
+函数名称：{function_name}
+ORM代码：{orm_code}
+调用者：{caller}
+元数据：{code_meta_data_str}
+
+**特别注意：**
+- 这是条件字段映射场景，必须识别出条件判断字段与SQL字段的映射关系
+- 生成的SQL必须反映实际的字段映射逻辑
+- 每个条件分支都应该有对应的SQL变体
+'''

@@ -1373,7 +1373,7 @@ class WorkflowManager:
             return unique_keywords
 
         # 设置并发控制
-        concurrency = 50  # 降低并发数以避免服务器过载
+        concurrency = 10  # 降低并发数以避免服务器过载
         semaphore = asyncio.Semaphore(concurrency)
 
         # 延迟导入避免循环依赖
@@ -2192,7 +2192,7 @@ class WorkflowManager:
                     }
             
             # 设置并发控制
-            concurrency = 20  # 降低并发数以避免服务器过载
+            concurrency = 10  # 降低并发数以避免服务器过载
             semaphore = asyncio.Semaphore(concurrency)
             
             async def process_with_semaphore(session: aiohttp.ClientSession, record: Dict[str, Any]) -> Dict[str, Any]:
@@ -2731,6 +2731,13 @@ class WorkflowManager:
                 valid_count = sum(1 for result in validation_results.values() if result == "valid")
                 logger.info(f"验证结果: {valid_count}/{len(generated_packs)} 个包通过验证")
             
+            # 关闭生成器，清理资源
+            try:
+                await generator.close()
+                logger.info("已关闭合成数据生成器")
+            except Exception as e:
+                logger.warning(f"关闭生成器时出错: {e}")
+            
             return step_info
             
         except ImportError as e:
@@ -2747,6 +2754,15 @@ class WorkflowManager:
         
         except Exception as e:
                 logger.error(f"合成数据生成失败: {e}")
+                
+                # 尝试关闭生成器
+                try:
+                    if 'generator' in locals():
+                        await generator.close()
+                        logger.info("已关闭合成数据生成器")
+                except Exception as close_error:
+                    logger.warning(f"关闭生成器时出错: {close_error}")
+                
                 error_step_info = {
                     'step_name': step_name,
                     'step_type': 'synthetic_data_generation',
@@ -2903,7 +2919,7 @@ class WorkflowManager:
 
     async def generate_sql_from_synthetic_data(self, 
                                         input_file: str = None,
-                                        concurrency: int = 80,
+                                        concurrency: int = 10,
                                         step_name: str = "sql_generation") -> Dict[str, Any]:
         """
         从合成数据生成SQL语句
@@ -2937,10 +2953,18 @@ class WorkflowManager:
                 if synthetic_output_dir.exists():
                     json_files = list(synthetic_output_dir.glob("*.json"))
                     if json_files:
-                        # 按修改时间排序，取最新的
-                        json_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-                        input_file = str(json_files[0])
-                        logger.info(f"使用最新的合成数据文件: {input_file}")
+                        # 优先选择主数据文件，而不是验证文件
+                        main_files = [f for f in json_files if not f.name.endswith('_validation.json')]
+                        if main_files:
+                            # 按修改时间排序，取最新的主文件
+                            main_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                            input_file = str(main_files[0])
+                            logger.info(f"使用最新的合成数据文件: {input_file}")
+                        else:
+                            # 如果没有主文件，使用最新的文件
+                            json_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                            input_file = str(json_files[0])
+                            logger.info(f"使用最新的合成数据文件: {input_file}")
                     else:
                         raise FileNotFoundError("未找到合成数据文件")
                 else:
@@ -3437,7 +3461,7 @@ async def run_synthetic_data_generation_workflow(base_output_dir: str = "workflo
                                          max_workers: int = 4,
                                          validate: bool = True,
                                          generate_sql: bool = True,
-                                         sql_concurrency: int = 80) -> Dict[str, Any]:
+                                         sql_concurrency: int = 10) -> Dict[str, Any]:
     """
     运行合成数据生成工作流
     

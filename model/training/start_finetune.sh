@@ -14,15 +14,25 @@
 # 获取脚本所在目录（绝对路径）
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# 激活Python虚拟环境
-VENV_PATH="$SCRIPT_DIR/LLaMA-Factory/.venv/bin/activate"
-if [ -f "$VENV_PATH" ]; then
-    echo "Activating Python virtual environment from $VENV_PATH"
-    source "$VENV_PATH"
-else
-    echo "Error: Virtual environment not found at $VENV_PATH"
+# 激活conda环境
+echo "Activating conda environment: llama-factory"
+source /data/miniconda/etc/profile.d/conda.sh
+conda activate llama-factory
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to activate conda environment 'llama-factory'"
     exit 1
 fi
+echo "Successfully activated conda environment: llama-factory"
+
+# 设置SwanLab API key
+export SWANLAB_API_KEY=jQJOUlRX6FNORBPoVl8op
+echo "SwanLab API key has been set"
+
+# 设置LLaMA-Factory路径
+export LLAMAFACTORY_DIR="$SCRIPT_DIR/LLaMA-Factory"
+export PYTHONPATH="$LLAMAFACTORY_DIR/src:$PYTHONPATH"
+echo "Set LLaMA-Factory directory: $LLAMAFACTORY_DIR"
+echo "Updated PYTHONPATH: $PYTHONPATH"
 
 # 训练脚本路径（与当前脚本同目录）
 TRAIN_SCRIPT="$SCRIPT_DIR/train_qwen3_ft.py"
@@ -42,6 +52,10 @@ LOG_FILE_1="${LOG_DIR}/train_gpus01234567_${TIMESTAMP}.log"
 echo "Starting training task on GPUs 0-7..."
 echo "Config: ${CONFIG_1}"
 echo "Log file: ${LOG_FILE_1}"
+
+# 切换到LLaMA-Factory目录并设置环境变量
+cd "$LLAMAFACTORY_DIR"
+export PYTHONPATH="$LLAMAFACTORY_DIR/src:$PYTHONPATH"
 
 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 nohup python -u "$TRAIN_SCRIPT" --config "$CONFIG_1" > "$LOG_FILE_1" 2>&1 &
 PID_1=$!

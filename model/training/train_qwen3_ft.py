@@ -162,7 +162,10 @@ def main():
         # 更新配置中的数据集名称与样本数
         config["dataset"] = dataset_name
         config["max_samples"] = dataset_info[dataset_name]["num_samples"]
+        # 更新数据集目录路径为数据转换器生成的正确路径
+        config["dataset_dir"] = str(converter.training_data_dir)
         logger.info(f"数据转换完成，新数据集: {dataset_name}，样本数: {config['max_samples']}")
+        logger.info(f"数据集目录: {config['dataset_dir']}")
     except Exception as e:
         logger.error(f"数据转换失败，将中止训练: {e}")
         return
@@ -225,7 +228,19 @@ def main():
         llamafactory_dir = Path(__file__).parent / "LLaMA-Factory"
         logger.info(f"切换到 LLaMA-Factory 目录: {llamafactory_dir}")
         
-        result = subprocess.run(cmd, check=True, capture_output=False, cwd=str(llamafactory_dir))
+        # 确保 SwanLab API key 被传递到子进程
+        env = os.environ.copy()
+        if "SWANLAB_API_KEY" not in env:
+            env["SWANLAB_API_KEY"] = "jQJOUlRX6FNORBPoVl8op"
+            logger.info("已设置 SwanLab API key")
+        
+        # 确保Python路径正确设置，解决分布式训练中的模块导入问题
+        llamafactory_src_path = str(llamafactory_dir / "src")
+        if llamafactory_src_path not in env.get("PYTHONPATH", ""):
+            env["PYTHONPATH"] = f"{llamafactory_src_path}:{env.get('PYTHONPATH', '')}"
+            logger.info(f"设置PYTHONPATH: {env['PYTHONPATH']}")
+        
+        result = subprocess.run(cmd, check=True, capture_output=False, cwd=str(llamafactory_dir), env=env)
         logger.info("训练完成！")
         
     except subprocess.CalledProcessError as e:

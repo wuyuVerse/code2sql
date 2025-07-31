@@ -37,7 +37,7 @@ async def main():
         count_per_scenario=2,
         llm_server="http://212.64.90.3:8081/v1",
         generate_sql=True,  # 启用SQL生成
-        sql_concurrency=20  # SQL生成并发数
+        sql_concurrency=10  # SQL生成并发数
     )
     
     print(f"工作流完成: {result}")

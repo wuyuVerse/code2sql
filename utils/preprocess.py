@@ -35,7 +35,7 @@ async def preprocess_record(record: Dict) -> Tuple[bool, Set[str], Set[str]]:
         config = load_llm_prompts_config()
         
         # 创建AsyncClient并调用LLM抽取逻辑
-        api_base = os.getenv("V3_API_URL", "http://212.64.90.3:8081/v1")
+        api_base = os.getenv("V3_API_URL", "http://182.254.152.117:8081/v1")
         api_key = "EMPTY"
         
         async with openai.AsyncClient(base_url=api_base, api_key=api_key) as client:

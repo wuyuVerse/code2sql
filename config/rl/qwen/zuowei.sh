@@ -1,6 +1,6 @@
 # Tested successfully on the hiyouga/verl:ngc-th2.6.0-cu126-vllm0.8.4-flashinfer0.2.2-cxx11abi0 image.
 # It outperforms the Qwen2 7B base model by two percentage points on the test set of GSM8K.
-export PYTHONPATH="/data/local_disk3/zuowei/verl-main:$PYTHONPATH"
+export PYTHONPATH="/data/cloud_disk_1/home/wuyu/code2sql/verl-main:$PYTHONPATH"
 
 export GLOO_SOCKET_IFNAME=eth0
 export NCCL_SOCKET_IFNAME=eth0
@@ -11,7 +11,7 @@ export NCCL_DEBUG=INFO
 
 
 # 创建日志目录
-LOG_DIR="/data/local_disk3/zuowei/logs"
+LOG_DIR="/data/cloud_disk_1/home/wuyu/code2sql/logs"
 mkdir -p ${LOG_DIR}
 
 # 生成带时间戳的日志文件名
@@ -26,15 +26,15 @@ set -x
 # 运行训练并在后台运行
 nohup python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=reinforce_plus_plus \
-    data.train_files=/data/local_disk3/zuowei/verl_train_dataset_train_no_think.parquet \
-    data.val_files=/data/local_disk3/zuowei/verl_train_dataset_val_no_think.parquet \
+    data.train_files=/data/cloud_disk_1/home/wuyu/code2sql/verl_train_dataset_train_no_think.parquet \
+    data.val_files=/data/cloud_disk_1/home/wuyu/code2sql/verl_train_dataset_val_no_think.parquet \
     data.train_batch_size=64 \
     data.max_prompt_length=8192 \
     data.max_response_length=4096 \
     data.filter_overlong_prompts=True \
     data.truncation='left' \
     data.trust_remote_code=True \
-    actor_rollout_ref.model.path=/data/local_disk3/zuowei/models/Qwen3-32B \
+    actor_rollout_ref.model.path=/data/cloud_disk_1/home/wuyu/code2sql/models/Qwen3-32B \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.model.trust_remote_code=True \
     actor_rollout_ref.actor.optim.lr=3e-6 \
@@ -60,7 +60,7 @@ nohup python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
     reward_model.reward_manager=batch \
     algorithm.use_kl_in_reward=False \
-    custom_reward_function.path=/data/local_disk3/zuowei/verl-main/reward_lib/composite_reward.py \
+    custom_reward_function.path=/data/cloud_disk_1/home/wuyu/code2sql/verl-main/reward_lib/composite_reward.py \
     custom_reward_function.name=compute_score_batch \
     trainer.critic_warmup=0 \
     trainer.logger=['console','swanlab'] \

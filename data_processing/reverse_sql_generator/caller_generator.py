@@ -70,10 +70,13 @@ class CallerGenerator:
                 print(f"    - 提示词长度: {len(prompt)} 字符")
                 
                 # 调用LLM生成Caller代码
-                response = self.llm_client.call_sync(
+                response = await self.llm_client.call_async_with_format_validation(
+                    self.session,
                     prompt,
+                    validator=lambda x: True,  # 简单验证，总是返回True
                     max_tokens=self.config.max_tokens,
-                    temperature=self.config.temperature
+                    temperature=self.config.temperature,
+                    module="reverse_sql_generator"
                 )
                 
                 print(f"    - LLM响应类型: {type(response)}")
@@ -453,10 +456,13 @@ class CallerGenerator:
         print(f"  - 提示词长度: {len(prompt)} 字符")
         
         # 调用LLM生成复杂控制流Caller代码
-        response = self.llm_client.call_sync(
+        response = await self.llm_client.call_async_with_format_validation(
+            self.session,
             prompt,
+            validator=lambda x: True,  # 简单验证，总是返回True
             max_tokens=self.config.max_tokens,
-            temperature=self.config.temperature
+            temperature=self.config.temperature,
+            module="reverse_sql_generator"
         )
         
         print(f"  - LLM响应类型: {type(response)}")
@@ -525,10 +531,13 @@ class CallerGenerator:
         print(f"  - 提示词长度: {len(prompt)} 字符")
         
         # 调用LLM生成固定参数Caller代码
-        response = self.llm_client.call_sync(
+        response = await self.llm_client.call_async_with_format_validation(
+            self.session,
             prompt,
+            validator=lambda x: True,  # 简单验证，总是返回True
             max_tokens=self.config.max_tokens,
-            temperature=self.config.temperature
+            temperature=self.config.temperature,
+            module="reverse_sql_generator"
         )
         
         print(f"  - LLM响应类型: {type(response)}")
@@ -597,10 +606,13 @@ class CallerGenerator:
         print(f"  - 提示词长度: {len(prompt)} 字符")
         
         # 调用LLM生成if-else+switch混合Caller代码
-        response = self.llm_client.call_sync(
+        response = await self.llm_client.call_async_with_format_validation(
+            self.session,
             prompt,
+            validator=lambda x: True,  # 简单验证，总是返回True
             max_tokens=self.config.max_tokens,
-            temperature=self.config.temperature
+            temperature=self.config.temperature,
+            module="reverse_sql_generator"
         )
         
         print(f"  - LLM响应类型: {type(response)}")
@@ -669,10 +681,13 @@ class CallerGenerator:
         print(f"  - 提示词长度: {len(prompt)} 字符")
         
         # 调用LLM生成条件链式Caller代码
-        response = self.llm_client.call_sync(
+        response = await self.llm_client.call_async_with_format_validation(
+            self.session,
             prompt,
+            validator=lambda x: True,  # 简单验证，总是返回True
             max_tokens=self.config.max_tokens,
-            temperature=self.config.temperature
+            temperature=self.config.temperature,
+            module="reverse_sql_generator"
         )
         
         print(f"  - LLM响应类型: {type(response)}")
@@ -741,10 +756,13 @@ class CallerGenerator:
         print(f"  - 提示词长度: {len(prompt)} 字符")
         
         # 调用LLM生成多分支事务处理Caller代码
-        response = self.llm_client.call_sync(
+        response = await self.llm_client.call_async_with_format_validation(
+            self.session,
             prompt,
+            validator=lambda x: True,  # 简单验证，总是返回True
             max_tokens=self.config.max_tokens,
-            temperature=self.config.temperature
+            temperature=self.config.temperature,
+            module="reverse_sql_generator"
         )
         
         print(f"  - LLM响应类型: {type(response)}")
@@ -813,10 +831,13 @@ class CallerGenerator:
         print(f"  - 提示词长度: {len(prompt)} 字符")
         
         # 调用LLM生成状态机式分支Caller代码
-        response = self.llm_client.call_sync(
+        response = await self.llm_client.call_async_with_format_validation(
+            self.session,
             prompt,
+            validator=lambda x: True,  # 简单验证，总是返回True
             max_tokens=self.config.max_tokens,
-            temperature=self.config.temperature
+            temperature=self.config.temperature,
+            module="reverse_sql_generator"
         )
         
         print(f"  - LLM响应类型: {type(response)}")
@@ -885,10 +906,13 @@ class CallerGenerator:
         print(f"  - 提示词长度: {len(prompt)} 字符")
         
         # 调用LLM生成条件分支+meta Caller代码
-        response = self.llm_client.call_sync(
+        response = await self.llm_client.call_async_with_format_validation(
+            self.session,
             prompt,
+            validator=lambda x: True,  # 简单验证，总是返回True
             max_tokens=self.config.max_tokens,
-            temperature=self.config.temperature
+            temperature=self.config.temperature,
+            module="reverse_sql_generator"
         )
         
         print(f"  - LLM响应类型: {type(response)}")

@@ -1,6 +1,6 @@
 # 模型基本配置
 model_name: qwen3_14b
-model_path: /data/local_disk0/wuyu/model/qwen/Qwen3-14B
+model_path: /data/cloud_disk_1/wuyu/model/qwen/Qwen3-14B
 template: qwen
 trust_remote_code: true
 
@@ -17,7 +17,7 @@ use_unsloth: false
 cuda_visible_devices: "0,1,2,3"  # 指定要使用的GPU设备，用逗号分隔
 
 # 数据集配置 - 使用ORM2SQL数据集（数据集名称和样本数将在训练时自动更新）
-dataset_dir: /home/wuyu/code2sql/model/data/orm2sql_training_data
+dataset_dir: model/data/orm2sql_training_data
 dataset: auto_generated  # 训练时自动更新为实际数据集名称
 template: qwen
 cutoff_len: 10000

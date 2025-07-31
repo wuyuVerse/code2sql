@@ -3,17 +3,17 @@ workflow_settings:
   # 并发处理设置
   concurrency:
     # SQL完整性检查并发数
-    sql_completeness_check: 100
+    sql_completeness_check: 10
     # SQL正确性检查并发数  
-    sql_correctness_check: 100
+    sql_correctness_check: 10
     # 冗余SQL验证并发数
-    redundant_sql_validation: 100
+    redundant_sql_validation: 10
     # 控制流验证并发数
-    control_flow_validation: 100
+    control_flow_validation: 10
     # 关键词数据处理并发数
-    keyword_data_processing: 100
+    keyword_data_processing: 10
     # 默认并发数（备用）
-    default: 50
+    default: 10
   
   # 超时设置（秒）
   timeout:

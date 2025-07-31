@@ -42,39 +42,6 @@ class LLMClient:
             )
         return self._openai_client
     
-    def call_sync(self, prompt: str, max_tokens: int = 2048, temperature: float = 0.0) -> str:
-        """同步调用LLM API
-        
-        Args:
-            prompt: 输入提示
-            max_tokens: 最大token数
-            temperature: 温度参数
-            
-        Returns:
-            LLM的响应内容
-        """
-        headers = {"Content-Type": "application/json"}
-        
-        data = {
-            "model": self.config.model_name,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        }
-        
-        try:
-            response = requests.post(
-                self.config.chat_completions_url,
-                headers=headers,
-                json=data,
-                timeout=self.config.timeout
-            )
-            response.raise_for_status()
-            result = response.json()
-            return result['choices'][0]['message']['content']
-        except Exception as e:
-            logger.debug(f"❌ {self.server_name.upper()} 同步API调用失败: {e}")
-            return ""
     
     def _format_error_details(self, e: Exception) -> str:
         """格式化错误详情"""
@@ -179,6 +146,16 @@ class LLMClient:
                     result = await response.json()
                     response_content = result['choices'][0]['message']['content']
                     
+                    # 检查响应内容是否为空
+                    if not response_content or not response_content.strip():
+                        logger.warning(f"⚠️ {self.server_name.upper()} 返回空响应内容")
+                        if attempt < max_retries - 1:
+                            logger.warning(f"   即将重试，等待 {retry_delay * (attempt + 1):.1f} 秒...")
+                            await asyncio.sleep(retry_delay * (attempt + 1))
+                            continue
+                        else:
+                            raise Exception(f"{self.server_name.upper()} 返回空响应内容，已达到最大重试次数")
+                    
                     # 验证格式
                     validation_result = validator(response_content)
                     
@@ -223,12 +200,13 @@ class LLMClient:
                     error_details = self._format_error_details(e)
                     logger.error(f"❌ {self.server_name.upper()} 异步API调用失败，已达到最大重试次数")
                     logger.error(f"   错误详情: {error_details}")
-                    return ""
+                    raise e  # 抛出异常而不是返回空字符串
             except Exception as e:
                 error_details = self._format_error_details(e)
                 logger.error(f"❌ {self.server_name.upper()} 异步API调用遇到非网络错误")
                 logger.error(f"   错误详情: {error_details}")
-                return ""
+                raise e  # 抛出异常而不是返回空字符串
         
-            return ""
+        # 如果所有重试都失败，抛出异常
+        raise Exception(f"{self.server_name.upper()} 异步API调用失败，已达到最大重试次数")
 

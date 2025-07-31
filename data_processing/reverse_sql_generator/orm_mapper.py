@@ -64,10 +64,13 @@ class ORMMapper:
                 print(f"    - 提示词长度: {len(prompt)} 字符")
                 
                 # 调用LLM进行ORM映射
-                response = self.llm_client.call_sync(
+                response = await self.llm_client.call_async_with_format_validation(
+                    self.session,
                     prompt,
+                    validator=lambda x: True,  # 简单验证，总是返回True
                     max_tokens=self.config.max_tokens,
-                    temperature=self.config.temperature
+                    temperature=self.config.temperature,
+                    module="reverse_sql_generator"
                 )
                 
                 print(f"    - LLM响应类型: {type(response)}")
@@ -132,10 +135,13 @@ class ORMMapper:
         print(f"  - 提示词长度: {len(prompt)} 字符")
         
         # 调用LLM进行ORM映射
-        response = self.llm_client.call_sync(
+        response = await self.llm_client.call_async_with_format_validation(
+            self.session,
             prompt,
+            validator=lambda x: True,  # 简单验证，总是返回True
             max_tokens=self.config.max_tokens,
-            temperature=self.config.temperature
+            temperature=self.config.temperature,
+            module="reverse_sql_generator"
         )
         
         print(f"  - LLM响应类型: {type(response)}")
@@ -195,10 +201,13 @@ class ORMMapper:
                 print(f"    - 提示词长度: {len(prompt)} 字符")
                 
                 # 调用LLM进行ORM映射
-                response = self.llm_client.call_sync(
+                response = await self.llm_client.call_async_with_format_validation(
+                    self.session,
                     prompt,
+                    validator=lambda x: True,  # 简单验证，总是返回True
                     max_tokens=self.config.max_tokens,
-                    temperature=self.config.temperature
+                    temperature=self.config.temperature,
+                    module="reverse_sql_generator"
                 )
                 
                 print(f"    - LLM响应类型: {type(response)}")

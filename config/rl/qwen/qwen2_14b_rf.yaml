@@ -16,8 +16,8 @@ data_conversion:
 # 数据配置
 data:
   # 数据文件路径（将由数据转换器自动生成）
-  train_files: " /home/wuyu/code2sql/model/data/orm2sql_rl_data/rl_orm2sql_training_data_20250723_222302_train.parquet"
-  val_files: " /home/wuyu/code2sql/model/data/orm2sql_rl_data/rl_orm2sql_training_data_20250723_222302_val.parquet"
+  train_files: " /data/cloud_disk_1/home/wuyu/code2sql/model/data/orm2sql_rl_data/rl_orm2sql_training_data_20250723_222302_train.parquet"
+  val_files: " /data/cloud_disk_1/home/wuyu/code2sql/model/data/orm2sql_rl_data/rl_orm2sql_training_data_20250723_222302_val.parquet"
   
   # 训练参数
   train_batch_size: 128  # 调整为64，能被8整除
@@ -35,7 +35,7 @@ algorithm:
 # Actor, Rollout, Reference 模型配置
 actor_rollout_ref:
   model:
-    path: "/home/wuyu/code2sql/saves/v5-tmp"
+    path: "/data/cloud_disk_1/home/wuyu/code2sql/saves/v5-tmp"
     use_remove_padding: true
     enable_gradient_checkpointing: true
     trust_remote_code: true
@@ -75,7 +75,7 @@ reward_model:
 
 # 自定义奖励函数配置
 custom_reward_function:
-  path: "/home/wuyu/code2sql/model/rl/code2sql_reward_v2.py"
+  path: "/data/cloud_disk_1/home/wuyu/code2sql/model/rl/code2sql_reward_v2.py"
   name: "compute_score_batch"
   # 调试模式开关，true时输出详细日志，false时只输出关键信息
   debug_mode: true
@@ -93,16 +93,16 @@ trainer:
   test_freq: 5
   total_epochs: 10
   # 模型保存路径设置
-  default_local_dir: "/home/wuyu/code2sql/saves/rl/checkpoints"
+  default_local_dir: "/data/cloud_disk_1/home/wuyu/code2sql/saves/rl/checkpoints"
 
 # 环境变量配置（用于脚本设置）
 environment:
   CUDA_VISIBLE_DEVICES: "0,1,2,3,4,5,6,7"  # 指定使用0,1,2,3,4,5,6,7号GPU
-  HF_MODULES_CACHE: "/home/wuyu/code2sql/saves/rl/hf_modules_cache"
-  TRANSFORMERS_CACHE: "/home/wuyu/code2sql/saves/rl/transformers_cache"
-  HF_HOME: "/home/wuyu/code2sql/saves/rl/huggingface"
+  HF_MODULES_CACHE: "/data/cloud_disk_1/home/wuyu/code2sql/saves/rl/hf_modules_cache"
+  TRANSFORMERS_CACHE: "/data/cloud_disk_1/home/wuyu/code2sql/saves/rl/transformers_cache"
+  HF_HOME: "/data/cloud_disk_1/home/wuyu/code2sql/saves/rl/huggingface"
   # 设置模型保存路径
-  VERL_SAVE_DIR: "/home/wuyu/code2sql/saves/rl"
+  VERL_SAVE_DIR: "/data/cloud_disk_1/home/wuyu/code2sql/saves/rl"
   GLOO_SOCKET_IFNAME: "eth0"
   NCCL_SOCKET_IFNAME: "eth0"
   NCCL_IB_DISABLE: "1"

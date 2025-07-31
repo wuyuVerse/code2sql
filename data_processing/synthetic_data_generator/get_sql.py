@@ -9,13 +9,15 @@ import time
 import base64
 from mimetypes import guess_type
 import random
-from typing import Any
+from typing import Any, Dict, List
+import aiohttp # Added for call_async_with_format_validation
 
 # 导入提示词模板
 from config.data_processing.validation.validation_prompts import (
     ANALYSIS_PROMPT_TEMPLATE,
     VERIFICATION_PROMPT_TEMPLATE,
-    FORMATTING_PROMPT_TEMPLATE
+    FORMATTING_PROMPT_TEMPLATE,
+    CONDITION_FIELD_MAPPING_PROMPT_TEMPLATE
 )
 
 # Venus API 配置
@@ -25,6 +27,7 @@ os.environ['OPENAI_API_KEY'] = "jCpoXAdfcikWZBUT6F1Vsr35@3538"
 CODE_ORM_MYSQL_SQL_EXTRACT = ANALYSIS_PROMPT_TEMPLATE
 CODE_ORM_MYSQL_SQL_VERIFY = VERIFICATION_PROMPT_TEMPLATE
 CODE_ORM_MYSQL_SQL_FORMAT = FORMATTING_PROMPT_TEMPLATE
+CODE_ORM_MYSQL_SQL_CONDITION_FIELD_MAPPING = CONDITION_FIELD_MAPPING_PROMPT_TEMPLATE
 
 # 添加指数退避重试机制
 async def retry_with_exponential_backoff(func, max_retries=10, base_delay=1.0, max_delay=60.0, backoff_factor=2.0, jitter=True):
@@ -67,6 +70,717 @@ async def retry_with_exponential_backoff(func, max_retries=10, base_delay=1.0, m
     else:
         raise Exception("所有重试都失败，但没有捕获到具体异常")
 
+# 互斥条件场景专用SQL生成函数
+async def generate_mutual_exclusive_sql(orm_code: str, llm_client, semaphore=None) -> Dict:
+    """
+    为mutual_exclusive_conditions场景生成SQL
+    
+    Args:
+        orm_code: ORM代码
+        llm_client: LLM客户端
+        semaphore: 信号量（用于并发控制）
+        
+    Returns:
+        包含SQL变体的字典
+    """
+    from config.data_processing.synthetic_data_generator.prompts import PROMPT_SQL_MUTUAL_EXCLUSIVE
+    
+    prompt = PROMPT_SQL_MUTUAL_EXCLUSIVE.format(
+        orm_code=orm_code
+    )
+    
+    if semaphore:
+        async with semaphore:
+            response = await llm_client.call_async(prompt)
+    else:
+        response = await llm_client.call_async(prompt)
+    
+    # 清理响应
+    response = response.replace("```json", "").replace("```", "")
+    
+    try:
+        sql_data = json.loads(response)
+        return sql_data
+    except json.JSONDecodeError as e:
+        print(f"解析mutual_exclusive_conditions SQL响应失败: {e}")
+        print(f"响应内容: {response[:200]}...")
+        raise ValueError(f"mutual_exclusive_conditions SQL生成失败: {e}")
+
+# 互斥条件场景SQL分析函数
+async def analyze_mutual_exclusive_sql(orm_code: str, function_name: str = "", caller: str = "", code_meta_data: str = "", llm_client=None, semaphore=None) -> List[Dict]:
+    """
+    分析mutual_exclusive_conditions场景的ORM代码，生成SQL语句
+    
+    Args:
+        orm_code: ORM代码
+        function_name: 函数名称
+        caller: 调用者信息
+        code_meta_data: 元数据信息
+        llm_client: LLM客户端
+        semaphore: 信号量
+        
+    Returns:
+        SQL分析结果列表
+    """
+    if not llm_client:
+        from utils.llm_client import LLMClient
+        llm_client = LLMClient("v3")
+    
+    print(f"分析mutual_exclusive_conditions SQL: {function_name}")
+    print(f"代码长度: {len(orm_code)} 字符")
+    
+    # 使用标准的分析提示词模板
+    from config.data_processing.validation.validation_prompts import ANALYSIS_PROMPT_TEMPLATE
+    
+    prompt = ANALYSIS_PROMPT_TEMPLATE.format(
+        function_name=function_name,
+        code_value=orm_code,
+        caller=caller,
+        code_meta_data_str=code_meta_data,
+        sql_pattern_cnt=1  # mutual_exclusive_conditions场景通常生成1个SQL模式
+    )
+    
+    # 创建简单的验证函数 - 对于mutual_exclusive_conditions场景使用宽松验证
+    def validate_json_response(response: str) -> bool:
+        # 对于mutual_exclusive_conditions场景，使用宽松验证
+        # 只要响应不为空就认为格式正确
+        if response and response.strip():
+            return True
+        return False
+    
+    if semaphore:
+        async with semaphore:
+            async with aiohttp.ClientSession() as session:
+                response = await llm_client.call_async_with_format_validation(
+                    session=session,
+                    prompt=prompt,
+                    validator=validate_json_response,
+                    max_tokens=4096,
+                    temperature=0.0
+                )
+    else:
+        async with aiohttp.ClientSession() as session:
+            response = await llm_client.call_async_with_format_validation(
+                session=session,
+                prompt=prompt,
+                validator=validate_json_response,
+                max_tokens=4096,
+                temperature=0.0
+            )
+    
+    # 处理LLM响应 - 支持分析报告格式和JSON格式
+    def parse_llm_response(response_text: str) -> dict:
+        """解析LLM响应，支持分析报告格式和JSON格式"""
+        # 首先尝试提取JSON格式
+        json_content = extract_json_from_response(response_text)
+        if json_content:
+            parsed_json = clean_and_parse_json(json_content)
+            if parsed_json:
+                return parsed_json
+        
+        # 如果JSON解析失败，尝试解析分析报告格式
+        return parse_analysis_report(response_text)
+    
+    def extract_json_from_response(response_text: str) -> str:
+        """从响应中提取JSON内容，支持多种格式"""
+        # 清理响应
+        cleaned_response = response_text.replace("```json", "").replace("```", "").strip()
+        
+        # 方法1：查找JSON开始位置
+        json_start = cleaned_response.find('{')
+        if json_start == -1:
+            json_start = cleaned_response.find('[')
+        
+        if json_start == -1:
+            # 如果没有找到JSON标记，尝试查找其他可能的JSON内容
+            # 查找包含SQL语句的部分
+            sql_markers = ['"sql":', '"type":', '"variants":']
+            for marker in sql_markers:
+                marker_pos = cleaned_response.find(marker)
+                if marker_pos != -1:
+                    # 向前查找最近的{或[
+                    for i in range(marker_pos, -1, -1):
+                        if cleaned_response[i] in '{[':
+                            json_start = i
+                            break
+                    if json_start != -1:
+                        break
+        
+        if json_start == -1:
+            return None
+        
+        # 提取JSON部分
+        json_content = cleaned_response[json_start:]
+        
+        # 尝试找到完整的JSON对象
+        brace_count = 0
+        bracket_count = 0
+        json_end = 0
+        in_string = False
+        escape_next = False
+        
+        for i, char in enumerate(json_content):
+            if escape_next:
+                escape_next = False
+                continue
+            
+            if char == '\\':
+                escape_next = True
+                continue
+            
+            if char == '"' and not escape_next:
+                in_string = not in_string
+                continue
+            
+            if not in_string:
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                elif char == '[':
+                    bracket_count += 1
+                elif char == ']':
+                    bracket_count -= 1
+                
+                # 检查是否找到完整的JSON
+                if (brace_count == 0 and bracket_count == 0) or (brace_count == 0 and bracket_count > 0):
+                    json_end = i + 1
+                    break
+        
+        if json_end > 0:
+            json_content = json_content[:json_end]
+        
+        return json_content
+    
+    def clean_and_parse_json(json_content: str) -> dict:
+        """清理并解析JSON内容"""
+        if not json_content:
+            return None
+        
+        # 尝试直接解析
+        try:
+            return json.loads(json_content)
+        except json.JSONDecodeError:
+            pass
+        
+        # 清理JSON内容
+        cleaned_json = json_content.strip()
+        
+        # 移除可能的空对象前缀
+        if cleaned_json.startswith('{}'):
+            cleaned_json = cleaned_json[2:].strip()
+        
+        # 移除可能的空数组前缀
+        if cleaned_json.startswith('[]'):
+            cleaned_json = cleaned_json[2:].strip()
+        
+        # 尝试解析清理后的JSON
+        try:
+            return json.loads(cleaned_json)
+        except json.JSONDecodeError:
+            pass
+        
+        # 尝试修复常见的JSON格式问题
+        # 1. 修复缺少引号的键名
+        import re
+        # 匹配没有引号的键名: {key: value} -> {"key": value}
+        cleaned_json = re.sub(r'(\s*)(\w+)(\s*):', r'\1"\2"\3:', cleaned_json)
+        
+        try:
+            return json.loads(cleaned_json)
+        except json.JSONDecodeError:
+            pass
+        
+        # 2. 尝试提取数组内容
+        array_start = cleaned_json.find('[')
+        array_end = cleaned_json.rfind(']')
+        if array_start != -1 and array_end != -1 and array_end > array_start:
+            try:
+                return json.loads(cleaned_json[array_start:array_end+1])
+            except json.JSONDecodeError:
+                pass
+        
+        # 3. 尝试提取对象内容
+        obj_start = cleaned_json.find('{')
+        obj_end = cleaned_json.rfind('}')
+        if obj_start != -1 and obj_end != -1 and obj_end > obj_start:
+            try:
+                return json.loads(cleaned_json[obj_start:obj_end+1])
+            except json.JSONDecodeError:
+                pass
+        
+        return None
+    
+    def parse_analysis_report(report_text: str) -> dict:
+        """解析分析报告格式的响应"""
+        # 检查是否是边界条件情况
+        if "NO SQL GENERATE" in report_text.upper() or "不能生成SQL" in report_text:
+            # 提取无法生成SQL的原因
+            reason = extract_reason_from_report(report_text)
+            return [{
+                "type": "NO_SQL_GENERATE",
+                "variants": [{
+                    "scenario": reason,
+                    "sql": ""
+                }]
+            }]
+        
+        if "LACK INFORMATION" in report_text.upper() or "信息缺失" in report_text:
+            # 提取缺失信息和推测的SQL
+            reason, sql = extract_lack_info_from_report(report_text)
+            return [{
+                "type": "LACK_INFORMATION",
+                "variants": [{
+                    "scenario": reason,
+                    "sql": sql
+                }]
+            }]
+        
+        # 尝试从分析报告中提取SQL语句
+        sql_statements = extract_sql_from_report(report_text)
+        if sql_statements:
+            return sql_statements
+        
+        # 如果无法解析，返回默认的无法生成SQL结果
+        return [{
+            "type": "NO_SQL_GENERATE",
+            "variants": [{
+                "scenario": "无法解析LLM响应",
+                "sql": ""
+            }]
+        }]
+    
+    def extract_reason_from_report(report_text: str) -> str:
+        """从报告中提取无法生成SQL的原因"""
+        # 查找常见的原因标记
+        markers = [
+            "不能生成SQL的原因：",
+            "无法生成SQL的原因：",
+            "原因：",
+            "NO SQL GENERATE:",
+            "LACK INFORMATION:"
+        ]
+        
+        for marker in markers:
+            if marker in report_text:
+                start = report_text.find(marker) + len(marker)
+                end = report_text.find('\n', start)
+                if end == -1:
+                    end = len(report_text)
+                return report_text[start:end].strip()
+        
+        return "代码不会生成SQL"
+    
+    def extract_lack_info_from_report(report_text: str) -> tuple:
+        """从报告中提取缺失信息和推测的SQL"""
+        # 查找缺失信息描述
+        reason = "信息缺失"
+        sql = ""
+        
+        # 查找推测的SQL
+        sql_markers = ["推测的SQL语句：", "推测SQL：", "SQL：", "生成的SQL："]
+        for marker in sql_markers:
+            if marker in report_text:
+                start = report_text.find(marker) + len(marker)
+                end = report_text.find('\n', start)
+                if end == -1:
+                    end = len(report_text)
+                sql = report_text[start:end].strip()
+                break
+        
+        return reason, sql
+    
+    def extract_sql_from_report(report_text: str) -> list:
+        """从分析报告中提取SQL语句"""
+        sql_list = []
+        
+        # 查找SQL语句的模式
+        import re
+        
+        # 查找SELECT语句
+        select_pattern = r'SELECT\s+.*?;'
+        select_matches = re.findall(select_pattern, report_text, re.IGNORECASE | re.DOTALL)
+        
+        # 查找INSERT语句
+        insert_pattern = r'INSERT\s+.*?;'
+        insert_matches = re.findall(insert_pattern, report_text, re.IGNORECASE | re.DOTALL)
+        
+        # 查找UPDATE语句
+        update_pattern = r'UPDATE\s+.*?;'
+        update_matches = re.findall(update_pattern, report_text, re.IGNORECASE | re.DOTALL)
+        
+        # 查找DELETE语句
+        delete_pattern = r'DELETE\s+.*?;'
+        delete_matches = re.findall(delete_pattern, report_text, re.IGNORECASE | re.DOTALL)
+        
+        # 合并所有SQL语句
+        all_sql = select_matches + insert_matches + update_matches + delete_matches
+        
+        if all_sql:
+            # 清理SQL语句
+            cleaned_sql = []
+            for sql in all_sql:
+                sql = sql.strip()
+                if sql and not sql.startswith('--'):
+                    cleaned_sql.append(sql)
+            
+            if cleaned_sql:
+                return cleaned_sql
+        
+        return None
+    
+    # 解析LLM响应
+    sql_analysis = parse_llm_response(response)
+    
+    if sql_analysis is None:
+        print(f"无法解析LLM响应")
+        print(f"响应内容: {response[:200]}...")
+        raise ValueError(f"mutual_exclusive_conditions SQL分析失败: 无法解析响应")
+    
+    print(f"SQL分析结果类型: {type(sql_analysis)}")
+    print(f"SQL分析结果长度: {len(str(sql_analysis))} 字符")
+    return sql_analysis
+
+# 互斥条件场景SQL验证函数
+async def verify_mutual_exclusive_sql(sql_analysis: List[Dict], orm_code: str, function_name: str = "", caller: str = "", code_meta_data: str = "", llm_client=None, semaphore=None) -> List[Dict]:
+    """
+    验证mutual_exclusive_conditions场景的SQL分析结果
+    
+    Args:
+        sql_analysis: SQL分析结果
+        orm_code: ORM代码
+        function_name: 函数名称
+        caller: 调用者信息
+        code_meta_data: 元数据信息
+        llm_client: LLM客户端
+        semaphore: 信号量
+        
+    Returns:
+        验证后的SQL分析结果
+    """
+    if not llm_client:
+        from utils.llm_client import LLMClient
+        llm_client = LLMClient("v3")
+    
+    print(f"验证SQL分析结果: {function_name}")
+    print(f"SQL分析结果类型: {type(sql_analysis)}")
+    print(f"SQL分析结果长度: {len(str(sql_analysis))} 字符")
+    
+    # 使用标准的验证提示词模板
+    from config.data_processing.validation.validation_prompts import VERIFICATION_PROMPT_TEMPLATE
+    
+    # 将sql_analysis转换为字符串格式
+    sql_statement = json.dumps(sql_analysis, ensure_ascii=False, indent=2)
+    
+    prompt = VERIFICATION_PROMPT_TEMPLATE.format(
+        function_definition=orm_code,
+        caller=caller,
+        code_chain=code_meta_data,
+        sql_statement=sql_statement,
+        sql_pattern_cnt=1  # mutual_exclusive_conditions场景通常生成1个SQL模式
+    )
+    
+    # 创建简单的验证函数 - 对于mutual_exclusive_conditions场景使用宽松验证
+    def validate_json_response(response: str) -> bool:
+        # 对于mutual_exclusive_conditions场景，使用宽松验证
+        # 只要响应不为空就认为格式正确
+        if response and response.strip():
+            return True
+        return False
+    
+    if semaphore:
+        async with semaphore:
+            async with aiohttp.ClientSession() as session:
+                response = await llm_client.call_async_with_format_validation(
+                    session=session,
+                    prompt=prompt,
+                    validator=validate_json_response,
+                    max_tokens=2048,
+                    temperature=0.0
+                )
+    else:
+        async with aiohttp.ClientSession() as session:
+            response = await llm_client.call_async_with_format_validation(
+                session=session,
+                prompt=prompt,
+                validator=validate_json_response,
+                max_tokens=2048,
+                temperature=0.0
+            )
+    
+    # 处理LLM响应 - 支持分析报告格式和JSON格式
+    def parse_llm_response(response_text: str) -> dict:
+        """解析LLM响应，支持分析报告格式和JSON格式"""
+        # 首先尝试提取JSON格式
+        json_content = extract_json_from_response(response_text)
+        if json_content:
+            parsed_json = clean_and_parse_json(json_content)
+            if parsed_json:
+                return parsed_json
+        
+        # 如果JSON解析失败，尝试解析分析报告格式
+        return parse_analysis_report(response_text)
+    
+    def extract_json_from_response(response_text: str) -> str:
+        """从响应中提取JSON内容，支持多种格式"""
+        # 清理响应
+        cleaned_response = response_text.replace("```json", "").replace("```", "").strip()
+        
+        # 方法1：查找JSON开始位置
+        json_start = cleaned_response.find('{')
+        if json_start == -1:
+            json_start = cleaned_response.find('[')
+        
+        if json_start == -1:
+            # 如果没有找到JSON标记，尝试查找其他可能的JSON内容
+            # 查找包含SQL语句的部分
+            sql_markers = ['"sql":', '"type":', '"variants":']
+            for marker in sql_markers:
+                marker_pos = cleaned_response.find(marker)
+                if marker_pos != -1:
+                    # 向前查找最近的{或[
+                    for i in range(marker_pos, -1, -1):
+                        if cleaned_response[i] in '{[':
+                            json_start = i
+                            break
+                    if json_start != -1:
+                        break
+        
+        if json_start == -1:
+            return None
+        
+        # 提取JSON部分
+        json_content = cleaned_response[json_start:]
+        
+        # 尝试找到完整的JSON对象
+        brace_count = 0
+        bracket_count = 0
+        json_end = 0
+        in_string = False
+        escape_next = False
+        
+        for i, char in enumerate(json_content):
+            if escape_next:
+                escape_next = False
+                continue
+            
+            if char == '\\':
+                escape_next = True
+                continue
+            
+            if char == '"' and not escape_next:
+                in_string = not in_string
+                continue
+            
+            if not in_string:
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                elif char == '[':
+                    bracket_count += 1
+                elif char == ']':
+                    bracket_count -= 1
+                
+                # 检查是否找到完整的JSON
+                if (brace_count == 0 and bracket_count == 0) or (brace_count == 0 and bracket_count > 0):
+                    json_end = i + 1
+                    break
+        
+        if json_end > 0:
+            json_content = json_content[:json_end]
+        
+        return json_content
+    
+    def clean_and_parse_json(json_content: str) -> dict:
+        """清理并解析JSON内容"""
+        if not json_content:
+            return None
+        
+        # 尝试直接解析
+        try:
+            return json.loads(json_content)
+        except json.JSONDecodeError:
+            pass
+        
+        # 清理JSON内容
+        cleaned_json = json_content.strip()
+        
+        # 移除可能的空对象前缀
+        if cleaned_json.startswith('{}'):
+            cleaned_json = cleaned_json[2:].strip()
+        
+        # 移除可能的空数组前缀
+        if cleaned_json.startswith('[]'):
+            cleaned_json = cleaned_json[2:].strip()
+        
+        # 尝试解析清理后的JSON
+        try:
+            return json.loads(cleaned_json)
+        except json.JSONDecodeError:
+            pass
+        
+        # 尝试修复常见的JSON格式问题
+        # 1. 修复缺少引号的键名
+        import re
+        # 匹配没有引号的键名: {key: value} -> {"key": value}
+        cleaned_json = re.sub(r'(\s*)(\w+)(\s*):', r'\1"\2"\3:', cleaned_json)
+        
+        try:
+            return json.loads(cleaned_json)
+        except json.JSONDecodeError:
+            pass
+        
+        # 2. 尝试提取数组内容
+        array_start = cleaned_json.find('[')
+        array_end = cleaned_json.rfind(']')
+        if array_start != -1 and array_end != -1 and array_end > array_start:
+            try:
+                return json.loads(cleaned_json[array_start:array_end+1])
+            except json.JSONDecodeError:
+                pass
+        
+        # 3. 尝试提取对象内容
+        obj_start = cleaned_json.find('{')
+        obj_end = cleaned_json.rfind('}')
+        if obj_start != -1 and obj_end != -1 and obj_end > obj_start:
+            try:
+                return json.loads(cleaned_json[obj_start:obj_end+1])
+            except json.JSONDecodeError:
+                pass
+        
+        return None
+    
+    def parse_analysis_report(report_text: str) -> dict:
+        """解析分析报告格式的响应"""
+        # 检查是否是边界条件情况
+        if "NO SQL GENERATE" in report_text.upper() or "不能生成SQL" in report_text:
+            # 提取无法生成SQL的原因
+            reason = extract_reason_from_report(report_text)
+            return [{
+                "type": "NO_SQL_GENERATE",
+                "variants": [{
+                    "scenario": reason,
+                    "sql": ""
+                }]
+            }]
+        
+        if "LACK INFORMATION" in report_text.upper() or "信息缺失" in report_text:
+            # 提取缺失信息和推测的SQL
+            reason, sql = extract_lack_info_from_report(report_text)
+            return [{
+                "type": "LACK_INFORMATION",
+                "variants": [{
+                    "scenario": reason,
+                    "sql": sql
+                }]
+            }]
+        
+        # 尝试从分析报告中提取SQL语句
+        sql_statements = extract_sql_from_report(report_text)
+        if sql_statements:
+            return sql_statements
+        
+        # 如果无法解析，返回默认的无法生成SQL结果
+        return [{
+            "type": "NO_SQL_GENERATE",
+            "variants": [{
+                "scenario": "无法解析LLM响应",
+                "sql": ""
+            }]
+        }]
+    
+    def extract_reason_from_report(report_text: str) -> str:
+        """从报告中提取无法生成SQL的原因"""
+        # 查找常见的原因标记
+        markers = [
+            "不能生成SQL的原因：",
+            "无法生成SQL的原因：",
+            "原因：",
+            "NO SQL GENERATE:",
+            "LACK INFORMATION:"
+        ]
+        
+        for marker in markers:
+            if marker in report_text:
+                start = report_text.find(marker) + len(marker)
+                end = report_text.find('\n', start)
+                if end == -1:
+                    end = len(report_text)
+                return report_text[start:end].strip()
+        
+        return "代码不会生成SQL"
+    
+    def extract_lack_info_from_report(report_text: str) -> tuple:
+        """从报告中提取缺失信息和推测的SQL"""
+        # 查找缺失信息描述
+        reason = "信息缺失"
+        sql = ""
+        
+        # 查找推测的SQL
+        sql_markers = ["推测的SQL语句：", "推测SQL：", "SQL：", "生成的SQL："]
+        for marker in sql_markers:
+            if marker in report_text:
+                start = report_text.find(marker) + len(marker)
+                end = report_text.find('\n', start)
+                if end == -1:
+                    end = len(report_text)
+                sql = report_text[start:end].strip()
+                break
+        
+        return reason, sql
+    
+    def extract_sql_from_report(report_text: str) -> list:
+        """从分析报告中提取SQL语句"""
+        sql_list = []
+        
+        # 查找SQL语句的模式
+        import re
+        
+        # 查找SELECT语句
+        select_pattern = r'SELECT\s+.*?;'
+        select_matches = re.findall(select_pattern, report_text, re.IGNORECASE | re.DOTALL)
+        
+        # 查找INSERT语句
+        insert_pattern = r'INSERT\s+.*?;'
+        insert_matches = re.findall(insert_pattern, report_text, re.IGNORECASE | re.DOTALL)
+        
+        # 查找UPDATE语句
+        update_pattern = r'UPDATE\s+.*?;'
+        update_matches = re.findall(update_pattern, report_text, re.IGNORECASE | re.DOTALL)
+        
+        # 查找DELETE语句
+        delete_pattern = r'DELETE\s+.*?;'
+        delete_matches = re.findall(delete_pattern, report_text, re.IGNORECASE | re.DOTALL)
+        
+        # 合并所有SQL语句
+        all_sql = select_matches + insert_matches + update_matches + delete_matches
+        
+        if all_sql:
+            # 清理SQL语句
+            cleaned_sql = []
+            for sql in all_sql:
+                sql = sql.strip()
+                if sql and not sql.startswith('--'):
+                    cleaned_sql.append(sql)
+            
+            if cleaned_sql:
+                return cleaned_sql
+        
+        return None
+    
+    # 解析LLM响应
+    verified_sql_analysis = parse_llm_response(response)
+    
+    if verified_sql_analysis is None:
+        print(f"无法解析LLM响应")
+        print(f"响应内容: {response[:200]}...")
+        raise ValueError(f"mutual_exclusive_conditions SQL验证失败: 无法解析响应")
+    
+    print(f"验证后SQL分析结果类型: {type(verified_sql_analysis)}")
+    print(f"验证后SQL分析结果长度: {len(str(verified_sql_analysis))} 字符")
+    return verified_sql_analysis
+
 # 保存中间结果的函数
 def save_intermediate_results(results, output_file, stage_name):
     """保存中间结果到文件"""
@@ -92,7 +806,7 @@ def load_intermediate_results(output_file, stage_name):
             print(f"加载 {stage_name} 阶段中间结果失败: {e}")
     return None
 
-async def process_json_file_async(input_file, output_file, concurrency=80):
+async def process_json_file_async(input_file, output_file, concurrency=10):
     """处理JSON文件并将结果保存到单个文件中，包含SQL语句"""
     # 验证输入文件
     if not validate_input_file(input_file):
@@ -187,34 +901,24 @@ async def process_json_file_async(input_file, output_file, concurrency=80):
                 code_meta_data_str += meta_code + "\n"
         sql_pattern_cnt = function_info.get('sql_pattern_cnt', None)
         
-        # 场景1：不带caller
-        caller = ""
-        scenario_key = f"{function_name}_no_caller"
-        prompt = CODE_ORM_MYSQL_SQL_EXTRACT.format(
-            function_name=function_name,
-            code_value=code_value,
-            caller=caller,
-            code_meta_data_str=code_meta_data_str,
-            sql_pattern_cnt=sql_pattern_cnt if sql_pattern_cnt is not None else ""
-        )
+        # 识别ORM场景并选择合适的提示词模板
+        scenario_type, prompt_template = identify_orm_scenario(function_info)
+        print(f"函数 {function_name} 识别为场景: {scenario_type}")
         
-        task_info = {
-            'function_info': function_info,
-            'caller': caller,
-            'scenario_key': scenario_key,
-            'prompt': prompt,
-            'sql_pattern_cnt': sql_pattern_cnt
-        }
-        all_tasks.append(task_info)
+        # 检查是否是必须带caller的场景
+        scenario = function_info.get('scenario', '')
+        is_mutual_exclusive = scenario == 'mutual_exclusive_conditions'
+        is_table_name_from_caller = scenario == 'table_name_from_caller'
+        requires_caller = is_mutual_exclusive or is_table_name_from_caller
         
-        # 场景2+：每个caller
-        callers = function_info.get('callers', [])
-        for i, caller_info in enumerate(callers):
-            caller = caller_info.get('code_value', '')
-            scenario_key = f"{function_name}_caller_{i}"
-            prompt = CODE_ORM_MYSQL_SQL_EXTRACT.format(
+        # 对于必须带caller的场景，不创建不带caller的任务
+        if not requires_caller:
+            # 场景1：不带caller
+            caller = ""
+            scenario_key = f"{function_name}_no_caller"
+            prompt = prompt_template.format(
                 function_name=function_name,
-                code_value=code_value,
+                code_value=code_value,  # 使用code_value参数名
                 caller=caller,
                 code_meta_data_str=code_meta_data_str,
                 sql_pattern_cnt=sql_pattern_cnt if sql_pattern_cnt is not None else ""
@@ -224,6 +928,35 @@ async def process_json_file_async(input_file, output_file, concurrency=80):
                 'function_info': function_info,
                 'caller': caller,
                 'scenario_key': scenario_key,
+                'scenario_type': scenario_type,
+                'prompt': prompt,
+                'sql_pattern_cnt': sql_pattern_cnt
+            }
+            all_tasks.append(task_info)
+        else:
+            if is_mutual_exclusive:
+                print(f"mutual_exclusive_conditions场景 {function_name} 跳过不带caller的任务")
+            elif is_table_name_from_caller:
+                print(f"table_name_from_caller场景 {function_name} 跳过不带caller的任务")
+        
+        # 场景2+：每个caller
+        callers = function_info.get('callers', [])
+        for i, caller_info in enumerate(callers):
+            caller = caller_info.get('code_value', '')
+            scenario_key = f"{function_name}_caller_{i}"
+            prompt = prompt_template.format(
+                function_name=function_name,
+                code_value=code_value,  # 使用code_value参数名
+                caller=caller,
+                code_meta_data_str=code_meta_data_str,
+                sql_pattern_cnt=sql_pattern_cnt if sql_pattern_cnt is not None else ""
+            )
+            
+            task_info = {
+                'function_info': function_info,
+                'caller': caller,
+                'scenario_key': scenario_key,
+                'scenario_type': scenario_type,
                 'prompt': prompt,
                 'sql_pattern_cnt': sql_pattern_cnt
             }
@@ -241,7 +974,17 @@ async def process_json_file_async(input_file, output_file, concurrency=80):
         task_map = {}
         
         for task_info in all_tasks:
-            task = asyncio.create_task(send_request_async(task_info['prompt'], semaphore))
+            # 检查是否是mutual_exclusive_conditions场景
+            if task_info['scenario_type'] == 'mutual_exclusive_conditions':
+                print(f"检测到mutual_exclusive_conditions场景，使用专用处理函数")
+                # 使用专用的mutual_exclusive_conditions处理函数
+                task = asyncio.create_task(
+                    process_mutual_exclusive_task(task_info, semaphore)
+                )
+            else:
+                # 使用标准的SQL生成流程
+                task = asyncio.create_task(send_request_async(task_info['prompt'], semaphore))
+            
             initial_tasks.append(task)
             task_map[task] = task_info
         
@@ -466,8 +1209,14 @@ async def process_json_file_async(input_file, output_file, concurrency=80):
             else:
                 caller_tasks.append(task)
         
-        # 添加不带caller的结果
-        if no_caller_task:
+        # 检查是否是必须带caller的场景
+        scenario = function_info.get('scenario', '')
+        is_mutual_exclusive = scenario == 'mutual_exclusive_conditions'
+        is_table_name_from_caller = scenario == 'table_name_from_caller'
+        requires_caller = is_mutual_exclusive or is_table_name_from_caller
+        
+        # 对于必须带caller的场景，不允许空的caller
+        if no_caller_task and not requires_caller:
             result_entry = {
                 'function_name': function_name,
                 'orm_code': function_info.get('code_value', ''),
@@ -479,6 +1228,11 @@ async def process_json_file_async(input_file, output_file, concurrency=80):
                 'sql_pattern_cnt': function_info.get('sql_pattern_cnt', None)
             }
             final_results.append(result_entry)
+        elif no_caller_task and requires_caller:
+            if is_mutual_exclusive:
+                print(f"警告: mutual_exclusive_conditions场景 {function_name} 没有caller，跳过该结果")
+            elif is_table_name_from_caller:
+                print(f"警告: table_name_from_caller场景 {function_name} 没有caller，跳过该结果")
         
         # 添加每个caller的结果
         for task in caller_tasks:
@@ -522,9 +1276,60 @@ async def process_json_file_async(input_file, output_file, concurrency=80):
     
     return valid_count, invalid_count
 
-def process_json_file(input_file, output_file, concurrency=80):
+def process_json_file(input_file, output_file, concurrency=10):
     """同步版本的处理函数"""
     return asyncio.run(process_json_file_async(input_file, output_file, concurrency))
+
+# 添加场景识别函数
+def identify_orm_scenario(function_info):
+    """
+    识别ORM代码的场景类型，选择合适的提示词模板
+    
+    Args:
+        function_info: 函数信息字典
+        
+    Returns:
+        tuple: (场景类型, 提示词模板)
+    """
+    code_value = function_info.get('code_value', '')
+    scenario = function_info.get('scenario', '')
+    
+    # 检查是否是mutual_exclusive_conditions场景
+    if scenario == 'mutual_exclusive_conditions':
+        return 'mutual_exclusive_conditions', CODE_ORM_MYSQL_SQL_EXTRACT
+    
+    # 检查是否是table_name_from_caller场景
+    if scenario == 'table_name_from_caller':
+        return 'table_name_from_caller', CODE_ORM_MYSQL_SQL_EXTRACT
+    
+    # 检查是否是condition_field_mapping场景
+    if scenario == 'condition_field_mapping':
+        return 'condition_field_mapping', CODE_ORM_MYSQL_SQL_CONDITION_FIELD_MAPPING
+    
+    # 检查代码中是否包含条件字段映射的特征
+    # condition_mapping_patterns = [
+    #     r'if\s+\w+\s*==\s*["\'](\w+)["\']\s*{',  # if field == "value" {
+    #     r'switch\s+\w+\s*{',  # switch field {
+    #     r'case\s+["\'](\w+)["\']:',  # case "value":
+    #     r'filter\[["\'](\w+)["\']\]',  # filter["field"]
+    #     r'Where\(["\'](\w+)\s*=\s*\?["\']',  # Where("field = ?")
+    # ]
+    
+    # for pattern in condition_mapping_patterns:
+    #     if re.search(pattern, code_value, re.IGNORECASE):
+    #         # 进一步检查是否包含字段映射逻辑
+    #         mapping_indicators = [
+    #             'location_id', 'topic_id', 'area_id', 'author_id',  # 常见映射字段
+    #             'cluster_id', 'type_id', 'category_id', 'region_id',  # 更多映射字段
+    #             'BillingAddress', 'Subject', 'Zone', 'Publisher',  # 映射键名
+    #         ]
+            
+    #         for indicator in mapping_indicators:
+    #             if indicator in code_value:
+    #                 return 'condition_field_mapping', CODE_ORM_MYSQL_SQL_CONDITION_FIELD_MAPPING
+    
+    # 默认使用标准提示词
+    return 'standard', CODE_ORM_MYSQL_SQL_EXTRACT
 
 # 添加输入验证
 def validate_input_file(input_file):
@@ -597,7 +1402,7 @@ def classify_sql(sql_statement):
 async def send_request_async(question, semaphore):
     async with semaphore:
         client = openai.AsyncClient(
-            base_url="http://212.64.90.3:8081/v1", 
+            base_url="http://182.254.152.117:8081/v1", 
             api_key="EMPTY"
         )
         
@@ -626,7 +1431,7 @@ async def verify_sql_async(sql_statement, function_definition=None, code_meta_da
     
     async with semaphore:
         client = openai.AsyncClient(
-            base_url="http://212.64.90.3:8081/v1", 
+            base_url="http://182.254.152.117:8081/v1", 
             api_key="EMPTY"
         )
         
@@ -644,7 +1449,8 @@ async def verify_sql_async(sql_statement, function_definition=None, code_meta_da
             caller=caller if caller else "",
             code_chain=code_chain,
             sql_statement=sql_statement,
-            sql_pattern_cnt=sql_pattern_cnt if sql_pattern_cnt is not None else ""
+            sql_pattern_cnt=sql_pattern_cnt if sql_pattern_cnt is not None else "",
+            code_value=function_definition if function_definition else ""  # 添加code_value参数
         )
         
         async def make_verify_request():
@@ -681,7 +1487,7 @@ async def verify_sql_async(sql_statement, function_definition=None, code_meta_da
 async def format_sql_async(sql_statement, semaphore):
     async with semaphore:
         client = openai.AsyncClient(
-            base_url="http://212.64.90.3:8081/v1", 
+            base_url="http://182.254.152.117:8081/v1", 
             api_key="EMPTY"
         )
         
@@ -992,21 +1798,122 @@ async def validate_and_regenerate_sql(sql_output: Any,
     print(f"⚠️ 所有重新生成尝试都失败，返回原始输出")
     return sql_output
 
+# 处理mutual_exclusive_conditions场景的专用函数
+async def process_mutual_exclusive_task(task_info, semaphore):
+    """
+    处理mutual_exclusive_conditions场景的SQL生成任务
+    
+    Args:
+        task_info: 任务信息
+        semaphore: 信号量
+        
+    Returns:
+        SQL分析结果
+    """
+    try:
+        from utils.llm_client import LLMClient
+        
+        # 创建LLM客户端
+        llm_client = LLMClient("v3")
+        
+        # 提取任务信息
+        function_info = task_info['function_info']
+        function_name = function_info.get('function_name', '')
+        code_value = function_info.get('code_value', '')
+        caller = task_info['caller']
+        code_meta_data = function_info.get('code_meta_data', [])
+        
+        # 格式化元数据
+        code_meta_data_str = ""
+        for meta in code_meta_data:
+            meta_code = meta.get('code_value', '')
+            if meta_code:
+                code_meta_data_str += meta_code + "\n"
+        
+        # 格式化调用者信息
+        caller_str = caller if caller else ""
+        
+        print(f"处理mutual_exclusive_conditions任务: {function_name}")
+        print(f"代码长度: {len(code_value)} 字符")
+        print(f"调用者长度: {len(caller_str)} 字符")
+        
+        # 使用信号量控制并发
+        if semaphore:
+            async with semaphore:
+                # 使用专用的mutual_exclusive_conditions分析函数
+                sql_analysis = await analyze_mutual_exclusive_sql(
+                    orm_code=code_value,
+                    function_name=function_name,
+                    caller=caller_str,
+                    code_meta_data=code_meta_data_str,
+                    llm_client=llm_client,
+                    semaphore=None  # 这里不需要再传递信号量，因为已经在外部控制了
+                )
+                
+                # 验证SQL分析结果
+                verified_sql = await verify_mutual_exclusive_sql(
+                    sql_analysis=sql_analysis,
+                    orm_code=code_value,
+                    function_name=function_name,
+                    caller=caller_str,
+                    code_meta_data=code_meta_data_str,
+                    llm_client=llm_client,
+                    semaphore=None  # 这里不需要再传递信号量，因为已经在外部控制了
+                )
+        else:
+            # 使用专用的mutual_exclusive_conditions分析函数
+            sql_analysis = await analyze_mutual_exclusive_sql(
+                orm_code=code_value,
+                function_name=function_name,
+                caller=caller_str,
+                code_meta_data=code_meta_data_str,
+                llm_client=llm_client,
+                semaphore=None
+            )
+            
+            # 验证SQL分析结果
+            verified_sql = await verify_mutual_exclusive_sql(
+                sql_analysis=sql_analysis,
+                orm_code=code_value,
+                function_name=function_name,
+                caller=caller_str,
+                code_meta_data=code_meta_data_str,
+                llm_client=llm_client,
+                semaphore=None
+            )
+        
+        # 返回验证后的SQL结果
+        # 将字典格式转换为字符串格式，以兼容工作流期望的格式
+        if isinstance(verified_sql, dict):
+            import json
+            return json.dumps(verified_sql, ensure_ascii=False, indent=2)
+        elif isinstance(verified_sql, list):
+            import json
+            return json.dumps(verified_sql, ensure_ascii=False, indent=2)
+        else:
+            return str(verified_sql)
+        
+    except Exception as e:
+        print(f"处理mutual_exclusive_conditions任务失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"mutual_exclusive_conditions处理失败: {str(e)}"
+
 
 if __name__ == '__main__':
     # 导入必要的库
     import argparse
     
     # 配置文件路径
-    input_file = '/data/local_disk0/shawn/api_benchmark/evaluate/const_scenarios.json'
-    output_file = '/data/local_disk0/shawn/api_benchmark/evaluate/const_scenarios_sql.json'
+    input_file = '/data/cloud_disk_1/home/wuyu/code2sql/const_scenarios.json'
+    output_file = '/data/cloud_disk_1/home/wuyu/code2sql/const_scenarios_sql.json'
     # input_file = '/data/local_disk0/shawn/dirty_work/temp_show.json'
     # output_file = '/data/local_disk0/shawn/dirty_work/temp_show_by_caller.json'
     # 添加命令行参数支持
     parser = argparse.ArgumentParser(description='分析ORM代码有效性并生成SQL语句')
     parser.add_argument('--input', type=str, default=input_file, help='输入JSON文件路径')
     parser.add_argument('--output', type=str, default=output_file, help='输出JSON文件路径')
-    parser.add_argument('--concurrency', type=int, default=100, help='并发请求数量')
+    parser.add_argument('--concurrency', type=int, default=10, help='并发请求数量')
     args = parser.parse_args()
     
     # 处理JSON文件

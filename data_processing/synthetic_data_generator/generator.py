@@ -243,6 +243,20 @@ class SyntheticDataGenerator:
                 example=example_str,
                 **var_names
             )
+        elif scenario == "mutual_exclusive_conditions":
+            from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_MUTUAL_EXCLUSIVE
+            orm_prompt = PROMPT_ORM_MUTUAL_EXCLUSIVE.format(
+                example=example_str,
+                **var_names
+            )
+        elif scenario == "table_name_from_caller":
+            from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_TABLE_NAME_FROM_CALLER
+            orm_prompt = PROMPT_ORM_TABLE_NAME_FROM_CALLER.format(
+                scenario=scenario,
+                scenario_desc=scenario_desc,
+                example=example_str,
+                **var_names
+            )
         elif scenario == "no-where":
             from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_NO_WHERE
             orm_prompt = PROMPT_ORM_NO_WHERE.format(
@@ -252,6 +266,18 @@ class SyntheticDataGenerator:
         elif scenario == "table_mapping_incomplete":
             from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_TABLE_MAPPING_INCOMPLETE
             orm_prompt = PROMPT_ORM_TABLE_MAPPING_INCOMPLETE.format(
+                example=example_str,
+                **var_names
+            )
+        elif scenario == "condition_field_mapping":
+            from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_CONDITION_FIELD_MAPPING
+            orm_prompt = PROMPT_ORM_CONDITION_FIELD_MAPPING.format(
+                example=example_str,
+                **var_names
+            )
+        elif scenario == "where_condition_with_fixed_values":
+            from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_WHERE_FIXED_VALUES
+            orm_prompt = PROMPT_ORM_WHERE_FIXED_VALUES.format(
                 example=example_str,
                 **var_names
             )
@@ -292,6 +318,100 @@ class SyntheticDataGenerator:
             # no-where场景不需要生成caller，直接使用空数组
             self._thread_safe_print("  - no-where场景跳过caller生成...")
             caller_blocks = []
+        elif scenario == "table_name_from_caller":
+            # table_name_from_caller场景必须生成caller，因为表名信息依赖于caller
+            self._thread_safe_print("  - table_name_from_caller场景必须生成caller...")
+            example_caller = "无样例数据"
+            if example:
+                example_data = list(example.values())[0]
+                if 'callers' in example_data and example_data['callers']:
+                    caller_data = example_data['callers'][0]
+                    caller_clean = {k: v for k, v in caller_data.items() 
+                                  if k not in ["code_file", "code_version", "code_label", "code_type", 
+                                             "code_start_line", "code_end_line", "code_start_column"]}
+                    example_caller = json.dumps(caller_clean, indent=2, ensure_ascii=False)
+            
+            # 使用table_name_from_caller专用的Caller提示词
+            from config.data_processing.synthetic_data_generator.prompts import PROMPT_CALLER_TABLE_NAME_FROM_CALLER
+            caller_prompt = PROMPT_CALLER_TABLE_NAME_FROM_CALLER.format(
+                orm_block=json.dumps(orm_block, ensure_ascii=False),
+                example_caller=example_caller,
+                **var_names
+            )
+            
+            caller_response = await self._call_llm(caller_prompt, "Caller")
+            caller_json = self._clean_json_response(caller_response)
+            try:
+                caller_data = json.loads(caller_json)
+                
+                # 处理 caller 数据：如果是数组，转换为多个 callers；如果是单个对象，包装成数组
+                if isinstance(caller_data, list):
+                    # LLM 返回了数组格式，直接使用
+                    caller_blocks = caller_data
+                    self._thread_safe_print(f"  - 检测到多个 callers: {len(caller_blocks)} 个")
+                elif isinstance(caller_data, dict):
+                    # LLM 返回了单个对象，包装成数组
+                    caller_blocks = [caller_data]
+                    self._thread_safe_print(f"  - 检测到单个 caller")
+                else:
+                    raise ValueError(f"Caller 数据格式不正确: {type(caller_data)}")
+                    
+                # 确保callers不为空
+                if not caller_blocks:
+                    raise ValueError("table_name_from_caller场景必须生成caller，但生成的callers为空")
+                    
+            except json.JSONDecodeError as e:
+                self._thread_safe_print(f"解析调用者JSON失败: {e}")
+                self._thread_safe_print(f"原始响应: {caller_response}")
+                self._thread_safe_print(f"清理后: {caller_json}")
+                raise
+        elif scenario == "mutual_exclusive_conditions":
+            # mutual_exclusive_conditions场景必须生成caller，因为filter条件信息依赖于caller
+            self._thread_safe_print("  - mutual_exclusive_conditions场景必须生成caller...")
+            example_caller = "无样例数据"
+            if example:
+                example_data = list(example.values())[0]
+                if 'callers' in example_data and example_data['callers']:
+                    caller_data = example_data['callers'][0]
+                    caller_clean = {k: v for k, v in caller_data.items() 
+                                  if k not in ["code_file", "code_version", "code_label", "code_type", 
+                                             "code_start_line", "code_end_line", "code_start_column"]}
+                    example_caller = json.dumps(caller_clean, indent=2, ensure_ascii=False)
+            
+            # 使用mutual_exclusive_conditions专用的Caller提示词
+            from config.data_processing.synthetic_data_generator.prompts import PROMPT_CALLER_MUTUAL_EXCLUSIVE
+            caller_prompt = PROMPT_CALLER_MUTUAL_EXCLUSIVE.format(
+                orm_block=json.dumps(orm_block, ensure_ascii=False),
+                example_caller=example_caller,
+                **var_names
+            )
+            
+            caller_response = await self._call_llm(caller_prompt, "Caller")
+            caller_json = self._clean_json_response(caller_response)
+            try:
+                caller_data = json.loads(caller_json)
+                
+                # 处理 caller 数据：如果是数组，转换为多个 callers；如果是单个对象，包装成数组
+                if isinstance(caller_data, list):
+                    # LLM 返回了数组格式，直接使用
+                    caller_blocks = caller_data
+                    self._thread_safe_print(f"  - 检测到多个 callers: {len(caller_blocks)} 个")
+                elif isinstance(caller_data, dict):
+                    # LLM 返回了单个对象，包装成数组
+                    caller_blocks = [caller_data]
+                    self._thread_safe_print(f"  - 检测到单个 caller")
+                else:
+                    raise ValueError(f"Caller 数据格式不正确: {type(caller_data)}")
+                    
+                # 确保callers不为空
+                if not caller_blocks:
+                    raise ValueError("mutual_exclusive_conditions场景必须生成caller，但生成的callers为空")
+                    
+            except json.JSONDecodeError as e:
+                self._thread_safe_print(f"解析调用者JSON失败: {e}")
+                self._thread_safe_print(f"原始响应: {caller_response}")
+                self._thread_safe_print(f"清理后: {caller_json}")
+                raise
         else:
             self._thread_safe_print("  - 生成调用者代码块...")
             example_caller = "无样例数据"
@@ -333,34 +453,48 @@ class SyntheticDataGenerator:
                     example_caller=example_caller,
                     **var_names
                 )
+            elif scenario == "condition_field_mapping":
+                from config.data_processing.synthetic_data_generator.prompts import PROMPT_CALLER_CONDITION_FIELD_MAPPING
+                caller_prompt = PROMPT_CALLER_CONDITION_FIELD_MAPPING.format(
+                    orm_block=json.dumps(orm_block, ensure_ascii=False),
+                    example_caller=example_caller,
+                    **var_names
+                )
+            elif scenario == "where_condition_with_fixed_values":
+                from config.data_processing.synthetic_data_generator.prompts import PROMPT_CALLER_WHERE_FIXED_VALUES
+                caller_prompt = PROMPT_CALLER_WHERE_FIXED_VALUES.format(
+                    orm_block=json.dumps(orm_block, ensure_ascii=False),
+                    example_caller=example_caller,
+                    **var_names
+                )
             else:
                 caller_prompt = PROMPT_CALLER.format(
                     orm_block=json.dumps(orm_block, ensure_ascii=False),
                     example_caller=example_caller,
                     **var_names
                 )
-        caller_response = await self._call_llm(caller_prompt, "Caller")
-        caller_json = self._clean_json_response(caller_response)
-        try:
-            caller_data = json.loads(caller_json)
-            
-            # 处理 caller 数据：如果是数组，转换为多个 callers；如果是单个对象，包装成数组
-            if isinstance(caller_data, list):
-                # LLM 返回了数组格式，直接使用
-                caller_blocks = caller_data
-                self._thread_safe_print(f"  - 检测到多个 callers: {len(caller_blocks)} 个")
-            elif isinstance(caller_data, dict):
-                # LLM 返回了单个对象，包装成数组
-                caller_blocks = [caller_data]
-                self._thread_safe_print(f"  - 检测到单个 caller")
-            else:
-                raise ValueError(f"Caller 数据格式不正确: {type(caller_data)}")
+            caller_response = await self._call_llm(caller_prompt, "Caller")
+            caller_json = self._clean_json_response(caller_response)
+            try:
+                caller_data = json.loads(caller_json)
                 
-        except json.JSONDecodeError as e:
-            self._thread_safe_print(f"解析调用者JSON失败: {e}")
-            self._thread_safe_print(f"原始响应: {caller_response}")
-            self._thread_safe_print(f"清理后: {caller_json}")
-            raise
+                # 处理 caller 数据：如果是数组，转换为多个 callers；如果是单个对象，包装成数组
+                if isinstance(caller_data, list):
+                    # LLM 返回了数组格式，直接使用
+                    caller_blocks = caller_data
+                    self._thread_safe_print(f"  - 检测到多个 callers: {len(caller_blocks)} 个")
+                elif isinstance(caller_data, dict):
+                    # LLM 返回了单个对象，包装成数组
+                    caller_blocks = [caller_data]
+                    self._thread_safe_print(f"  - 检测到单个 caller")
+                else:
+                    raise ValueError(f"Caller 数据格式不正确: {type(caller_data)}")
+                    
+            except json.JSONDecodeError as e:
+                self._thread_safe_print(f"解析调用者JSON失败: {e}")
+                self._thread_safe_print(f"原始响应: {caller_response}")
+                self._thread_safe_print(f"清理后: {caller_json}")
+                raise
         # 3) 元数据
         self._thread_safe_print("  - 生成元数据...")
         example_meta = "无样例数据"
@@ -377,12 +511,23 @@ class SyntheticDataGenerator:
                 example_meta = json.dumps(meta_clean, indent=2, ensure_ascii=False)
         # 使用第一个 caller 作为 meta 提示的参考
         first_caller = caller_blocks[0] if caller_blocks else {}
-        meta_prompt = PROMPT_META.format(
-            orm_block=json.dumps(orm_block, ensure_ascii=False),
-            caller_block=json.dumps(first_caller, ensure_ascii=False),
-            example_meta=example_meta,
-            **var_names
-        )
+        
+        # 根据场景选择不同的元数据提示词模板
+        if scenario == "table_mapping_incomplete":
+            from config.data_processing.synthetic_data_generator.prompts import PROMPT_META_TABLE_MAPPING_INCOMPLETE
+            meta_prompt = PROMPT_META_TABLE_MAPPING_INCOMPLETE.format(
+                orm_block=json.dumps(orm_block, ensure_ascii=False),
+                caller_block=json.dumps(first_caller, ensure_ascii=False),
+                example_meta=example_meta,
+                **var_names
+            )
+        else:
+            meta_prompt = PROMPT_META.format(
+                orm_block=json.dumps(orm_block, ensure_ascii=False),
+                caller_block=json.dumps(first_caller, ensure_ascii=False),
+                example_meta=example_meta,
+                **var_names
+            )
         meta_response = await self._call_llm(meta_prompt, "Meta")
         meta_json = self._clean_json_response(meta_response)
         try:
@@ -468,6 +613,18 @@ class SyntheticDataGenerator:
                 example=example_str,
                 **var_names
             )
+        elif scenario == "mutual_exclusive_conditions":
+            from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_MUTUAL_EXCLUSIVE
+            orm_prompt = PROMPT_ORM_MUTUAL_EXCLUSIVE.format(
+                example=example_str,
+                **var_names
+            )
+        elif scenario == "table_name_from_caller":
+            from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_TABLE_NAME_FROM_CALLER
+            orm_prompt = PROMPT_ORM_TABLE_NAME_FROM_CALLER.format(
+                example=example_str,
+                **var_names
+            )
         elif scenario == "no-where":
             from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_NO_WHERE
             orm_prompt = PROMPT_ORM_NO_WHERE.format(
@@ -477,6 +634,12 @@ class SyntheticDataGenerator:
         elif scenario == "table_mapping_incomplete":
             from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_TABLE_MAPPING_INCOMPLETE
             orm_prompt = PROMPT_ORM_TABLE_MAPPING_INCOMPLETE.format(
+                example=example_str,
+                **var_names
+            )
+        elif scenario == "condition_field_mapping":
+            from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_CONDITION_FIELD_MAPPING
+            orm_prompt = PROMPT_ORM_CONDITION_FIELD_MAPPING.format(
                 example=example_str,
                 **var_names
             )
@@ -549,9 +712,30 @@ class SyntheticDataGenerator:
                     example_caller=example_caller,
                     **var_names
                 )
+            elif scenario == "mutual_exclusive_conditions":
+                from config.data_processing.synthetic_data_generator.prompts import PROMPT_CALLER_MUTUAL_EXCLUSIVE
+                caller_prompt = PROMPT_CALLER_MUTUAL_EXCLUSIVE.format(
+                    orm_block=json.dumps(orm_block, ensure_ascii=False),
+                    example_caller=example_caller,
+                    **var_names
+                )
+            elif scenario == "table_name_from_caller":
+                from config.data_processing.synthetic_data_generator.prompts import PROMPT_CALLER_TABLE_NAME_FROM_CALLER
+                caller_prompt = PROMPT_CALLER_TABLE_NAME_FROM_CALLER.format(
+                    orm_block=json.dumps(orm_block, ensure_ascii=False),
+                    example_caller=example_caller,
+                    **var_names
+                )
             elif scenario == "table_mapping_incomplete":
                 from config.data_processing.synthetic_data_generator.prompts import PROMPT_CALLER_TABLE_MAPPING_INCOMPLETE
                 caller_prompt = PROMPT_CALLER_TABLE_MAPPING_INCOMPLETE.format(
+                    orm_block=json.dumps(orm_block, ensure_ascii=False),
+                    example_caller=example_caller,
+                    **var_names
+                )
+            elif scenario == "condition_field_mapping":
+                from config.data_processing.synthetic_data_generator.prompts import PROMPT_CALLER_CONDITION_FIELD_MAPPING
+                caller_prompt = PROMPT_CALLER_CONDITION_FIELD_MAPPING.format(
                     orm_block=json.dumps(orm_block, ensure_ascii=False),
                     example_caller=example_caller,
                     **var_names
@@ -563,44 +747,56 @@ class SyntheticDataGenerator:
                     **var_names
                 )
             
-            meta_prompt = PROMPT_META.format(
-                orm_block=json.dumps(orm_block, ensure_ascii=False),
-                caller_block="",  # 这里暂时为空，因为我们还没有caller
-                example_meta=example_meta,
-                **var_names
-            )
-            
-            # 并行发送请求
-            prompts_and_types = [
-                (caller_prompt, "Caller"),
-                (meta_prompt, "Meta")
-            ]
-            
-            responses = await self._call_llm_parallel(prompts_and_types)
-            caller_response, meta_response = responses
-            
-            # 解析结果
+            # 先获取caller，然后再生成meta
+            caller_response = await self._call_llm(caller_prompt, "Caller")
             caller_json = self._clean_json_response(caller_response)
-            meta_json = self._clean_json_response(meta_response)
-            
             try:
                 caller_data = json.loads(caller_json)
-                meta_block = json.loads(meta_json)
                 
                 # 处理 caller 数据：如果是数组，转换为多个 callers；如果是单个对象，包装成数组
                 if isinstance(caller_data, list):
                     # LLM 返回了数组格式，直接使用
                     caller_blocks = caller_data
-                    self._thread_safe_print(f"  - [并行] 检测到多个 callers: {len(caller_blocks)} 个")
+                    self._thread_safe_print(f"  - 检测到多个 callers: {len(caller_blocks)} 个")
                 elif isinstance(caller_data, dict):
                     # LLM 返回了单个对象，包装成数组
                     caller_blocks = [caller_data]
-                    self._thread_safe_print(f"  - [并行] 检测到单个 caller")
+                    self._thread_safe_print(f"  - 检测到单个 caller")
                 else:
                     raise ValueError(f"Caller 数据格式不正确: {type(caller_data)}")
                     
             except json.JSONDecodeError as e:
-                self._thread_safe_print(f"解析并行响应JSON失败: {e}")
+                self._thread_safe_print(f"解析Caller JSON失败: {e}")
+                raise
+            
+            # 使用第一个caller作为meta生成的参考
+            caller_block_for_meta = json.dumps(caller_blocks[0], ensure_ascii=False) if caller_blocks else ""
+            
+            # 根据场景选择不同的元数据提示词模板
+            if scenario == "table_mapping_incomplete":
+                from config.data_processing.synthetic_data_generator.prompts import PROMPT_META_TABLE_MAPPING_INCOMPLETE
+                meta_prompt = PROMPT_META_TABLE_MAPPING_INCOMPLETE.format(
+                    orm_block=json.dumps(orm_block, ensure_ascii=False),
+                    caller_block=caller_block_for_meta,
+                    example_meta=example_meta,
+                    **var_names
+                )
+            else:
+                meta_prompt = PROMPT_META.format(
+                    orm_block=json.dumps(orm_block, ensure_ascii=False),
+                    caller_block=caller_block_for_meta,
+                    example_meta=example_meta,
+                    **var_names
+                )
+            
+            # 生成meta
+            meta_response = await self._call_llm(meta_prompt, "Meta")
+            meta_json = self._clean_json_response(meta_response)
+            
+            try:
+                meta_block = json.loads(meta_json)
+            except json.JSONDecodeError as e:
+                self._thread_safe_print(f"解析Meta JSON失败: {e}")
                 raise
         
         # 组装最终字典

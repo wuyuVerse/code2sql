@@ -43,7 +43,7 @@ TOP_P = float(os.getenv("OPENAI_TOP_P", "0.8"))
 MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "4096"))
 
 # full_scenario.json路径
-FULL_SCENARIO_PATH = "/data/local_disk0/shawn/api_benchmark/evaluate/full_scenario.json"
+FULL_SCENARIO_PATH = "/data/cloud_disk_1/home/wuyu/code2sql/full_scenario.json"
 
 client = openai.Client(base_url=BASE_URL, api_key=API_KEY)
 
