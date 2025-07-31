@@ -175,6 +175,11 @@ model/training/LLaMA-Factory/
 model/rl/verl/
 model/rl/outputs/
 
+# Large log files and data files - should not be committed
+model/rl/reward_logs/*.jsonl
+model/rl/reward_logs/*.log
+model/rl/reward_logs/*.json
+
 # -----------------------------------------------------------------------------
 # Project-specific ignores for evaluation artifacts
 # -----------------------------------------------------------------------------
