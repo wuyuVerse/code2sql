@@ -1,0 +1,19 @@
+name: sglang
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - "sglang[server]>=0.4.9.post6"
+    - pybase64
+    - pydantic
+    - orjson
+    - uvicorn
+    - fastapi
+    - requests
+    - aiohttp
+    - numpy
+    - tqdm
+    - setproctitle
+    - IPython 

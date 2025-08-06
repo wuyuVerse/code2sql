@@ -17,8 +17,8 @@ nohup env CUDA_VISIBLE_DEVICES=0,1 python -m sglang.launch_server \
   --port 8081 \
   --disable-cuda-graph \
   --disable-radix-cache \
-  > code2sql_sglang_8001.log 2>&1 &
+  > code2sql_sglang_8081.log 2>&1 &
 
 echo "sglang服务启动完成，进程ID: $!"
-echo "查看日志: tail -f code2sql_sglang_8001.log"
+echo "查看日志: tail -f code2sql_sglang_8081.log"
 echo "查看进程: ps aux | grep sglang" 

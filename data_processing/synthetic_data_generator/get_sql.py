@@ -29,6 +29,49 @@ CODE_ORM_MYSQL_SQL_VERIFY = VERIFICATION_PROMPT_TEMPLATE
 CODE_ORM_MYSQL_SQL_FORMAT = FORMATTING_PROMPT_TEMPLATE
 CODE_ORM_MYSQL_SQL_CONDITION_FIELD_MAPPING = CONDITION_FIELD_MAPPING_PROMPT_TEMPLATE
 
+# =====================================================
+# 📝 场景特定 SQL 生成规则
+# =====================================================
+# 部分 with_* 场景对生成的 SQL 有特殊要求，例如需要自动
+# 添加 LIMIT、ORDER BY 或生成 COUNT 查询等。为了避免在
+# 多处手动拼接规则，这里集中维护一个映射表，在构建 prompt
+# 时统一附加相应说明。
+
+SCENARIO_SQL_RULES = {
+    # with_first → LIMIT 1
+    'with_first': (
+        "\n# ⚠️ 规则提醒:\n"
+        "- 当 ORM 使用 First() 方法时，生成的 SQL 必须自动添加 `LIMIT 1`。\n"
+        "- 请确保 SELECT 语句末尾包含 `LIMIT 1`。\n"
+    ),
+
+    # with_take → LIMIT 1
+    'with_take': (
+        "\n# ⚠️ 规则提醒:\n"
+        "- 当 ORM 使用 Take() 方法时，生成的 SQL 必须自动添加 `LIMIT 1`。\n"
+        "- 请确保 SELECT 语句末尾包含 `LIMIT 1`。\n"
+    ),
+
+    # with_last → LIMIT 1 + ORDER BY 主键 DESC
+    'with_last': (
+        "\n# ⚠️ 规则提醒:\n"
+        "- 当 ORM 使用 Last() 方法时，生成的 SQL 必须自动添加 `LIMIT 1`，并且添加 `ORDER BY <primary_key> DESC`。\n"
+        "- 如果无法识别主键名称，可以使用 `ORDER BY id DESC` 作为默认。\n"
+    ),
+
+    # with_find_no_limit → 不添加 LIMIT
+    'with_find_no_limit': (
+        "\n# ⚠️ 规则提醒:\n"
+        "- 当 ORM 使用 Find() 方法且场景为 with_find_no_limit 时，生成的 SQL 不应包含任何 `LIMIT` 子句。\n"
+    ),
+
+    # with_count → SELECT COUNT(*)
+    'with_count': (
+        "\n# ⚠️ 规则提醒:\n"
+        "- 当 ORM 使用 Count() 方法时，生成的 SQL 必须为 `SELECT COUNT(*) ...` 形式，用于统计记录数量。\n"
+    ),
+}
+
 # 添加指数退避重试机制
 async def retry_with_exponential_backoff(func, max_retries=10, base_delay=1.0, max_delay=60.0, backoff_factor=2.0, jitter=True):
     """
@@ -924,6 +967,11 @@ async def process_json_file_async(input_file, output_file, concurrency=10):
                 sql_pattern_cnt=sql_pattern_cnt if sql_pattern_cnt is not None else ""
             )
             
+            # 如果是特殊 with_* 场景，附加 SQL 生成规则
+            scenario_key_lower = scenario.lower() if scenario else ""
+            if scenario_key_lower in SCENARIO_SQL_RULES:
+                prompt += SCENARIO_SQL_RULES[scenario_key_lower]
+            
             task_info = {
                 'function_info': function_info,
                 'caller': caller,
@@ -951,6 +999,11 @@ async def process_json_file_async(input_file, output_file, concurrency=10):
                 code_meta_data_str=code_meta_data_str,
                 sql_pattern_cnt=sql_pattern_cnt if sql_pattern_cnt is not None else ""
             )
+            
+            # 如果是特殊 with_* 场景，附加 SQL 生成规则
+            scenario_key_lower = scenario.lower() if scenario else ""
+            if scenario_key_lower in SCENARIO_SQL_RULES:
+                prompt += SCENARIO_SQL_RULES[scenario_key_lower]
             
             task_info = {
                 'function_info': function_info,
@@ -1402,7 +1455,7 @@ def classify_sql(sql_statement):
 async def send_request_async(question, semaphore):
     async with semaphore:
         client = openai.AsyncClient(
-            base_url="http://182.254.152.117:8081/v1", 
+            base_url="http://10.0.0.31:8081/v1", 
             api_key="EMPTY"
         )
         
@@ -1431,7 +1484,7 @@ async def verify_sql_async(sql_statement, function_definition=None, code_meta_da
     
     async with semaphore:
         client = openai.AsyncClient(
-            base_url="http://182.254.152.117:8081/v1", 
+            base_url="http://10.0.0.31:8081/v1", 
             api_key="EMPTY"
         )
         
@@ -1487,7 +1540,7 @@ async def verify_sql_async(sql_statement, function_definition=None, code_meta_da
 async def format_sql_async(sql_statement, semaphore):
     async with semaphore:
         client = openai.AsyncClient(
-            base_url="http://182.254.152.117:8081/v1", 
+            base_url="http://10.0.0.31:8081/v1", 
             api_key="EMPTY"
         )
         

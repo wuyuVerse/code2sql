@@ -3,23 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reward日志分析器</title>
+    <title>四维度奖励函数分析器</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Chart.js for enhanced visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Prism CSS -->
     <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.css" rel="stylesheet">
     
     <style>
         :root {
+            --validity-color: #10b981;
+            --consistency-color: #3b82f6;
+            --keyword-penalty-color: #f59e0b;
+            --branch-penalty-color: #ef4444;
             --primary-color: #6366f1;
             --secondary-color: #8b5cf6;
-            --success-color: #10b981;
-            --warning-color: #f59e0b;
-            --danger-color: #ef4444;
-            --info-color: #3b82f6;
         }
         
         body {
@@ -57,6 +59,76 @@
             transform: translateY(-5px);
         }
         
+        /* 四维度卡片样式 */
+        .dimension-card {
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .dimension-card:hover {
+            transform: translateY(-3px);
+        }
+        
+        .dimension-card.validity {
+            background: linear-gradient(135deg, var(--validity-color), #059669);
+            color: white;
+        }
+        
+        .dimension-card.consistency {
+            background: linear-gradient(135deg, var(--consistency-color), #2563eb);
+            color: white;
+        }
+        
+        .dimension-card.keyword-penalty {
+            background: linear-gradient(135deg, var(--keyword-penalty-color), #d97706);
+            color: white;
+        }
+        
+        .dimension-card.branch-penalty {
+            background: linear-gradient(135deg, var(--branch-penalty-color), #dc2626);
+            color: white;
+        }
+        
+        .dimension-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .dimension-score {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        
+        .dimension-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .chart-wrapper canvas {
+            max-width: 100% !important;
+            max-height: 100% !important;
+        }
+        
         .score-badge {
             font-size: 0.9rem;
             padding: 8px 12px;
@@ -64,21 +136,19 @@
             font-weight: 600;
         }
         
-        .score-excellent { background: linear-gradient(45deg, #10b981, #059669); }
-        .score-good { background: linear-gradient(45deg, #3b82f6, #2563eb); }
-        .score-average { background: linear-gradient(45deg, #f59e0b, #d97706); }
-        .score-poor { background: linear-gradient(45deg, #ef4444, #dc2626); }
+        .score-excellent { background: linear-gradient(45deg, #10b981, #059669); color: white; }
+        .score-good { background: linear-gradient(45deg, #3b82f6, #2563eb); color: white; }
+        .score-average { background: linear-gradient(45deg, #f59e0b, #d97706); color: white; }
+        .score-poor { background: linear-gradient(45deg, #ef4444, #dc2626); color: white; }
         
         .reward-item {
             background: white;
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            margin-bottom: 30px;
-            margin-left: 15px;
-            margin-right: 15px;
+            margin-bottom: 25px;
             padding: 25px;
             transition: all 0.3s ease;
-            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-left: 5px solid var(--primary-color);
         }
         
         .reward-item:hover {
@@ -89,51 +159,205 @@
         .function-name {
             color: var(--primary-color);
             font-weight: 600;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             margin-bottom: 10px;
         }
         
-        .dimension-scores {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+        .dimension-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
             margin: 15px 0;
         }
         
         .dimension-item {
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--primary-color);
-            padding: 4px 8px;
-            border-radius: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            border-left: 4px solid;
+        }
+        
+        .dimension-item.validity { border-left-color: var(--validity-color); }
+        .dimension-item.consistency { border-left-color: var(--consistency-color); }
+        .dimension-item.keyword-penalty { border-left-color: var(--keyword-penalty-color); }
+        .dimension-item.branch-penalty { border-left-color: var(--branch-penalty-color); }
+        .dimension-item.multi-sql-penalty { border-left-color: #8b5cf6; }
+        
+        .dimension-label {
             font-size: 0.8rem;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+        
+        .dimension-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        /* 累积惩罚样式 */
+        .cumulative-penalty {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            border-radius: 8px;
+            padding: 10px;
+            border-left: 4px solid #dc2626;
+        }
+        
+        .penalty-summary {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .penalty-label {
+            font-weight: 600;
+            color: #991b1b;
+            font-size: 0.9rem;
+        }
+        
+        .penalty-value {
+            font-weight: 700;
+            color: #dc2626;
+            font-size: 1rem;
+        }
+        
+        .multiplier-badge {
+            background: #dc2626;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .active-count {
+            color: #6b7280;
+            font-size: 0.8rem;
+        }
+        
+        /* 多语句分析样式 */
+        .sql-analysis-box {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .analysis-item {
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        
+        .analysis-item.multi-statement {
+            border-left: 4px solid #dc3545;
+            background: #fff5f5;
+        }
+        
+        .analysis-item.single-statement {
+            border-left: 4px solid #198754;
+            background: #f0fff4;
+        }
+        
+        .analysis-header {
+            background: #f8f9fa;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sql-index {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .statement-count {
+            font-size: 0.85rem;
+        }
+        
+        .sql-content {
+            padding: 10px;
+        }
+        
+        .statements-breakdown {
+            padding: 0 10px 10px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .statement-list {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        
+        .statement-list li {
+            padding: 4px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        
+        /* 惩罚分解样式 */
+        .penalty-breakdown {
+            background: #fff;
+            border-radius: 6px;
+            padding: 12px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        
+        .breakdown-item:last-child {
+            border-bottom: none;
+        }
+        
+        .breakdown-item.multiplier-applied {
+            background: #fff3cd;
+            margin: 8px -12px -12px;
+            padding: 8px 12px;
+            border-radius: 0 0 6px 6px;
+            font-weight: 600;
+        }
+        
+        .penalty-type {
+            color: #495057;
             font-weight: 500;
+        }
+        
+        .penalty-amount {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        
+        .calculation-box {
+            background: #e7f3ff;
+            border-radius: 6px;
+            padding: 12px;
+            border-left: 4px solid #0066cc;
+        }
+        
+        .calculation-details {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
         }
         
         .code-preview {
             background: #f8f9fa;
-            border-radius: 10px;
+            border-radius: 8px;
             padding: 15px;
-            margin: 10px 0;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85rem;
+            margin: 15px 0;
             border-left: 4px solid var(--primary-color);
-        }
-        
-        .search-box {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
         }
         
         .btn-action {
             border-radius: 25px;
-            padding: 8px 20px;
+            padding: 10px 20px;
             font-weight: 500;
             transition: all 0.3s ease;
         }
@@ -143,135 +367,82 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
         
-        .modal-content {
+        .search-box {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .filter-badge {
+            display: inline-block;
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary-color);
+            border: 1px solid rgba(99, 102, 241, 0.3);
             border-radius: 20px;
-            border: none;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            margin: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .filter-badge:hover, .filter-badge.active {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .filter-section {
+            margin-bottom: 15px;
+        }
+        
+        .filter-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
-        /* 详情页面样式 */
         .detail-section {
-            background: white;
-            border-radius: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(0, 0, 0, 0.05);
-        }
-
-        .detail-section h6 {
-            color: var(--primary-color);
-            font-weight: 600;
-            margin-bottom: 15px;
-            border-bottom: 2px solid var(--primary-color);
-            padding-bottom: 8px;
         }
 
         .detail-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
         }
 
         .detail-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 12px;
-            background: rgba(99, 102, 241, 0.05);
-            border-radius: 8px;
-            border-left: 3px solid var(--primary-color);
-        }
-
-        .detail-item .label {
-            font-weight: 500;
-            color: #374151;
-        }
-
-        .detail-item .value {
-            font-weight: 600;
-            color: #1f2937;
-        }
-
-        .detail-item .score-badge {
-            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .keyword-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .accordion-item {
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            margin-bottom: 8px;
-            overflow: hidden;
-        }
-
-        .accordion-button {
-            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border: none;
-            font-weight: 600;
-        }
-
-        .accordion-button:not(.collapsed) {
-            background: linear-gradient(45deg, var(--secondary-color), var(--primary-color));
-            color: white;
-        }
-
-        .accordion-button:focus {
-            box-shadow: none;
-            border: none;
-        }
-
-        .accordion-body {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 20px;
-        }
-
-        .modal-xl {
-            max-width: 90%;
-        }
-
-        .modal-header {
-            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border-radius: 15px 15px 0 0;
-            border: none;
-        }
-
-        .modal-body {
-            max-height: 80vh;
-            overflow-y: auto;
-            padding: 30px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
         }
         
-        .modal-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 20px 20px 0 0;
+        .detail-item:last-child {
+            border-bottom: none;
         }
         
-        .chart-container {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            margin-bottom: 20px;
+        .label {
+            font-weight: 600;
+            color: #495057;
         }
         
-        .progress-bar {
-            height: 25px;
-            border-radius: 15px;
-            background: linear-gradient(45deg, #667eea, #764ba2);
+        .value {
+            color: #212529;
         }
         
         .back-to-top {
@@ -279,149 +450,257 @@
             bottom: 30px;
             right: 30px;
             border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
+            width: 50px;
+            height: 50px;
+            z-index: 1000;
         }
         
-        .back-to-top:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-        }
-        
-        .filter-badge {
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--primary-color);
-            border: 1px solid rgba(99, 102, 241, 0.3);
-            border-radius: 20px;
-            padding: 5px 15px;
-            margin: 5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .filter-badge:hover {
-            background: var(--primary-color);
-            color: white;
-        }
-        
-        .filter-badge.active {
-            background: var(--primary-color);
-            color: white;
-        }
-        
-        /* 加载进度条样式 */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
-            backdrop-filter: blur(10px);
+        .dimension-weights {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .weight-item {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            z-index: 9999;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 3px solid var(--primary-color);
         }
-        
-        .loading-overlay.hidden {
-            opacity: 0;
-            visibility: hidden;
+
+        .weight-label {
+            font-weight: 500;
+            color: #495057;
         }
-        
-        .loading-container {
-            text-align: center;
-            color: white;
-        }
-        
-        .loading-spinner {
-            width: 80px;
-            height: 80px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .loading-text {
-            font-size: 1.2rem;
+
+        .weight-value {
             font-weight: 600;
-            margin-bottom: 15px;
+            color: var(--primary-color);
+            font-family: 'Courier New', monospace;
         }
         
-        .loading-subtext {
+        .weight-config {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .config-item {
+            padding: 6px 10px;
+            background: #e9ecef;
+            border-radius: 4px;
             font-size: 0.9rem;
-            opacity: 0.8;
+            font-family: 'Courier New', monospace;
+        }
+
+        .sql-preview {
+            display: block;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            background: #f1f3f4;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
         }
         
-        .progress-container {
-            width: 300px;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            margin: 20px auto 0;
-            overflow: hidden;
+        .llm-analysis-box {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border: 1px solid #bbdefb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
         }
         
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #10b981, #3b82f6, #8b5cf6, #f59e0b);
-            border-radius: 10px;
-            width: 0%;
-            transition: width 0.3s ease;
+        .llm-response {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .llm-response pre {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 8px;
+            border-left: 3px solid #2196f3;
+        }
+
+        .complexity-analysis-box {
+            background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%);
+            border: 1px solid #ffcc02;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .complexity-details {
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .caller-context-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .caller-context-box pre {
+            margin: 0;
+            background: transparent;
+            border: none;
+            padding: 0;
         }
         
-        .loading-steps {
-            margin-top: 20px;
-            font-size: 0.8rem;
-            opacity: 0.7;
+        .keyword-detail-box {
+            background: linear-gradient(135deg, #fff8e1 0%, #f3e5f5 100%);
+            border: 1px solid #ffcc02;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
         }
         
-        .loading-step {
+        .keyword-list {
+            list-style: none;
+            padding: 0;
             margin: 5px 0;
-            opacity: 0.5;
-            transition: opacity 0.3s ease;
         }
         
-        .loading-step.active {
-            opacity: 1;
-            color: #10b981;
+        .keyword-list li {
+            display: inline-block;
+            margin: 2px;
+        }
+        
+        .branch-detail-box {
+            background: linear-gradient(135deg, #e8f5e8 0%, #f0f4ff 100%);
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        
+        .exclusive-groups {
+            margin-top: 8px;
+        }
+        
+        .group-item {
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 4px;
+            border-left: 3px solid #2196f3;
+        }
+        
+        .group-label {
+            font-weight: bold;
+            margin-right: 8px;
+            color: #1976d2;
+        }
+        
+        .sql-validation-results {
+            margin-top: 8px;
+        }
+        
+        .validation-item {
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid;
+        }
+        
+        .validation-item.valid {
+            background: #f1f8e9;
+            border-left-color: #4caf50;
+        }
+        
+        .validation-item.invalid {
+            background: #ffebee;
+            border-left-color: #f44336;
+        }
+        
+        .validation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .sql-index {
+            font-weight: bold;
+            background: #e3f2fd;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        
+        .validation-status {
+            font-weight: bold;
+        }
+        
+        .validation-details {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .field-tag {
+            background: #e1f5fe;
+            color: #0277bd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            margin: 0 2px;
+        }
+        
+        .final-evaluation {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+        
+        .evaluation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        
+        .eval-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .eval-item .label {
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .eval-item .value {
+            color: #333;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            .dimension-grid {
+                grid-template-columns: 1fr;
+        }
+        
+            .main-container {
+                margin: 10px;
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-container">
-            <div class="loading-spinner"></div>
-            <div class="loading-text">正在加载数据...</div>
-            <div class="loading-subtext">请稍候，我们正在为您准备分析结果</div>
-            <div class="progress-container">
-                <div class="progress-bar" id="progressBar"></div>
-            </div>
-            <div class="loading-steps">
-                <div class="loading-step" id="step1">初始化页面组件</div>
-                <div class="loading-step" id="step2">加载统计数据</div>
-                <div class="loading-step" id="step3">处理评估数据</div>
-                <div class="loading-step" id="step4">渲染图表组件</div>
-                <div class="loading-step" id="step5">完成加载</div>
-            </div>
-        </div>
-    </div>
-
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
@@ -445,93 +724,91 @@
             <div class="row mb-4">
                 <div class="col-12">
                     <h1 class="text-center mb-3">
-                        <i class="bi bi-bar-chart-fill text-primary"></i>
-                        Reward日志分析器
+                        <i class="bi bi-diagram-3-fill text-primary"></i>
+                        四维度奖励函数分析器
                     </h1>
                     <p class="text-center text-muted">
-                        深度分析AI模型的ORM代码生成质量评估结果
+                        深度分析AI模型的四维度评估：有效性、一致性、关键词惩罚、分支惩罚
+                    </p>
+                    <p class="text-center">
+                        <span class="badge bg-primary">{{ filename }}</span>
+                        <span class="badge bg-info ms-2">{{ total_records }} 条记录</span>
+                        <span class="badge bg-success ms-2">平均分: {{ avg_score }}</span>
                     </p>
                 </div>
             </div>
 
-            <!-- Statistics Cards -->
+            <!-- 四维度统计卡片 -->
             <div class="row mb-4">
                 <div class="col-md-3">
-                    <div class="stats-card text-center">
-                        <i class="bi bi-database-fill" style="font-size: 2rem;"></i>
-                        <h3 class="mt-2">{{ total_records }}</h3>
-                        <p class="mb-0">总评估记录</p>
+                    <div class="dimension-card validity text-center">
+                        <i class="bi bi-check-circle-fill dimension-icon"></i>
+                        <h6>有效性 (Validity)</h6>
+                        <div class="dimension-score">{{ "%.3f"|format(dimension_stats.validity.avg_score) }}</div>
+                        <div class="dimension-subtitle">
+                            启用: {{ dimension_stats.validity.enabled_count }} 次<br>
+                            范围: {{ "%.3f"|format(dimension_stats.validity.min_score) }} - {{ "%.3f"|format(dimension_stats.validity.max_score) }}
+                    </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="stats-card text-center">
-                        <i class="bi bi-graph-up" style="font-size: 2rem;"></i>
-                        <h3 class="mt-2">{{ avg_score }}</h3>
-                        <p class="mb-0">平均评分</p>
+                    <div class="dimension-card consistency text-center">
+                        <i class="bi bi-arrow-repeat dimension-icon"></i>
+                        <h6>一致性 (Consistency)</h6>
+                        <div class="dimension-score">{{ "%.3f"|format(dimension_stats.consistency.avg_score) }}</div>
+                        <div class="dimension-subtitle">
+                            启用: {{ dimension_stats.consistency.enabled_count }} 次<br>
+                            范围: {{ "%.3f"|format(dimension_stats.consistency.min_score) }} - {{ "%.3f"|format(dimension_stats.consistency.max_score) }}
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="stats-card text-center">
-                        <i class="bi bi-star-fill" style="font-size: 2rem;"></i>
-                        <h3 class="mt-2">{{ score_ranges['优秀 (0.8-1.0)'] }}</h3>
-                        <p class="mb-0">优秀案例</p>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stats-card text-center">
-                        <i class="bi bi-exclamation-triangle-fill" style="font-size: 2rem;"></i>
-                        <h3 class="mt-2">{{ score_ranges['较差 (0.0-0.4)'] }}</h3>
-                        <p class="mb-0">需改进案例</p>
+                    <div class="col-md-3">
+                    <div class="dimension-card keyword-penalty text-center">
+                        <i class="bi bi-exclamation-triangle-fill dimension-icon"></i>
+                        <h6>关键词惩罚</h6>
+                        <div class="dimension-score">{{ "%.3f"|format(dimension_stats.keyword_penalty.avg_penalty) }}</div>
+                        <div class="dimension-subtitle">
+                            启用: {{ dimension_stats.keyword_penalty.enabled_count }} 次<br>
+                            总惩罚: {{ "%.3f"|format(dimension_stats.keyword_penalty.total_penalty) }}
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
+                    <div class="col-md-3">
+                    <div class="dimension-card branch-penalty text-center">
+                        <i class="bi bi-git-branch dimension-icon"></i>
+                        <h6>分支惩罚</h6>
+                        <div class="dimension-score">{{ "%.3f"|format(dimension_stats.branch_penalty.avg_penalty) }}</div>
+                        <div class="dimension-subtitle">
+                            启用: {{ dimension_stats.branch_penalty.enabled_count }} 次<br>
+                            总惩罚: {{ "%.3f"|format(dimension_stats.branch_penalty.total_penalty) }}
+                            </div>
+                        </div>
+                    </div>
+                            </div>
 
-            <!-- Score Distribution Chart -->
+            <!-- 分数分布图表 -->
             <div class="chart-container">
-                <h4 class="mb-3">
-                    <i class="bi bi-pie-chart"></i> 分数分布
-                </h4>
                 <div class="row">
-                    <div class="col-md-3">
-                        <div class="text-center">
-                            <div class="progress-circle" style="width: 100px; height: 100px; margin: 0 auto;">
-                                <div class="progress" style="width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(#10b981 {{ score_ranges['优秀 (0.8-1.0)'] / total_records * 360 }}deg, #e5e7eb 0deg);"></div>
-                            </div>
-                            <p class="mt-2 mb-0"><strong>优秀</strong></p>
-                            <small class="text-muted">{{ score_ranges['优秀 (0.8-1.0)'] }} 条</small>
+                    <div class="col-md-6">
+                        <h5 class="mb-3">
+                            <i class="bi bi-pie-chart"></i> 总分分布
+                        </h5>
+                        <div class="chart-wrapper">
+                            <canvas id="scoreDistributionChart" width="400" height="300"></canvas>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="text-center">
-                            <div class="progress-circle" style="width: 100px; height: 100px; margin: 0 auto;">
-                                <div class="progress" style="width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(#3b82f6 {{ score_ranges['良好 (0.6-0.8)'] / total_records * 360 }}deg, #e5e7eb 0deg);"></div>
-                            </div>
-                            <p class="mt-2 mb-0"><strong>良好</strong></p>
-                            <small class="text-muted">{{ score_ranges['良好 (0.6-0.8)'] }} 条</small>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="text-center">
-                            <div class="progress-circle" style="width: 100px; height: 100px; margin: 0 auto;">
-                                <div class="progress" style="width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(#f59e0b {{ score_ranges['一般 (0.4-0.6)'] / total_records * 360 }}deg, #e5e7eb 0deg);"></div>
-                            </div>
-                            <p class="mt-2 mb-0"><strong>一般</strong></p>
-                            <small class="text-muted">{{ score_ranges['一般 (0.4-0.6)'] }} 条</small>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="text-center">
-                            <div class="progress-circle" style="width: 100px; height: 100px; margin: 0 auto;">
-                                <div class="progress" style="width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(#ef4444 {{ score_ranges['较差 (0.0-0.4)'] / total_records * 360 }}deg, #e5e7eb 0deg);"></div>
-                            </div>
-                            <p class="mt-2 mb-0"><strong>较差</strong></p>
-                            <small class="text-muted">{{ score_ranges['较差 (0.0-0.4)'] }} 条</small>
+                    <div class="col-md-6">
+                        <h5 class="mb-3">
+                            <i class="bi bi-bar-chart"></i> 四维度对比
+                        </h5>
+                        <div class="chart-wrapper">
+                            <canvas id="dimensionComparisonChart" width="400" height="300"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Search and Filter -->
+            <!-- 搜索和过滤 -->
             <div class="search-box">
                 <div class="row">
                     <div class="col-md-6">
@@ -552,36 +829,64 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <button class="btn btn-primary btn-action w-100" onclick="sortByScore()">
+                        <button class="btn btn-primary btn-action w-100 mb-2" onclick="sortByScore()">
                             <i class="bi bi-sort-down"></i> 按分数排序
+                        </button>
+                        <button class="btn btn-outline-secondary btn-action w-100" onclick="resetFilters()">
+                            <i class="bi bi-arrow-clockwise"></i> 重置过滤器
                         </button>
                     </div>
                 </div>
                 <div class="mt-3">
-                    <span class="filter-badge" onclick="filterByScore('excellent')">优秀</span>
-                    <span class="filter-badge" onclick="filterByScore('good')">良好</span>
-                    <span class="filter-badge" onclick="filterByScore('average')">一般</span>
-                    <span class="filter-badge" onclick="filterByScore('poor')">较差</span>
+                    <div class="filter-section">
+                        <h6 class="filter-title">按分数筛选</h6>
+                        <div class="filter-group">
+                            <span class="filter-badge active" onclick="filterByScore('all')">全部</span>
+                            <span class="filter-badge" onclick="filterByScore('excellent')">优秀</span>
+                            <span class="filter-badge" onclick="filterByScore('good')">良好</span>
+                            <span class="filter-badge" onclick="filterByScore('average')">一般</span>
+                            <span class="filter-badge" onclick="filterByScore('poor')">较差</span>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-section mt-3">
+                        <h6 class="filter-title">按维度筛选</h6>
+                        <div class="filter-group">
+                            <span class="filter-badge" onclick="filterByDimension('has-keyword-penalty')">关键词惩罚</span>
+                            <span class="filter-badge" onclick="filterByDimension('has-branch-penalty')">分支惩罚</span>
+                            <span class="filter-badge" onclick="filterByDimension('has-multi-sql-penalty')">多语句惩罚</span>
+                            <span class="filter-badge" onclick="filterByDimension('has-cumulative-penalty')">累积惩罚</span>
+                            <span class="filter-badge" onclick="filterByDimension('no-penalty')">无惩罚</span>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-section mt-3">
+                        <h6 class="filter-title">按问题数量</h6>
+                        <div class="filter-group">
+                            <span class="filter-badge" onclick="filterByPenaltyCount('single-issue')">单一问题</span>
+                            <span class="filter-badge" onclick="filterByPenaltyCount('multiple-issues')">多重问题</span>
+                            <span class="filter-badge" onclick="filterByPenaltyCount('critical-issues')">严重问题(3+)</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Reward Data List -->
+            <!-- 奖励数据列表 -->
             <div class="row">
                 <div class="col-12">
                     <div id="rewardList">
                         {% for item in reward_data %}
-                        <div class="reward-item" data-score="{{ item.score }}" data-function="{{ item.function_name }}">
-                            <div class="card-body">
+                        <div class="reward-item" data-score="{{ item.get('score', 0) }}" data-function="{{ item.get('function_name', '') }}">
                                 <div class="row">
                                     <div class="col-md-8">
                                         <div class="d-flex justify-content-between align-items-start mb-3">
-                                            <h5 class="function-name">{{ item.function_name }}</h5>
+                                        <h5 class="function-name">{{ item.get('function_name', '未知函数') }}</h5>
                                             <span class="score-badge 
-                                                {% if item.score >= 0.8 %}score-excellent
-                                                {% elif item.score >= 0.6 %}score-good
-                                                {% elif item.score >= 0.4 %}score-average
+                                            {% if item.get('score', 0) >= 0.8 %}score-excellent
+                                            {% elif item.get('score', 0) >= 0.6 %}score-good
+                                            {% elif item.get('score', 0) >= 0.4 %}score-average
                                                 {% else %}score-poor{% endif %}">
-                                                {{ "%.2f"|format(item.score) }}
+                                            {{ "%.3f"|format(item.get('score', 0)) }}
                                             </span>
                                         </div>
                                         
@@ -590,26 +895,79 @@
                                                 <i class="bi bi-clock"></i> 
                                                 {% if item.timestamp %}{{ item.timestamp|datetime }}{% else %}N/A{% endif %}
                                                 <span class="ms-3">
-                                                    <i class="bi bi-hash"></i> 索引: {{ item.index }}
+                                            <i class="bi bi-hash"></i> 索引: {{ item.get('index', 'N/A') }}
                                                 </span>
                                             </small>
                                         </div>
                                         
                                         <div class="code-preview">
                                             <strong>ORM代码预览:</strong><br>
-                                            <code>{{ item.orm_code[:300] }}{% if item.orm_code|length > 300 %}...{% endif %}</code>
+                                        <code>{{ (item.get('orm_code', '') or '暂无代码')[:200] }}{% if (item.get('orm_code', '') or '')|length > 200 %}...{% endif %}</code>
                                         </div>
                                         
-                                        <div class="dimension-scores">
-                                            <strong>维度评分:</strong><br>
-                                            {% for dimension, score in item.dimension_scores.items() %}
-                                                {% if score is not none %}
-                                                <span class="dimension-item">
-                                                    {{ dimension.replace('_score', '').title() }}: {{ "%.2f"|format(score) }}
-                                                </span>
+                                    {% if item.get('solution_preview') %}
+                                    <div class="code-preview mt-2">
+                                        <strong>生成SQL预览:</strong><br>
+                                        <code class="sql-preview">{{ item.solution_preview }}</code>
+                                    </div>
                                                 {% endif %}
-                                            {% endfor %}
+                                    
+                                    <!-- 五维度评分网格 -->
+                                    <div class="dimension-grid">
+                                        {% if item.get('dimension_details', {}).get('validity') %}
+                                        <div class="dimension-item validity">
+                                            <div class="dimension-label">有效性</div>
+                                            <div class="dimension-value">{{ "%.3f"|format(item.dimension_details.validity.get('score', 0)) }}</div>
+                                            <small>{{ item.dimension_details.validity.get('valid_count', 0) }}/{{ item.dimension_details.validity.get('total_count', 0) }}</small>
                                         </div>
+                                        {% endif %}
+                                        
+                                        {% if item.get('dimension_details', {}).get('consistency') %}
+                                        <div class="dimension-item consistency">
+                                            <div class="dimension-label">一致性</div>
+                                            <div class="dimension-value">{{ "%.3f"|format(item.dimension_details.consistency.get('score', 0)) }}</div>
+                                            <small>{{ item.dimension_details.consistency.get('valid_sql_count', 0) }}/{{ item.dimension_details.consistency.get('total_sqls', 0) }}</small>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if item.get('dimension_details', {}).get('keyword_penalty', {}).get('enabled') %}
+                                        <div class="dimension-item keyword-penalty">
+                                            <div class="dimension-label">关键词惩罚</div>
+                                            <div class="dimension-value">-{{ "%.3f"|format(item.dimension_details.keyword_penalty.get('penalty_amount', 0)) }}</div>
+                                            <small>{% if item.dimension_details.keyword_penalty.get('matched_keywords') %}{{ item.dimension_details.keyword_penalty.matched_keywords|join(', ') }}{% endif %}</small>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if item.get('dimension_details', {}).get('branch_penalty', {}).get('enabled') %}
+                                        <div class="dimension-item branch-penalty">
+                                            <div class="dimension-label">分支惩罚</div>
+                                            <div class="dimension-value">-{{ "%.3f"|format(item.dimension_details.branch_penalty.get('penalty_amount', 0)) }}</div>
+                                            <small>严重度: {{ "%.2f"|format(item.dimension_details.branch_penalty.get('severity', 0)) }}</small>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if item.get('dimension_details', {}).get('multi_sql_penalty', {}).get('enabled') %}
+                                        <div class="dimension-item multi-sql-penalty">
+                                            <div class="dimension-label">多语句惩罚</div>
+                                            <div class="dimension-value">-{{ "%.3f"|format(item.dimension_details.multi_sql_penalty.get('penalty_amount', 0)) }}</div>
+                                            <small>比例: {{ "%.2f"|format(item.dimension_details.multi_sql_penalty.get('ratio', 0)) }}</small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- 累积惩罚总结 -->
+                                    {% if item.get('raw_details', {}).get('total_penalty', 0) > 0 %}
+                                    <div class="cumulative-penalty mt-2">
+                                        <div class="penalty-summary">
+                                            <span class="penalty-label">总惩罚:</span>
+                                            <span class="penalty-value">-{{ "%.3f"|format(item.raw_details.total_penalty) }}</span>
+                                            {% if item.get('raw_details', {}).get('penalty_multiplier', 1.0) > 1.0 %}
+                                            <span class="multiplier-badge">×{{ "%.1f"|format(item.raw_details.penalty_multiplier) }}</span>
+                                            {% endif %}
+                                            <small class="active-count">({{ item.get('raw_details', {}).get('active_penalties', 0) }}个问题)</small>
+                                        </div>
+                                    </div>
+                                    {% endif %}
                                     </div>
                                     
                                     <div class="col-md-4">
@@ -620,7 +978,6 @@
                                             <button class="btn btn-outline-success btn-action" onclick="showSolution({{ loop.index0 }})">
                                                 <i class="bi bi-code-slash"></i> 查看SQL
                                             </button>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -632,40 +989,40 @@
         </div>
     </div>
 
-    <!-- Back to Top Button -->
+    <!-- 返回顶部按钮 -->
     <button class="btn btn-primary back-to-top" onclick="scrollToTop()" style="display: none;">
         <i class="bi bi-arrow-up"></i>
     </button>
 
-    <!-- Detail Modal -->
+    <!-- 详情模态框 -->
     <div class="modal fade" id="detailModal" tabindex="-1">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="bi bi-info-circle"></i> 详细信息
+                        <i class="bi bi-info-circle"></i> 四维度详细分析
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" id="detailModalBody">
-                    <!-- Content will be loaded here -->
+                    <!-- 内容将在这里动态加载 -->
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Solution Modal -->
+    <!-- SQL解决方案模态框 -->
     <div class="modal fade" id="solutionModal" tabindex="-1">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="bi bi-code-slash"></i> SQL解决方案
+                        <i class="bi bi-code-slash"></i> SQL解决方案对比
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" id="solutionModalBody">
-                    <!-- Content will be loaded here -->
+                    <!-- 内容将在这里动态加载 -->
                 </div>
             </div>
         </div>
@@ -676,19 +1033,112 @@
     <!-- Prism JS -->
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-sql.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-go.min.js"></script>
     
     <script>
-        // 存储reward数据
+        // 存储奖励数据
         const rewardData = {{ reward_data|tojson }};
+        const dimensionStats = {{ dimension_stats|tojson }};
+        const scoreRanges = {{ score_ranges|tojson }};
         
-        // 确保DOM加载完成后再执行
+        // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
-            // 加载动画
-            setTimeout(() => {
-                simulateLoading();
-            }, 100);
+            initCharts();
+            initEventListeners();
+            Prism.highlightAll();
+        });
+        
+        // 初始化图表
+        function initCharts() {
+            // 分数分布饼图
+            const scoreCtx = document.getElementById('scoreDistributionChart').getContext('2d');
+            new Chart(scoreCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['优秀 (0.8-1.0)', '良好 (0.6-0.8)', '一般 (0.4-0.6)', '较差 (0.0-0.4)'],
+                    datasets: [{
+                        data: [
+                            {{ score_ranges['优秀 (0.8-1.0)'] }},
+                            {{ score_ranges['良好 (0.6-0.8)'] }},
+                            {{ score_ranges['一般 (0.4-0.6)'] }},
+                            {{ score_ranges['较差 (0.0-0.4)'] }}
+                        ],
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 1.2,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 10,
+                                fontSize: 12,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
             
+            // 四维度对比柱图
+            const dimCtx = document.getElementById('dimensionComparisonChart').getContext('2d');
+            new Chart(dimCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['有效性', '一致性', '关键词惩罚', '分支惩罚'],
+                    datasets: [{
+                        label: '平均分数/惩罚',
+                        data: [
+                            dimensionStats.validity.avg_score,
+                            dimensionStats.consistency.avg_score,
+                            -dimensionStats.keyword_penalty.avg_penalty,
+                            -dimensionStats.branch_penalty.avg_penalty
+                        ],
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+                        borderRadius: 6,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 1.5,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                display: true,
+                                color: '#f1f5f9'
+                            },
+                            ticks: {
+                                fontSize: 12
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                fontSize: 12
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 初始化事件监听器
+        function initEventListeners() {
             // 搜索功能
             document.getElementById('searchInput').addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase();
@@ -708,34 +1158,20 @@
         
         // 分数过滤
         document.getElementById('scoreFilter').addEventListener('change', function() {
-            const filterValue = this.value;
-            const items = document.querySelectorAll('.reward-item');
-            
-            items.forEach(item => {
-                const score = parseFloat(item.dataset.score);
-                let show = true;
-                
-                switch(filterValue) {
-                    case 'excellent':
-                        show = score >= 0.8;
-                        break;
-                    case 'good':
-                        show = score >= 0.6 && score < 0.8;
-                        break;
-                    case 'average':
-                        show = score >= 0.4 && score < 0.6;
-                        break;
-                    case 'poor':
-                        show = score < 0.4;
-                        break;
-                }
-                
-                item.style.display = show ? 'block' : 'none';
+                filterByScore(this.value);
             });
+            
+            // 滚动事件
+            window.addEventListener('scroll', function() {
+                const backToTop = document.querySelector('.back-to-top');
+                if (window.pageYOffset > 300) {
+                    backToTop.style.display = 'block';
+                } else {
+                    backToTop.style.display = 'none';
+                }
         });
-        });
+        }
         
-        // 全局函数定义
         // 按分数排序
         function sortByScore() {
             const container = document.getElementById('rewardList');
@@ -750,11 +1186,14 @@
             items.forEach(item => container.appendChild(item));
         }
         
-        // 快速过滤
+        // 按分数过滤
         function filterByScore(level) {
+            // 更新过滤按钮状态
             const badges = document.querySelectorAll('.filter-badge');
             badges.forEach(badge => badge.classList.remove('active'));
+            if (event && event.target) {
             event.target.classList.add('active');
+            }
             
             const items = document.querySelectorAll('.reward-item');
             items.forEach(item => {
@@ -774,26 +1213,262 @@
                     case 'poor':
                         show = score < 0.4;
                         break;
+                    case 'all':
+                    default:
+                        show = true;
+                        break;
                 }
                 
                 item.style.display = show ? 'block' : 'none';
             });
         }
         
-        // 格式化解决方案预览
-        function formatSolutionPreview(solutionPreview) {
-            if (typeof solutionPreview === 'string') {
-                return solutionPreview;
-            } else if (Array.isArray(solutionPreview)) {
-                return solutionPreview.join('\n');
-            } else if (typeof solutionPreview === 'object') {
-                return JSON.stringify(solutionPreview, null, 2);
+        // 按维度过滤
+        function filterByDimension(dimension) {
+            // 更新过滤按钮状态
+            updateActiveFilter(event);
+            
+            const items = document.querySelectorAll('.reward-item');
+            items.forEach(item => {
+                const index = Array.from(items).indexOf(item);
+                const itemData = rewardData[index];
+                let show = false;
+                
+                if (!itemData) {
+                    item.style.display = 'none';
+                    return;
+                }
+                
+                switch(dimension) {
+                    case 'has-keyword-penalty':
+                        show = itemData.dimension_details && 
+                               itemData.dimension_details.keyword_penalty && 
+                               itemData.dimension_details.keyword_penalty.enabled &&
+                               itemData.dimension_details.keyword_penalty.penalty_amount > 0;
+                        break;
+                    case 'has-branch-penalty':
+                        show = itemData.dimension_details && 
+                               itemData.dimension_details.branch_penalty && 
+                               itemData.dimension_details.branch_penalty.enabled &&
+                               itemData.dimension_details.branch_penalty.penalty_amount > 0;
+                        break;
+                    case 'has-multi-sql-penalty':
+                        show = itemData.dimension_details && 
+                               itemData.dimension_details.multi_sql_penalty && 
+                               itemData.dimension_details.multi_sql_penalty.enabled &&
+                               itemData.dimension_details.multi_sql_penalty.penalty_amount > 0;
+                        break;
+                    case 'has-cumulative-penalty':
+                        show = itemData.raw_details && 
+                               itemData.raw_details.penalty_multiplier > 1.0;
+                        break;
+                    case 'no-penalty':
+                        show = (!itemData.dimension_details?.keyword_penalty?.enabled || itemData.dimension_details.keyword_penalty.penalty_amount === 0) &&
+                               (!itemData.dimension_details?.branch_penalty?.enabled || itemData.dimension_details.branch_penalty.penalty_amount === 0) &&
+                               (!itemData.dimension_details?.multi_sql_penalty?.enabled || itemData.dimension_details.multi_sql_penalty.penalty_amount === 0);
+                        break;
+                }
+                
+                item.style.display = show ? 'block' : 'none';
+            });
+        }
+        
+        // 按问题数量过滤
+        function filterByPenaltyCount(countType) {
+            // 更新过滤按钮状态
+            updateActiveFilter(event);
+            
+            const items = document.querySelectorAll('.reward-item');
+            items.forEach(item => {
+                const index = Array.from(items).indexOf(item);
+                const itemData = rewardData[index];
+                let show = false;
+                
+                if (!itemData || !itemData.raw_details) {
+                    item.style.display = 'none';
+                    return;
+                }
+                
+                const activePenalties = itemData.raw_details.active_penalties || 0;
+                
+                switch(countType) {
+                    case 'single-issue':
+                        show = activePenalties === 1;
+                        break;
+                    case 'multiple-issues':
+                        show = activePenalties === 2;
+                        break;
+                    case 'critical-issues':
+                        show = activePenalties >= 3;
+                        break;
+                }
+                
+                item.style.display = show ? 'block' : 'none';
+            });
+        }
+        
+        // 更新激活的过滤按钮状态
+        function updateActiveFilter(event) {
+            if (event && event.target) {
+                // 移除同组内其他按钮的active状态
+                const filterGroup = event.target.closest('.filter-group');
+                if (filterGroup) {
+                    const badges = filterGroup.querySelectorAll('.filter-badge');
+                    badges.forEach(badge => badge.classList.remove('active'));
+                }
+                event.target.classList.add('active');
             }
-            return solutionPreview || '无数据';
+        }
+        
+        // 重置所有过滤器
+        function resetFilters() {
+            const badges = document.querySelectorAll('.filter-badge');
+            badges.forEach(badge => badge.classList.remove('active'));
+            
+            // 激活"全部"按钮
+            const allBadge = document.querySelector('.filter-badge[onclick="filterByScore(\'all\')"]');
+            if (allBadge) {
+                allBadge.classList.add('active');
+            }
+            
+            // 显示所有项目
+            const items = document.querySelectorAll('.reward-item');
+            items.forEach(item => {
+                item.style.display = 'block';
+            });
+        }
+        
+        // 显示详情
+        function showDetails(index) {
+            const item = rewardData[index];
+            const modalBody = document.getElementById('detailModalBody');
+            
+            const html = `
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="detail-section">
+                            <h6><i class="bi bi-info-circle"></i> 基本信息</h6>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <span class="label">函数名:</span>
+                                    <span class="value">${item.function_name || '未知函数'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="label">索引:</span>
+                                    <span class="value">${item.index || 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="label">时间戳:</span>
+                                    <span class="value">${item.timestamp ? new Date(item.timestamp * 1000).toLocaleString() : 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="label">总分:</span>
+                                    <span class="value score-badge">${(item.score || 0).toFixed(3)}</span>
+                                </div>
+                                ${item && item.sample_info && item.sample_info.source_file ? `
+                                    <div class="detail-item">
+                                        <span class="label">源文件:</span>
+                                        <span class="value">${item.sample_info.source_file.split('/').pop()}</span>
+                                    </div>
+                                ` : ''}
+                                ${item && item.sample_info && item.sample_info.sql_pattern_cnt ? `
+                                    <div class="detail-item">
+                                        <span class="label">SQL模式数:</span>
+                                        <span class="value">${item.sample_info.sql_pattern_cnt}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-section">
+                            <h6><i class="bi bi-graph-up"></i> 权重配置</h6>
+                            <div class="detail-grid">
+                                ${item.details && item.details.weights ? Object.entries(item.details.weights).map(([key, value]) => `
+                                    <div class="detail-item">
+                                        <span class="label">${key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
+                                        <span class="value">${value}</span>
+                                    </div>
+                                `).join('') : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 五维度详细分析 -->
+                <div class="accordion" id="dimensionAccordion">
+                    ${generateDimensionDetails(item.dimension_details, item)}
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="detail-section">
+                            <h6><i class="bi bi-database"></i> 生成的SQL语句</h6>
+                            <pre><code class="language-sql">${formatSolutionPreview(item.solution_preview)}</code></pre>
+                            ${item.ground_truth_preview && formatSolutionPreview(item.ground_truth_preview) !== '[]' ? `
+                                <div class="mt-3">
+                                    <h6><i class="bi bi-check-circle text-success"></i> 参考答案</h6>
+                                    <pre><code class="language-sql">${formatSolutionPreview(item.ground_truth_preview)}</code></pre>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="detail-section">
+                            <h6><i class="bi bi-code"></i> ORM代码</h6>
+                            <pre><code class="language-go">${item.orm_code || '暂无代码'}</code></pre>
+                        </div>
+                    </div>
+                </div>
+                
+                ${item.details && item.details.positive_dimensions ? `
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="detail-section">
+                            <h6><i class="bi bi-pie-chart"></i> 维度权重分布</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">启用的维度</h6>
+                                    <div class="dimension-weights">
+                                        ${item.details.positive_dimensions.enabled_dimensions.map(dim => `
+                                            <div class="weight-item">
+                                                <span class="weight-label">${dim.charAt(0).toUpperCase() + dim.slice(1)}</span>
+                                                <span class="weight-value">${(item.details.positive_dimensions.normalized_scores[dim] || 0).toFixed(3)}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">权重配置</h6>
+                                    <div class="weight-config">
+                                        <div class="config-item">总权重: ${item.details.positive_dimensions.total_weight}</div>
+                                        <div class="config-item">有效性权重: ${item.details.weights.validity_weight}</div>
+                                        <div class="config-item">一致性权重: ${item.details.weights.consistency_weight}</div>
+                                        <div class="config-item">关键词惩罚上限: ${item.details.weights.keyword_penalty_cap}</div>
+                                        <div class="config-item">分支惩罚上限: ${item.details.weights.branch_penalty_cap}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+            
+            modalBody.innerHTML = html;
+            new bootstrap.Modal(document.getElementById('detailModal')).show();
+            
+            // 语法高亮
+            setTimeout(() => {
+                Prism.highlightAll();
+            }, 100);
         }
         
         // 生成维度详细信息
-        function generateDimensionDetails(dimensionDetails) {
+        function generateDimensionDetails(dimensionDetails, item) {
             let html = '';
             
             // 有效性详情
@@ -803,16 +1478,13 @@
                     <div class="accordion-item">
                         <h2 class="accordion-header">
                             <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#validity-details">
-                                <i class="bi bi-check-circle"></i> 有效性 (Validity) 详情
+                                <i class="bi bi-check-circle text-success"></i> 
+                                <span class="ms-2">有效性 (Validity) - 评分: ${validity.score.toFixed(3)}</span>
                             </button>
                         </h2>
-                        <div id="validity-details" class="accordion-collapse collapse show" data-bs-parent="#dimensionAccordion">
+                        <div id="validity-details" class="accordion-collapse collapse show">
                             <div class="accordion-body">
                                 <div class="detail-grid">
-                                    <div class="detail-item">
-                                        <span class="label">评分:</span>
-                                        <span class="value score-badge">${validity.score.toFixed(3)}</span>
-                                    </div>
                                     <div class="detail-item">
                                         <span class="label">有效SQL数:</span>
                                         <span class="value">${validity.valid_count}</span>
@@ -822,20 +1494,14 @@
                                         <span class="value">${validity.total_count}</span>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="label">SQL数量:</span>
-                                        <span class="value">${validity.sql_count}</span>
+                                        <span class="label">权重:</span>
+                                        <span class="value">${validity.weight}</span>
                                     </div>
                                 </div>
-                                ${validity.extracted_sqls && validity.extracted_sqls.length > 0 ? `
-                                    <div class="mt-3">
-                                        <h6>提取的SQL:</h6>
-                                        <pre><code class="language-sql">${validity.extracted_sqls.join('\n')}</code></pre>
-                                    </div>
-                                ` : ''}
                                 ${validity.invalid_sqls && validity.invalid_sqls.length > 0 ? `
                                     <div class="mt-3">
                                         <h6>无效SQL:</h6>
-                                        <pre><code class="language-sql">${validity.invalid_sqls.join('\n')}</code></pre>
+                                        <pre><code class="language-sql">${validity.invalid_sqls.join('\\n')}</code></pre>
                                     </div>
                                 ` : ''}
                             </div>
@@ -851,45 +1517,36 @@
                     <div class="accordion-item">
                         <h2 class="accordion-header">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#consistency-details">
-                                <i class="bi bi-arrow-repeat"></i> 一致性 (Consistency) 详情
+                                <i class="bi bi-arrow-repeat text-primary"></i>
+                                <span class="ms-2">一致性 (Consistency) - 评分: ${consistency.score.toFixed(3)}</span>
                             </button>
                         </h2>
-                        <div id="consistency-details" class="accordion-collapse collapse" data-bs-parent="#dimensionAccordion">
+                        <div id="consistency-details" class="accordion-collapse collapse">
                             <div class="accordion-body">
                                 <div class="detail-grid">
-                                    <div class="detail-item">
-                                        <span class="label">评分:</span>
-                                        <span class="value score-badge">${consistency.score.toFixed(3)}</span>
-                                    </div>
-                                    ${consistency.valid_sql_count !== undefined ? `
                                         <div class="detail-item">
                                             <span class="label">有效SQL数:</span>
-                                            <span class="value">${consistency.valid_sql_count}</span>
+                                        <span class="value">${consistency.valid_sql_count || 'N/A'}</span>
                                         </div>
-                                    ` : ''}
-                                    ${consistency.total_sqls !== undefined ? `
                                         <div class="detail-item">
                                             <span class="label">总SQL数:</span>
-                                            <span class="value">${consistency.total_sqls}</span>
+                                        <span class="value">${consistency.total_sqls || 'N/A'}</span>
                                         </div>
-                                    ` : ''}
-                                    ${consistency.llm_tables && consistency.llm_tables.length > 0 ? `
                                         <div class="detail-item">
-                                            <span class="label">LLM表:</span>
-                                            <span class="value">${consistency.llm_tables.join(', ')}</span>
+                                        <span class="label">权重:</span>
+                                        <span class="value">${consistency.weight}</span>
                                         </div>
-                                    ` : ''}
-                                    ${consistency.llm_columns && consistency.llm_columns.length > 0 ? `
-                                        <div class="detail-item">
-                                            <span class="label">LLM列:</span>
-                                            <span class="value">${consistency.llm_columns.join(', ')}</span>
                                         </div>
-                                    ` : ''}
-                                </div>
-                                ${consistency.orm_code ? `
+                                ${consistency.llm_tables && consistency.llm_tables.length > 0 ? `
                                     <div class="mt-3">
-                                        <h6>ORM代码片段:</h6>
-                                        <pre><code class="language-go">${consistency.orm_code}</code></pre>
+                                        <h6>LLM识别的表:</h6>
+                                        <p><code>${consistency.llm_tables.join(', ')}</code></p>
+                                </div>
+                                ` : ''}
+                                ${consistency.llm_columns && consistency.llm_columns.length > 0 ? `
+                                    <div class="mt-3">
+                                        <h6>LLM识别的列:</h6>
+                                        <p><code>${consistency.llm_columns.join(', ')}</code></p>
                                     </div>
                                 ` : ''}
                             </div>
@@ -898,33 +1555,86 @@
                 `;
             }
 
-            // 关键词详情
-            if (dimensionDetails.keyword) {
-                const keyword = dimensionDetails.keyword;
+            // 关键词惩罚详情
+            if (dimensionDetails.keyword_penalty) {
+                const keyword = dimensionDetails.keyword_penalty;
                 html += `
                     <div class="accordion-item">
                         <h2 class="accordion-header">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#keyword-details">
-                                <i class="bi bi-search"></i> 关键词 (Keyword) 详情
+                                <i class="bi bi-exclamation-triangle text-warning"></i>
+                                <span class="ms-2">关键词惩罚 - 惩罚值: ${keyword.penalty_amount.toFixed(3)} (${keyword.enabled ? '启用' : '禁用'})</span>
                             </button>
                         </h2>
-                        <div id="keyword-details" class="accordion-collapse collapse" data-bs-parent="#dimensionAccordion">
+                        <div id="keyword-details" class="accordion-collapse collapse">
                             <div class="accordion-body">
                                 <div class="detail-grid">
                                     <div class="detail-item">
-                                        <span class="label">评分:</span>
-                                        <span class="value score-badge">${keyword.score !== null ? keyword.score.toFixed(3) : 'N/A'}</span>
+                                        <span class="label">惩罚值:</span>
+                                        <span class="value">${keyword.penalty_amount.toFixed(3)}</span>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="label">有关键词:</span>
-                                        <span class="value">${keyword.has_keywords ? '是' : '否'}</span>
+                                        <span class="label">惩罚上限:</span>
+                                        <span class="value">${keyword.penalty_cap}</span>
                                     </div>
+                                    <div class="detail-item">
+                                        <span class="label">启用状态:</span>
+                                        <span class="value">${keyword.enabled ? '启用' : '禁用'}</span>
+                                    </div>
+                                    ${keyword.keyword_score !== undefined ? `
+                                        <div class="detail-item">
+                                            <span class="label">关键词分数:</span>
+                                            <span class="value">${keyword.keyword_score}</span>
+                                        </div>
+                                    ` : ''}
                                 </div>
                                 ${keyword.matched_keywords && keyword.matched_keywords.length > 0 ? `
                                     <div class="mt-3">
                                         <h6>匹配的关键词:</h6>
-                                        <div class="keyword-tags">
-                                            ${keyword.matched_keywords.map(kw => `<span class="badge bg-success me-1">${kw}</span>`).join('')}
+                                        <p>${keyword.matched_keywords.map(kw => `<span class="badge bg-warning">${kw}</span>`).join(' ')}</p>
+                                    </div>
+                                ` : ''}
+                                
+                                ${keyword.has_keywords !== undefined ? `
+                                    <div class="mt-3">
+                                        <h6><i class="bi bi-search text-primary"></i> 关键词详细分析:</h6>
+                                        <div class="keyword-detail-box">
+                                <div class="detail-grid">
+                                    <div class="detail-item">
+                                                    <span class="label">是否包含关键词:</span>
+                                                    <span class="value">${keyword.has_keywords ? '是' : '否'}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                                    <span class="label">关键词分数:</span>
+                                                    <span class="value">${keyword.keyword_score !== undefined ? keyword.keyword_score.toFixed(3) : 'N/A'}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                                    <span class="label">原始分数:</span>
+                                                    <span class="value">${keyword.original_score !== undefined ? keyword.original_score.toFixed(3) : 'N/A'}</span>
+                                    </div>
+                                    </div>
+                                            ${keyword.matched_keywords && keyword.matched_keywords.length > 0 ? `
+                                                <div class="mt-2">
+                                                    <strong>匹配的关键词详情:</strong>
+                                                    <ul class="keyword-list">
+                                                        ${keyword.matched_keywords.map(kw => `<li><span class="badge bg-danger">${kw}</span></li>`).join('')}
+                                                    </ul>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${item && item.keyword_analysis && item.keyword_analysis.llm_response ? `
+                                    <div class="mt-3">
+                                        <h6><i class="bi bi-robot text-info"></i> LLM分析结果:</h6>
+                                        <div class="llm-analysis-box">
+                                            <div class="llm-response">
+                                                <strong>分析时间:</strong> ${(item.keyword_analysis && item.keyword_analysis.analysis_timestamp) || 'N/A'}<br>
+                                                <strong>是否包含特殊关键词:</strong> ${(item.keyword_analysis && item.keyword_analysis.has_special_keywords) ? '是' : '否'}<br>
+                                                <strong>LLM响应:</strong>
+                                                <pre><code>${(item.keyword_analysis && item.keyword_analysis.llm_response) || 'N/A'}</code></pre>
+                                            </div>
                                         </div>
                                     </div>
                                 ` : ''}
@@ -934,54 +1644,285 @@
                 `;
             }
 
-            // 惩罚详情
-            if (dimensionDetails.penalty) {
-                const penalty = dimensionDetails.penalty;
+            // 分支惩罚详情
+            if (dimensionDetails.branch_penalty) {
+                const branch = dimensionDetails.branch_penalty;
                 html += `
                     <div class="accordion-item">
                         <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#penalty-details">
-                                <i class="bi bi-exclamation-triangle"></i> 惩罚 (Penalty) 详情
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#branch-details">
+                                <i class="bi bi-git-branch text-danger"></i>
+                                <span class="ms-2">分支惩罚 - 惩罚值: ${branch.penalty_amount.toFixed(3)} (${branch.enabled ? '启用' : '禁用'})</span>
                             </button>
                         </h2>
-                        <div id="penalty-details" class="accordion-collapse collapse" data-bs-parent="#dimensionAccordion">
+                        <div id="branch-details" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                        <span class="label">严重度:</span>
+                                        <span class="value">${branch.severity.toFixed(3)}</span>
+                                </div>
+                                <div class="detail-item">
+                                        <span class="label">惩罚值:</span>
+                                        <span class="value">${branch.penalty_amount.toFixed(3)}</span>
+                                </div>
+                                <div class="detail-item">
+                                        <span class="label">惩罚上限:</span>
+                                        <span class="value">${branch.penalty_cap}</span>
+                                </div>
+                                <div class="detail-item">
+                                        <span class="label">启用状态:</span>
+                                        <span class="value">${branch.enabled ? '启用' : '禁用'}</span>
+                                </div>
+                            </div>
+                                
+                                ${branch.inferred_exclusive_groups || branch.sql_validation || branch.final_evaluation ? `
+                                    <div class="mt-3">
+                                        <h6><i class="bi bi-diagram-2 text-primary"></i> 分支约束详细分析:</h6>
+                                        <div class="branch-detail-box">
+                                            ${branch.inferred_exclusive_groups ? `
+                                                <div class="mb-3">
+                                                    <strong>推断的互斥字段组:</strong>
+                                                    <div class="exclusive-groups">
+                                                        ${branch.inferred_exclusive_groups.map((group, index) => `
+                                                            <div class="group-item">
+                                                                <span class="group-label">组${index + 1}:</span>
+                                                                ${group.map(field => `<span class="badge bg-info">${field}</span>`).join(' ')}
+                        </div>
+                                                        `).join('')}
+                    </div>
+                                        </div>
+                                            ` : ''}
+                                            
+                                            ${branch.sql_validation ? `
+                                                <div class="mb-3">
+                                                    <strong>SQL验证结果:</strong>
+                                                    <div class="sql-validation-results">
+                                                        ${branch.sql_validation.map(validation => `
+                                                            <div class="validation-item ${validation.valid ? 'valid' : 'invalid'}">
+                                                                <div class="validation-header">
+                                                                    <span class="sql-index">SQL${validation.sql_index}</span>
+                                                                    <span class="validation-status ${validation.valid ? 'text-success' : 'text-danger'}">
+                                                                        <i class="bi bi-${validation.valid ? 'check-circle' : 'x-circle'}"></i>
+                                                                        ${validation.valid ? '有效' : '无效'}
+                                                                    </span>
+                            </div>
+                                                                <div class="validation-details">
+                                                                    <div><strong>提取字段:</strong> ${validation.extracted_fields.length > 0 ? validation.extracted_fields.map(f => `<span class="field-tag">${f}</span>`).join(' ') : '无'}</div>
+                                                                    <div><strong>约束检查:</strong> ${validation.constraint_check}</div>
+                        </div>
+                    </div>
+                                                        `).join('')}
+                </div>
+                                                </div>
+                                            ` : ''}
+                                            
+                                            ${branch.final_evaluation ? `
+                                                <div class="mb-3">
+                                                    <strong>最终评估:</strong>
+                                                    <div class="final-evaluation">
+                                                        <div class="evaluation-grid">
+                                                            <div class="eval-item">
+                                                                <span class="label">违规总数:</span>
+                                                                <span class="value">${branch.final_evaluation.total_violations}</span>
+                            </div>
+                                                            <div class="eval-item">
+                                                                <span class="label">分数:</span>
+                                                                <span class="value">${branch.final_evaluation.score.toFixed(3)}</span>
+                        </div>
+                                                            <div class="eval-item">
+                                                                <span class="label">包含排他逻辑:</span>
+                                                                <span class="value">${branch.final_evaluation.has_exclusivity_logic ? '是' : '否'}</span>
+                    </div>
+                </div>
+                        </div>
+                    </div>
+                                            ` : ''}
+                </div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${item && item.dimension_results && item.dimension_results.branch_penalty ? `
+                                    <div class="mt-3">
+                                        <h6><i class="bi bi-code-square text-info"></i> 代码复杂度分析:</h6>
+                                        <div class="complexity-analysis-box">
+                                            <div class="complexity-details">
+                                                <strong>检测方法:</strong> 基于代码结构分析<br>
+                                                <strong>分支严重度:</strong> ${(item.dimension_results.branch_penalty.severity || 0).toFixed(3)}<br>
+                                                <strong>惩罚计算:</strong> severity × penalty_cap = ${(branch.severity || 0).toFixed(3)} × ${branch.penalty_cap || 0} = ${(branch.penalty_amount || 0).toFixed(3)}<br>
+                                                <strong>触发条件:</strong> ${(branch.severity || 0) > 0 ? '代码包含复杂分支结构' : '未检测到复杂分支结构'}
+                        </div>
+                    </div>
+                </div>
+                                ` : ''}
+                                
+                                ${item && item.code_info && item.code_info.caller ? `
+                                    <div class="mt-3">
+                                        <h6><i class="bi bi-diagram-3 text-secondary"></i> 调用上下文:</h6>
+                                        <div class="caller-context-box">
+                                            <pre><code class="language-go">${item.code_info.caller.substring(0, 500)}${item.code_info.caller.length > 500 ? '...' : ''}</code></pre>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                                </div>
+                    </div>
+                </div>
+            `;
+            }
+
+            // 多语句惩罚详情
+            if (dimensionDetails.multi_sql_penalty) {
+                const multiSql = dimensionDetails.multi_sql_penalty;
+                html += `
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#multi-sql-details">
+                                <i class="bi bi-layers text-warning"></i>
+                                <span class="ms-2">多语句惩罚 - 惩罚值: ${multiSql.penalty_amount.toFixed(3)} (始终启用)</span>
+                            </button>
+                        </h2>
+                        <div id="multi-sql-details" class="accordion-collapse collapse">
                             <div class="accordion-body">
                                 <div class="detail-grid">
                                     <div class="detail-item">
-                                        <span class="label">评分:</span>
-                                        <span class="value score-badge">${penalty.score.toFixed(3)}</span>
+                                        <span class="label">原始分数:</span>
+                                        <span class="value">${multiSql.original_score.toFixed(3)}</span>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="label">启用:</span>
-                                        <span class="value">${penalty.enabled ? '是' : '否'}</span>
+                                        <span class="label">惩罚值:</span>
+                                        <span class="value">${multiSql.penalty_amount.toFixed(3)}</span>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="label">惩罚严重性:</span>
-                                        <span class="value score-badge">${penalty.penalty_severity.toFixed(3)}</span>
+                                        <span class="label">惩罚上限:</span>
+                                        <span class="value">${multiSql.penalty_cap}</span>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="label">惩罚金额:</span>
-                                        <span class="value score-badge">${penalty.penalty_amount.toFixed(3)}</span>
+                                        <span class="label">总SQL数:</span>
+                                        <span class="value">${multiSql.total_count || 'N/A'}</span>
                                     </div>
-                                    ${penalty.variants_count !== undefined ? `
-                                        <div class="detail-item">
-                                            <span class="label">变体数量:</span>
-                                            <span class="value">${penalty.variants_count}</span>
-                                        </div>
-                                    ` : ''}
+                                    <div class="detail-item">
+                                        <span class="label">多语句数:</span>
+                                        <span class="value">${multiSql.multi_sql_count || 0}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="label">多语句比例:</span>
+                                        <span class="value">${(multiSql.ratio || 0).toFixed(3)}</span>
+                                    </div>
                                 </div>
-                                ${penalty.error ? `
+                                
+                                ${multiSql.example_multi_sqls && multiSql.example_multi_sqls.length > 0 ? `
                                     <div class="mt-3">
-                                        <h6>错误信息:</h6>
-                                        <div class="alert alert-warning">${penalty.error}</div>
+                                        <h6><i class="bi bi-exclamation-circle text-danger"></i> 检测到的多语句示例:</h6>
+                                        <pre><code class="language-sql">${multiSql.example_multi_sqls.join('\\n\\n')}</code></pre>
                                     </div>
                                 ` : ''}
-                                ${penalty.sql_variants && penalty.sql_variants.length > 0 ? `
+                                
+                                ${multiSql.sql_analysis && multiSql.sql_analysis.length > 0 ? `
                                     <div class="mt-3">
-                                        <h6>SQL变体:</h6>
-                                        <pre><code class="language-sql">${penalty.sql_variants.join('\n')}</code></pre>
+                                        <h6><i class="bi bi-search text-primary"></i> SQL详细分析:</h6>
+                                        <div class="sql-analysis-box">
+                                            ${multiSql.sql_analysis.map((analysis, index) => `
+                                                <div class="analysis-item ${analysis.is_multi_statement ? 'multi-statement' : 'single-statement'}">
+                                                    <div class="analysis-header">
+                                                        <span class="sql-index">SQL ${analysis.sql_index}</span>
+                                                        <span class="statement-count">
+                                                            <i class="bi bi-${analysis.is_multi_statement ? 'exclamation-triangle text-warning' : 'check-circle text-success'}"></i>
+                                                            ${analysis.statement_count} 条语句
+                                                        </span>
+                                                    </div>
+                                                    <div class="sql-content">
+                                                        <pre><code class="language-sql">${analysis.sql_content}</code></pre>
+                                                    </div>
+                                                    ${analysis.statements && analysis.statements.length > 0 ? `
+                                                        <div class="statements-breakdown">
+                                                            <small><strong>语句分解:</strong></small>
+                                                            <ul class="statement-list">
+                                                                ${analysis.statements.map(stmt => `<li><code>${stmt}</code></li>`).join('')}
+                                                            </ul>
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            `).join('')}
+                                        </div>
                                     </div>
                                 ` : ''}
+                                
+                                <div class="mt-3">
+                                    <h6><i class="bi bi-calculator text-info"></i> 惩罚计算逻辑:</h6>
+                                    <div class="calculation-box">
+                                        <div class="calculation-details">
+                                            <strong>计算公式:</strong> penalty_amount = penalty_cap × (1 - original_score)<br>
+                                            <strong>实际计算:</strong> ${multiSql.penalty_cap} × (1 - ${multiSql.original_score.toFixed(3)}) = ${multiSql.penalty_amount.toFixed(3)}<br>
+                                            <strong>设计原理:</strong> 原始分数越低（多语句比例越高），惩罚越重
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 累积惩罚总结
+            if (item && item.raw_details && (item.raw_details.total_penalty > 0 || item.raw_details.penalty_multiplier > 1.0)) {
+                const rawDetails = item.raw_details;
+                html += `
+                    <div class="accordion-item border-danger">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cumulative-penalty-details">
+                                <i class="bi bi-exclamation-diamond text-danger"></i>
+                                <span class="ms-2">累积惩罚机制 - 总惩罚: ${rawDetails.total_penalty.toFixed(3)}</span>
+                                ${rawDetails.penalty_multiplier > 1.0 ? `<span class="multiplier-badge ms-2">×${rawDetails.penalty_multiplier.toFixed(1)}</span>` : ''}
+                            </button>
+                        </h2>
+                        <div id="cumulative-penalty-details" class="accordion-collapse collapse">
+                            <div class="accordion-body bg-light">
+                                <div class="detail-grid">
+                                    <div class="detail-item">
+                                        <span class="label">活跃惩罚数:</span>
+                                        <span class="value">${rawDetails.active_penalties}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="label">惩罚倍数:</span>
+                                        <span class="value">${rawDetails.penalty_multiplier.toFixed(1)}x</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="label">总惩罚值:</span>
+                                        <span class="value text-danger">${rawDetails.total_penalty.toFixed(3)}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <h6><i class="bi bi-diagram-2 text-primary"></i> 惩罚组合分析:</h6>
+                                    <div class="penalty-breakdown">
+                                        <div class="breakdown-item">
+                                            <span class="penalty-type">关键词惩罚:</span>
+                                            <span class="penalty-amount">${rawDetails.keyword_penalty_amount ? rawDetails.keyword_penalty_amount.toFixed(3) : '0.000'}</span>
+                                        </div>
+                                        <div class="breakdown-item">
+                                            <span class="penalty-type">分支冲突惩罚:</span>
+                                            <span class="penalty-amount">${rawDetails.branch_penalty_amount ? rawDetails.branch_penalty_amount.toFixed(3) : '0.000'}</span>
+                                        </div>
+                                        <div class="breakdown-item">
+                                            <span class="penalty-type">多语句惩罚:</span>
+                                            <span class="penalty-amount">${rawDetails.multi_sql_penalty_amount ? rawDetails.multi_sql_penalty_amount.toFixed(3) : '0.000'}</span>
+                                        </div>
+                                        ${rawDetails.penalty_multiplier > 1.0 ? `
+                                            <div class="breakdown-item multiplier-applied">
+                                                <span class="penalty-type">累积加重 (${rawDetails.active_penalties}个问题):</span>
+                                                <span class="penalty-amount">×${rawDetails.penalty_multiplier.toFixed(1)}</span>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <div class="alert alert-warning">
+                                        <i class="bi bi-info-circle"></i>
+                                        <strong>累积惩罚机制说明:</strong> 
+                                        当同时存在2个或以上问题时，总惩罚将额外增加20%，以强化对多重问题代码的约束效果。
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -989,114 +1930,6 @@
             }
 
             return html;
-        }
-        
-        // 显示详细信息
-        function showDetails(index) {
-            const item = rewardData[index];
-            const modalBody = document.getElementById('detailModalBody');
-            
-            // 基本信息
-            const basicInfo = `
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <div class="detail-section">
-                            <h6><i class="bi bi-function"></i> 基本信息</h6>
-                            <div class="detail-grid">
-                                <div class="detail-item">
-                                    <span class="label">函数名:</span>
-                                    <span class="value">${item.function_name}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="label">索引:</span>
-                                    <span class="value">${item.index}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="label">时间戳:</span>
-                                    <span class="value">${item.timestamp ? new Date(item.timestamp * 1000).toLocaleString() : 'N/A'}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="label">总分:</span>
-                                    <span class="value score-badge">${item.score.toFixed(3)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-section">
-                            <h6><i class="bi bi-graph-up"></i> 维度评分</h6>
-                            <div class="detail-grid">
-                                ${Object.entries(item.dimension_scores).map(([key, value]) => 
-                                    value !== null ? `
-                                        <div class="detail-item">
-                                            <span class="label">${key.replace('_score', '').replace(/_/g, ' ').toUpperCase()}:</span>
-                                            <span class="value score-badge">${value.toFixed(3)}</span>
-                                        </div>
-                                    ` : ''
-                                ).join('')}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // 维度详细信息
-            const dimensionDetails = `
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="detail-section">
-                            <h6><i class="bi bi-list-ul"></i> 维度详细信息</h6>
-                            <div class="accordion" id="dimensionAccordion">
-                                ${generateDimensionDetails(item.dimension_details)}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // ORM代码
-            const ormCode = `
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="detail-section">
-                            <h6><i class="bi bi-code"></i> ORM代码</h6>
-                            <pre><code class="language-go">${item.orm_code}</code></pre>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // 解决方案预览
-            const solutionPreview = `
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="detail-section">
-                            <h6><i class="bi bi-code-slash"></i> 解决方案预览</h6>
-                            <pre><code class="language-sql">${formatSolutionPreview(item.solution_preview)}</code></pre>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // 标准答案预览
-            const groundTruthPreview = `
-                <div class="row">
-                    <div class="col-12">
-                        <div class="detail-section">
-                            <h6><i class="bi bi-check-circle"></i> 标准答案预览</h6>
-                            <pre><code class="language-sql">${formatSolutionPreview(item.ground_truth_preview)}</code></pre>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            modalBody.innerHTML = basicInfo + dimensionDetails + ormCode + solutionPreview + groundTruthPreview;
-            new bootstrap.Modal(document.getElementById('detailModal')).show();
-            
-            // 语法高亮
-            setTimeout(() => {
-                Prism.highlightAll();
-            }, 100);
         }
         
         // 显示SQL解决方案
@@ -1120,102 +1953,65 @@
             modalBody.innerHTML = html;
             new bootstrap.Modal(document.getElementById('solutionModal')).show();
             
-            // 语法高亮
             setTimeout(() => {
                 Prism.highlightAll();
             }, 100);
         }
         
+        // 格式化解决方案预览
+        function formatSolutionPreview(solutionPreview) {
+            if (typeof solutionPreview === 'string') {
+                try {
+                    // 尝试解析为JSON数组
+                    const parsed = JSON.parse(solutionPreview);
+                    if (Array.isArray(parsed)) {
+                        return parsed.map(sql => {
+                            if (typeof sql === 'object') {
+                                // 处理复杂SQL对象
+                                if (sql.type === 'param_dependent' && sql.variants) {
+                                    return sql.variants.map(variant => {
+                                        return `-- ${variant.scenario || 'SQL变体'}\n${variant.sql || variant}`;
+                                    }).join('\n\n');
+                                } else if (sql.sql) {
+                                    return sql.sql;
+                                }
+                                return JSON.stringify(sql, null, 2);
+                            }
+                            return sql;
+                        }).join('\n\n');
+                }
+                } catch (e) {
+                    // 如果不是JSON，直接返回
+                }
+                return solutionPreview;
+            } else if (Array.isArray(solutionPreview)) {
+                return solutionPreview.map(sql => {
+                    if (typeof sql === 'object') {
+                        // 处理复杂SQL对象
+                        if (sql.type === 'param_dependent' && sql.variants) {
+                            return sql.variants.map(variant => {
+                                return `-- ${variant.scenario || 'SQL变体'}\n${variant.sql || variant}`;
+                            }).join('\n\n');
+                        } else if (sql.sql) {
+                            return sql.sql;
+                        }
+                        return JSON.stringify(sql, null, 2);
+                    }
+                    return sql;
+                }).join('\n\n');
+            } else if (typeof solutionPreview === 'object') {
+                return JSON.stringify(solutionPreview, null, 2);
+            }
+            return solutionPreview || '无数据';
+                }
+        
         // 回到顶部
         function scrollToTop() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-        
-        // 显示/隐藏回到顶部按钮
-        window.addEventListener('scroll', function() {
-            const backToTop = document.querySelector('.back-to-top');
-            if (window.pageYOffset > 300) {
-                backToTop.style.display = 'block';
-            } else {
-                backToTop.style.display = 'none';
-            }
-        });
-        
-        // 加载动画函数
-        function simulateLoading() {
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            const progressBar = document.getElementById('progressBar');
-            const steps = ['step1', 'step2', 'step3', 'step4', 'step5'];
-            let currentStep = 0;
-            
-            // 检查元素是否存在
-            if (!loadingOverlay || !progressBar) {
-                console.error('Loading elements not found');
-                return;
-            }
-            
-            // 更新加载步骤
-            function updateStep() {
-                // 移除所有active类
-                steps.forEach(step => {
-                    document.getElementById(step).classList.remove('active');
-                });
-                
-                // 激活当前步骤
-                if (currentStep < steps.length) {
-                    document.getElementById(steps[currentStep]).classList.add('active');
-                }
-            }
-            
-            // 模拟加载进度
-            function updateProgress(progress) {
-                progressBar.style.width = progress + '%';
-                console.log('Progress:', progress + '%'); // 调试信息
-            }
-            
-            // 开始加载动画
-            let progress = 0;
-            
-            // 确保进度条初始状态
-            progressBar.style.width = '0%';
-            
-            const progressInterval = setInterval(() => {
-                progress += Math.random() * 15 + 5; // 随机增加5-20%
-                
-                if (progress >= 100) {
-                    progress = 100;
-                    clearInterval(progressInterval);
-                    
-                    // 完成加载
-                    setTimeout(() => {
-                        loadingOverlay.classList.add('hidden');
-                        setTimeout(() => {
-                            loadingOverlay.style.display = 'none';
-                        }, 500);
-                    }, 500);
-                }
-                
-                updateProgress(progress);
-                
-                // 更新步骤
-                if (progress > 20 && currentStep === 0) {
-                    currentStep = 1;
-                    updateStep();
-                } else if (progress > 40 && currentStep === 1) {
-                    currentStep = 2;
-                    updateStep();
-                } else if (progress > 60 && currentStep === 2) {
-                    currentStep = 3;
-                    updateStep();
-                } else if (progress > 80 && currentStep === 3) {
-                    currentStep = 4;
-                    updateStep();
-                }
-            }, 200);
-            
-            // 初始化第一个步骤
-            updateStep();
-        }
+    </script>
+</body>
+</html> 
     </script>
 </body>
 </html> 

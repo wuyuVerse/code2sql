@@ -24,7 +24,7 @@ sys.path.insert(0, str(project_root))
 
 # 现在可以导入项目内的模块
 from config.rl.data_conversion.orm2sql_prompt_template import PROMPT_TEMPLATE
-from utils.preprocess import preprocess_record
+from utils.preprocess import preprocess_record  # 暂时注释掉，筛选功能不使用
 
 # 设置日志
 logging.basicConfig(
@@ -82,7 +82,7 @@ class RLDataConverter:
     
     def find_latest_workflow_output(self) -> Optional[Path]:
         """查找最新的workflow输出目录"""
-        workflow_dir = self.project_root / "workflow_output"
+        workflow_dir = self.project_root / "workflow_output_0802"
         if not workflow_dir.exists():
             return None
         
@@ -194,10 +194,11 @@ class RLDataConverter:
     async def process_single_record(self, record: Dict, index: int) -> Optional[Dict]:
         """处理单条记录（异步）"""
         try:
-            # 预处理步骤（仅表名字段名抽取）
+            # 预处理步骤（仅表名字段名抽取）- 暂时注释掉筛选逻辑
             ok, pre_tables, pre_columns = await preprocess_record(record)
             if not ok:
                 return None
+            pre_tables, pre_columns = [], []
             
             # 创建聊天格式的提示词
             prompt = self.create_rl_prompt(record)
@@ -224,11 +225,13 @@ class RLDataConverter:
                 "caller": record.get('caller', ''),
                 "callee": record.get('callee', ''),
                 "code_meta_data": record.get('code_meta_data', []),
-                # 预处理的表名字段名结果
+                # 预处理的表名字段名结果 - 暂时注释掉
                 "pre_tables": list(pre_tables),
                 "pre_columns": list(pre_columns),
                 # 保持原有关键词信息不变
-                "llm_keyword_analysis": record.get("llm_keyword_analysis", {})
+                "llm_keyword_analysis": record.get("llm_keyword_analysis", {}),
+                # 【新增】将condition字段移入extra_info，用于四维度奖励机制判断
+                "condition": record.get("condition", [])
             }
             
             return {
@@ -304,10 +307,10 @@ class RLDataConverter:
                     elif result is None:
                         filtered_count += 1
                     else:
-                        # 检查是否有关键词
-                        original_record = data[i + j]
-                        if original_record.get("llm_keyword_analysis", {}).get("has_special_keywords", False):
-                            has_keywords_count += 1
+                    #     # 检查是否有关键词
+                    #     original_record = data[i + j]
+                    #     if original_record.get("llm_keyword_analysis", {}).get("has_special_keywords", False):
+                    #         has_keywords_count += 1
                         results.append(result)
                 
                 # 更新进度条
@@ -365,8 +368,8 @@ class RLDataConverter:
             # 打印extra_info的关键信息
             extra_info = record.get('extra_info', {})
             logger.info(f"function_name: {extra_info.get('function_name', 'N/A')}")
-            logger.info(f"pre_tables: {extra_info.get('pre_tables', [])}")
-            logger.info(f"pre_columns: {extra_info.get('pre_columns', [])}")
+            logger.info(f"pre_tables: {extra_info.get('pre_tables', [])}")  # 注释掉预处理相关输出
+            logger.info(f"pre_columns: {extra_info.get('pre_columns', [])}")  # 注释掉预处理相关输出
             logger.info("")
         
         logger.info("=== 数据示例结束 ===")

@@ -211,6 +211,27 @@ class SyntheticDataGenerator:
     
     async def generate_pack(self, scenario: str) -> Dict:
         """为给定场景标签生成*一个*合成包（串行版本，异步）"""
+        
+        # 特殊处理with_first场景
+        if scenario == "with_first":
+            return await self._generate_with_first_pack()
+            
+        # 特殊处理with_take场景
+        if scenario == "with_take":
+            return await self._generate_with_take_pack()
+            
+        # 特殊处理with_last场景
+        if scenario == "with_last":
+            return await self._generate_with_last_pack()
+            
+        # 特殊处理with_find_no_limit场景
+        if scenario == "with_find_no_limit":
+            return await self._generate_with_find_no_limit_pack()
+            
+        # 特殊处理with_count场景
+        if scenario == "with_count":
+            return await self._generate_with_count_pack()
+            
         self._thread_safe_print(f"正在生成场景: {scenario}")
         var_names = self.config.get_random_names()
         scenario_desc = self.config.get_scenario_description(scenario)
@@ -278,6 +299,12 @@ class SyntheticDataGenerator:
         elif scenario == "where_condition_with_fixed_values":
             from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_WHERE_FIXED_VALUES
             orm_prompt = PROMPT_ORM_WHERE_FIXED_VALUES.format(
+                example=example_str,
+                **var_names
+            )
+        elif scenario == "raw_sql_in_code":
+            from config.data_processing.synthetic_data_generator.prompts import PROMPT_ORM_RAW_SQL_IN_CODE
+            orm_prompt = PROMPT_ORM_RAW_SQL_IN_CODE.format(
                 example=example_str,
                 **var_names
             )
@@ -467,6 +494,7 @@ class SyntheticDataGenerator:
                     example_caller=example_caller,
                     **var_names
                 )
+
             else:
                 caller_prompt = PROMPT_CALLER.format(
                     orm_block=json.dumps(orm_block, ensure_ascii=False),
@@ -550,6 +578,14 @@ class SyntheticDataGenerator:
     
     async def generate_pack_parallel(self, scenario: str) -> Dict:
         """为给定场景标签生成*一个*合成包（并行版本）"""
+        # 特殊处理 with_* 场景，将其重定向到专用的生成方法
+        if scenario.startswith("with_"):
+            # _generate_with_method_pack 是所有 with_* 场景的统一处理器，
+            # 它会内部处理“选择基础场景 -> 修改代码”的逻辑。
+            method_type = scenario.replace("with_", "")
+            self._thread_safe_print(f"[并行] 检测到`with_*`场景，重定向到增强方法: {method_type}")
+            return await self._generate_with_method_pack(method_type)
+
         self._thread_safe_print(f"[并行] 正在生成场景: {scenario}")
         
         # 获取随机变量名
@@ -895,3 +931,249 @@ class SyntheticDataGenerator:
         self._thread_safe_print(f"  - 总Token数: {stats['total_tokens']}")
         if stats['successful_requests'] > 0:
             self._thread_safe_print(f"  - 平均Token/请求: {stats['total_tokens']/stats['successful_requests']:.0f}") 
+
+    def _get_base_scenarios_for_with_methods(self) -> List[str]:
+        """获取用于with_first、with_take、with_last、with_find_no_limit、with_count场景的基础场景列表
+        
+        Returns:
+            排除了所有with_*场景的基础场景列表
+        """
+        all_scenarios = self.config.list_scenarios()
+        # 排除所有with_*场景
+        excluded_scenarios = {"with_first", "with_take", "with_last", "with_find_no_limit", "with_count"}
+        base_scenarios = [s for s in all_scenarios if s not in excluded_scenarios]
+        return base_scenarios
+
+    async def _generate_with_method_pack(self, method_type: str) -> Dict:
+        """生成with_*场景的通用方法
+        
+        Args:
+            method_type: 方法类型，支持 "first", "take", "last"
+            
+        Returns:
+            生成的数据包
+        """
+        scenario_name = f"with_{method_type}"
+        self._thread_safe_print(f"开始生成{scenario_name}场景数据包...")
+        
+                # 获取对应的提示词模板
+        method_templates = {
+            "first": {
+                "judge": "PROMPT_WITH_FIRST_JUDGE",
+                "generate": "PROMPT_WITH_FIRST_GENERATE",
+                "can_add_field": "can_add_first"
+            },
+            "take": {
+                "judge": "PROMPT_WITH_TAKE_JUDGE", 
+                "generate": "PROMPT_WITH_TAKE_GENERATE",
+                "can_add_field": "can_add_take"
+            },
+            "last": {
+                "judge": "PROMPT_WITH_LAST_JUDGE",
+                "generate": "PROMPT_WITH_LAST_GENERATE", 
+                "can_add_field": "can_add_last"
+            },
+            "find_no_limit": {
+                "judge": "PROMPT_WITH_FIND_NO_LIMIT_JUDGE",
+                "generate": "PROMPT_WITH_FIND_NO_LIMIT_GENERATE",
+                "can_add_field": "can_use_find_no_limit"
+            },
+            "count": {
+                "judge": "PROMPT_WITH_COUNT_JUDGE",
+                "generate": "PROMPT_WITH_COUNT_GENERATE",
+                "can_add_field": "can_use_count"
+            }
+        }
+        
+        if method_type not in method_templates:
+            raise ValueError(f"不支持的方法类型: {method_type}")
+            
+        templates = method_templates[method_type]
+        
+        # 第一步：生成基础场景数据包
+        self._thread_safe_print("  - 第一步：生成基础场景数据包...")
+        base_scenarios = self._get_base_scenarios_for_with_methods()
+        
+        import random
+        base_scenario = random.choice(base_scenarios)
+        self._thread_safe_print(f"  - 选择基础场景: {base_scenario}")
+        
+        # 生成基础数据包
+        base_pack = await self.generate_pack(base_scenario)
+        if not base_pack:
+            self._thread_safe_print("  - 基础数据包生成失败")
+            return {}
+        
+        # 获取基础数据包中的ORM代码和caller代码
+        pack_key = list(base_pack.keys())[0]
+        orm_code = base_pack[pack_key].get('code_value', '')
+        original_scenario = base_pack[pack_key].get('scenario', '')
+        original_code_meta_data = base_pack[pack_key].get('code_meta_data', [])
+        caller_code = ''
+        
+        if 'callers' in base_pack[pack_key] and base_pack[pack_key]['callers']:
+            caller_data = base_pack[pack_key]['callers'][0]
+            caller_code = caller_data.get('code_value', '')
+        
+        # 第二步：判断是否可以添加对应方法
+        self._thread_safe_print(f"  - 第二步：判断是否可以添加{method_type.title()}()方法...")
+        
+        # 获取随机变量名（如果需要的话）
+        var_names = self.config.get_random_names()
+        
+        # 动态导入判断提示词
+        from config.data_processing.synthetic_data_generator import prompts
+        judge_prompt_template = getattr(prompts, templates["judge"])
+        
+        # 尝试格式化，如果模板需要更多参数就提供
+        try:
+            judge_prompt = judge_prompt_template.format(orm_code=orm_code)
+        except Exception as e:
+            # 如果需要更多参数，提供完整的参数集
+            try:
+                judge_prompt = judge_prompt_template.format(
+                    orm_code=orm_code,
+                    **var_names
+                )
+            except Exception as e2:
+                raise
+        
+        judge_response = await self.llm_client.call_async_with_format_validation(
+            self.session,
+            judge_prompt,
+            validator=lambda x: True,  # 简单的JSON验证
+            max_tokens=self.config.max_tokens,
+            temperature=self.config.temperature,
+            module="synthetic_data_generator"
+        )
+        
+        if isinstance(judge_response, dict) and 'valid' in judge_response:
+            if judge_response['valid']:
+                judge_json = judge_response.get('content', '')
+            else:
+                raise ValueError(f"判断格式验证失败: {judge_response.get('error', '未知错误')}")
+        else:
+            judge_json = self._clean_json_response(str(judge_response))
+        
+        try:
+            judge_data = json.loads(judge_json)
+        except json.JSONDecodeError as e:
+            self._thread_safe_print(f"解析判断JSON失败: {e}")
+            raise
+        
+        # 检查是否可以添加对应方法
+        if not judge_data.get(templates["can_add_field"], False):
+            reason = judge_data.get('reason', '未知原因')
+            self._thread_safe_print(f"  - 无法添加{method_type.title()}()方法，原因: {reason}")
+            return {}  # 返回空字典表示丢弃
+        
+        # 第三步：生成添加方法后的完整数据
+        self._thread_safe_print(f"  - 第三步：生成添加{method_type.title()}()后的完整数据...")
+        
+        # 动态导入生成提示词
+        generate_prompt_template = getattr(prompts, templates["generate"])
+        
+        # 准备原始code_meta_data作为参考
+        original_code_meta_data_str = ""
+        if original_code_meta_data:
+            for meta in original_code_meta_data:
+                meta_key = meta.get('code_key', '')
+                meta_value = meta.get('code_value', '')
+                if meta_key and meta_value:
+                    original_code_meta_data_str += f"// {meta_key}\n{meta_value}\n\n"
+        
+        # 尝试格式化，如果模板需要更多参数就提供
+        try:
+            generate_prompt = generate_prompt_template.format(
+                orm_code=orm_code,
+                original_scenario=original_scenario,
+                caller_code=caller_code,
+                original_code_meta_data=original_code_meta_data_str
+            )
+        except (KeyError, ValueError) as e:
+            # 如果需要更多参数，提供完整的参数集
+            generate_prompt = generate_prompt_template.format(
+                orm_code=orm_code,
+                original_scenario=original_scenario,
+                caller_code=caller_code,
+                original_code_meta_data=original_code_meta_data_str,
+                **var_names
+            )
+        
+        generate_response = await self.llm_client.call_async_with_format_validation(
+            self.session,
+            generate_prompt,
+            validator=lambda x: True,  # 简单的JSON验证
+            max_tokens=self.config.max_tokens,
+            temperature=self.config.temperature,
+            module="synthetic_data_generator"
+        )
+        
+        if isinstance(generate_response, dict) and 'valid' in generate_response:
+            if generate_response['valid']:
+                generate_json = generate_response.get('content', '')
+            else:
+                raise ValueError(f"生成格式验证失败: {generate_response.get('error', '未知错误')}")
+        else:
+            generate_json = self._clean_json_response(str(generate_response))
+        
+        try:
+            generate_data = json.loads(generate_json)
+        except json.JSONDecodeError as e:
+            self._thread_safe_print(f"解析生成JSON失败: {e}")
+            raise
+        
+        # 验证生成的数据格式
+        required_fields = ['scenario', 'code_key', 'code_value', 'sql_pattern_cnt', 'callers', 'callees', 'code_meta_data']
+        for field in required_fields:
+            if field not in generate_data:
+                self._thread_safe_print(f"  - 生成的数据缺少必需字段: {field}")
+                return {}
+        
+        # 验证scenario字段
+        if generate_data['scenario'] != scenario_name:
+            self._thread_safe_print(f"  - 生成的scenario字段不正确: {generate_data['scenario']}")
+            return {}
+        
+        # 验证callers和callees是数组
+        if not isinstance(generate_data['callers'], list) or not isinstance(generate_data['callees'], list):
+            self._thread_safe_print("  - 生成的callers或callees字段不是数组")
+            return {}
+        
+        # 验证code_meta_data是数组
+        if not isinstance(generate_data['code_meta_data'], list):
+            self._thread_safe_print("  - 生成的code_meta_data字段不是数组")
+            return {}
+        
+        # 构建最终的数据包
+        new_pack_key = f"synthetic_{scenario_name}_{generate_data['code_key']}"
+        
+        # 如果LLM没有生成code_meta_data或生成了空数组，则使用原始数据作为基础
+        if not generate_data.get('code_meta_data') or len(generate_data.get('code_meta_data', [])) == 0:
+            self._thread_safe_print(f"  - 警告：LLM未生成code_meta_data，使用原始数据作为基础")
+            generate_data['code_meta_data'] = original_code_meta_data
+        
+        new_pack = {new_pack_key: generate_data}
+        
+        self._thread_safe_print(f"  - 成功生成{scenario_name}数据包: {new_pack_key}")
+        return new_pack
+
+    async def _generate_with_first_pack(self) -> Dict:
+        """生成with_first场景的数据包"""
+        return await self._generate_with_method_pack("first") 
+
+    async def _generate_with_take_pack(self) -> Dict:
+        """生成with_take场景的数据包"""
+        return await self._generate_with_method_pack("take") 
+
+    async def _generate_with_last_pack(self) -> Dict:
+        """生成with_last场景的数据包"""
+        return await self._generate_with_method_pack("last")
+
+    async def _generate_with_find_no_limit_pack(self) -> Dict:
+        """生成with_find_no_limit场景的数据包"""
+        return await self._generate_with_method_pack("find_no_limit")
+
+    async def _generate_with_count_pack(self) -> Dict:
+        """生成with_count场景的数据包"""
+        return await self._generate_with_method_pack("count") 

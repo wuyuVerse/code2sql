@@ -1908,9 +1908,30 @@ async def reward_viewer_detail(request: Request, filename: str):
             for line_num, line in enumerate(f, 1):
                 if line.strip():
                     try:
-                        data = json.loads(line.strip())
-                        data['line_number'] = line_num
-                        reward_data.append(data)
+                        raw_data = json.loads(line.strip())
+                        
+                        # 转换数据结构以适配前端模板
+                        processed_data = {
+                            'line_number': line_num,
+                            'timestamp': raw_data.get('timestamp'),
+                            'index': raw_data.get('sample_info', {}).get('index'),
+                            'function_name': raw_data.get('sample_info', {}).get('function_name'),
+                            'orm_code': raw_data.get('code_info', {}).get('orm_code'),
+                            'score': raw_data.get('final_result', {}).get('score', 0),
+                            'solution_preview': raw_data.get('io_data', {}).get('solution_preview'),
+                            'ground_truth_preview': raw_data.get('io_data', {}).get('ground_truth_preview'),
+                            'dimension_scores': raw_data.get('raw_dimension_scores', {}),
+                            'dimension_details': raw_data.get('raw_dimension_details', {}),
+                            'details': raw_data.get('raw_details', {}),
+                            # 新增LLM分析信息
+                            'keyword_analysis': raw_data.get('keyword_analysis', {}),
+                            'dimension_results': raw_data.get('dimension_results', {}),
+                            # 其他元数据
+                            'code_info': raw_data.get('code_info', {}),
+                            'sample_info': raw_data.get('sample_info', {})
+                        }
+                        
+                        reward_data.append(processed_data)
                     except json.JSONDecodeError as e:
                         logger.warning(f"解析第{line_num}行JSON失败: {e}")
                         continue
@@ -1928,6 +1949,107 @@ async def reward_viewer_detail(request: Request, filename: str):
             '较差 (0.0-0.4)': len([item for item in reward_data if item.get('score') is not None and 0.0 <= item.get('score', 0) < 0.4])
         }
         
+        # 五维度统计
+        dimension_stats = {
+            'validity': {'scores': [], 'enabled_count': 0},
+            'consistency': {'scores': [], 'enabled_count': 0},
+            'keyword_penalty': {'penalties': [], 'enabled_count': 0},
+            'branch_penalty': {'penalties': [], 'enabled_count': 0},
+            'multi_sql_penalty': {'penalties': [], 'enabled_count': 0}
+        }
+        
+        # 累积惩罚统计
+        cumulative_penalty_stats = {
+            'no_penalty_count': 0,
+            'single_penalty_count': 0,
+            'multiple_penalty_count': 0,
+            'critical_penalty_count': 0,
+            'multiplier_applied_count': 0,
+            'avg_multiplier': 0.0
+        }
+        
+        for item in reward_data:
+            dimension_details = item.get('dimension_details', {})
+            dimension_scores = item.get('dimension_scores', {})
+            
+            # 统计validity
+            if 'validity' in dimension_details:
+                validity_data = dimension_details['validity']
+                if validity_data.get('score') is not None:
+                    dimension_stats['validity']['scores'].append(validity_data['score'])
+                    dimension_stats['validity']['enabled_count'] += 1
+            
+            # 统计consistency
+            if 'consistency' in dimension_details:
+                consistency_data = dimension_details['consistency']
+                if consistency_data.get('score') is not None:
+                    dimension_stats['consistency']['scores'].append(consistency_data['score'])
+                    dimension_stats['consistency']['enabled_count'] += 1
+            
+            # 统计keyword_penalty
+            if 'keyword_penalty' in dimension_details:
+                keyword_data = dimension_details['keyword_penalty']
+                if keyword_data.get('enabled', False):
+                    penalty_amount = keyword_data.get('penalty_amount', 0)
+                    dimension_stats['keyword_penalty']['penalties'].append(penalty_amount)
+                    dimension_stats['keyword_penalty']['enabled_count'] += 1
+            
+            # 统计branch_penalty
+            if 'branch_penalty' in dimension_details:
+                branch_data = dimension_details['branch_penalty']
+                if branch_data.get('enabled', False):
+                    penalty_amount = branch_data.get('penalty_amount', 0)
+                    dimension_stats['branch_penalty']['penalties'].append(penalty_amount)
+                    dimension_stats['branch_penalty']['enabled_count'] += 1
+            
+            # 统计multi_sql_penalty
+            if 'multi_sql_penalty' in dimension_details:
+                multi_sql_data = dimension_details['multi_sql_penalty']
+                if multi_sql_data.get('enabled', True):  # 多语句惩罚始终启用
+                    penalty_amount = multi_sql_data.get('penalty_amount', 0)
+                    dimension_stats['multi_sql_penalty']['penalties'].append(penalty_amount)
+                    dimension_stats['multi_sql_penalty']['enabled_count'] += 1
+            
+            # 统计累积惩罚
+            raw_details = item.get('details', {})
+            active_penalties = raw_details.get('active_penalties', 0)
+            penalty_multiplier = raw_details.get('penalty_multiplier', 1.0)
+            
+            if active_penalties == 0:
+                cumulative_penalty_stats['no_penalty_count'] += 1
+            elif active_penalties == 1:
+                cumulative_penalty_stats['single_penalty_count'] += 1
+            elif active_penalties == 2:
+                cumulative_penalty_stats['multiple_penalty_count'] += 1
+            elif active_penalties >= 3:
+                cumulative_penalty_stats['critical_penalty_count'] += 1
+                
+            if penalty_multiplier > 1.0:
+                cumulative_penalty_stats['multiplier_applied_count'] += 1
+        
+        # 计算各维度平均值
+        for dim_name, dim_data in dimension_stats.items():
+            if dim_name in ['validity', 'consistency']:
+                scores = dim_data['scores']
+                dim_data['avg_score'] = sum(scores) / len(scores) if scores else 0
+                dim_data['max_score'] = max(scores) if scores else 0
+                dim_data['min_score'] = min(scores) if scores else 0
+            else:  # penalty dimensions
+                penalties = dim_data['penalties']
+                dim_data['avg_penalty'] = sum(penalties) / len(penalties) if penalties else 0
+                dim_data['max_penalty'] = max(penalties) if penalties else 0
+                dim_data['total_penalty'] = sum(penalties)
+        
+        # 计算累积惩罚平均倍数
+        multipliers = []
+        for item in reward_data:
+            raw_details = item.get('details', {})
+            penalty_multiplier = raw_details.get('penalty_multiplier', 1.0)
+            if penalty_multiplier > 1.0:
+                multipliers.append(penalty_multiplier)
+        
+        cumulative_penalty_stats['avg_multiplier'] = sum(multipliers) / len(multipliers) if multipliers else 1.0
+        
         # 获取模板资源
         resources = get_template_resources()
         
@@ -1937,7 +2059,10 @@ async def reward_viewer_detail(request: Request, filename: str):
             "total_records": total_records,
             "avg_score": round(avg_score, 3),
             "score_ranges": score_ranges,
-            "filename": filename
+            "dimension_stats": dimension_stats,
+            "cumulative_penalty_stats": cumulative_penalty_stats,
+            "filename": filename,
+            "resources": resources
         })
         
     except Exception as e:

@@ -54,11 +54,13 @@ def async_evaluate_sql_validity(solution_str: str, debug_mode: bool = False):
             print(f"[SQL有效性] 有效SQL: {valid_count}/{total_count}, 得分: {validity_score:.2f}")
         
         # 构建详细信息
+        invalid_sqls = [sql for sql in extracted_sqls if extractor.extract(sql) == "invalid_sql"]
         detail_dict = {
             "valid_count": valid_count,
             "total_count": total_count,
-            "invalid_sqls": [sql[:50] + "..." if len(sql) > 50 else sql 
-                           for sql in extracted_sqls if extractor.extract(sql) == "invalid_sql"][:3]  # 最多3条示例
+            "invalid_sqls": invalid_sqls[:3],  # 保存前3条完整的无效SQL
+            "all_extracted_sqls": extracted_sqls,  # 保存所有提取的SQL，便于调试
+            "invalid_sqls_count": len(invalid_sqls)  # 记录无效SQL总数
         }
         
         return round(validity_score, 2), detail_dict

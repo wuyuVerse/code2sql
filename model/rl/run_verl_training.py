@@ -236,7 +236,7 @@ def main():
     
     # 解析命令行参数
     parser = argparse.ArgumentParser(description="VERL强化学习训练启动脚本")
-    parser.add_argument("--config", type=str, default="qwen2_14b_rf.yaml", 
+    parser.add_argument("--config", type=str, default="qwen2_14b_rf_0802.yaml", 
                        help="配置文件名（位于config/rl/qwen/目录下）")
     parser.add_argument("--debug", action="store_true", help="开启调试模式，只打印命令不执行")
     

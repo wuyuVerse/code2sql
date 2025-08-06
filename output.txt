@@ -1,592 +1,0 @@
-nohup: ignoring input
-🚀 开始运行全新的关键词优先数据处理工作流
-INFO:data_processing.workflow.workflow_manager:工作流管理器初始化完成，输出目录: workflow_output/workflow_20250717_193425
-INFO:data_processing.workflow.workflow_manager:开始从原始数据集加载所有数据: datasets/test_data
-INFO:data_processing.data_reader:找到 1 个JSON文件
-INFO:data_processing.data_reader:成功读取文件 datasets/test_data/IVC__ivc-urs_results.json: 112 条记录
-INFO:data_processing.data_reader:总共读取了 112 条记录
-INFO:data_processing.workflow.workflow_manager:原始数据集加载完成，共 112 条记录
-INFO:data_processing.workflow.workflow_manager:原始数据集已保存，共 112 条记录
-INFO:data_processing.workflow.workflow_manager:开始从清洗后的数据中提取关键词: keyword_extraction_step1 (use_llm=True)
-INFO:data_processing.workflow.workflow_manager:开始并发调用LLM进行关键词分析...
-LLM关键词分析:   0%|          | 0/112 [00:00<?, ?it/s]LLM关键词分析:   1%|          | 1/112 [00:05<09:39,  5.22s/it]WARNING:utils.llm_client:❌ V3 格式验证失败 (尝试 1/10)
-WARNING:utils.llm_client:   响应内容: `No`...
-WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
-LLM关键词分析:   2%|▏         | 2/112 [00:05<04:22,  2.39s/it]LLM关键词分析:   4%|▍         | 5/112 [00:05<01:17,  1.38it/s]LLM关键词分析:   7%|▋         | 8/112 [00:07<00:58,  1.77it/s]WARNING:utils.llm_client:❌ V3 格式验证失败 (尝试 1/10)
-WARNING:utils.llm_client:   响应内容: `No`...
-WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
-WARNING:utils.llm_client:❌ V3 格式验证失败 (尝试 1/10)
-WARNING:utils.llm_client:   响应内容: `No`...
-WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
-LLM关键词分析:   8%|▊         | 9/112 [00:07<00:53,  1.94it/s]LLM关键词分析:  10%|▉         | 11/112 [00:07<00:36,  2.78it/s]LLM关键词分析:  11%|█         | 12/112 [00:09<01:01,  1.63it/s]LLM关键词分析:  12%|█▏        | 13/112 [00:09<00:50,  1.95it/s]LLM关键词分析:  13%|█▎        | 15/112 [00:10<00:44,  2.17it/s]LLM关键词分析:  14%|█▍        | 16/112 [00:13<01:37,  1.01s/it]LLM关键词分析:  15%|█▌        | 17/112 [00:14<01:38,  1.03s/it]LLM关键词分析:  17%|█▋        | 19/112 [00:14<01:12,  1.29it/s]LLM关键词分析:  18%|█▊        | 20/112 [00:15<01:11,  1.29it/s]LLM关键词分析:  19%|█▉        | 21/112 [00:16<01:00,  1.50it/s]WARNING:utils.llm_client:❌ V3 格式验证失败 (尝试 1/10)
-WARNING:utils.llm_client:   响应内容: `No`...
-WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
-LLM关键词分析:  20%|█▉        | 22/112 [00:16<01:05,  1.38it/s]LLM关键词分析:  21%|██▏       | 24/112 [00:17<00:39,  2.21it/s]LLM关键词分析:  22%|██▏       | 25/112 [00:18<00:55,  1.56it/s]LLM关键词分析:  23%|██▎       | 26/112 [00:18<00:49,  1.75it/s]LLM关键词分析:  24%|██▍       | 27/112 [00:18<00:39,  2.15it/s]WARNING:utils.llm_client:❌ V3 格式验证失败 (尝试 1/10)
-WARNING:utils.llm_client:   响应内容: `No`...
-WARNING:utils.llm_client:   即将重试，等待 1.0 秒...
-LLM关键词分析:  25%|██▌       | 28/112 [00:19<00:47,  1.78it/s]LLM关键词分析:  26%|██▌       | 29/112 [00:20<00:43,  1.93it/s]LLM关键词分析:  28%|██▊       | 31/112 [00:21<00:46,  1.75it/s]LLM关键词分析:  29%|██▊       | 32/112 [00:21<00:37,  2.11it/s]LLM关键词分析:  29%|██▉       | 33/112 [00:22<00:47,  1.65it/s]LLM关键词分析:  31%|███▏      | 35/112 [00:23<00:38,  2.00it/s]LLM关键词分析:  32%|███▏      | 36/112 [00:24<00:42,  1.78it/s]LLM关键词分析:  33%|███▎      | 37/112 [00:24<00:46,  1.62it/s]LLM关键词分析:  58%|█████▊    | 65/112 [00:28<00:07,  6.18it/s]LLM关键词分析:  59%|█████▉    | 66/112 [00:28<00:07,  6.26it/s]LLM关键词分析:  62%|██████▏   | 69/112 [00:28<00:06,  7.13it/s]LLM关键词分析:  63%|██████▎   | 71/112 [00:28<00:05,  7.76it/s]LLM关键词分析:  65%|██████▌   | 73/112 [00:29<00:07,  5.41it/s]LLM关键词分析:  67%|██████▋   | 75/112 [00:30<00:10,  3.52it/s]LLM关键词分析:  68%|██████▊   | 76/112 [00:31<00:11,  3.02it/s]LLM关键词分析:  69%|██████▉   | 77/112 [00:32<00:14,  2.47it/s]LLM关键词分析:  70%|██████▉   | 78/112 [00:32<00:13,  2.51it/s]LLM关键词分析:  71%|███████   | 79/112 [00:32<00:11,  2.76it/s]LLM关键词分析:  71%|███████▏  | 80/112 [00:33<00:13,  2.38it/s]LLM关键词分析:  72%|███████▏  | 81/112 [00:33<00:11,  2.79it/s]LLM关键词分析:  73%|███████▎  | 82/112 [00:33<00:08,  3.40it/s]LLM关键词分析:  74%|███████▍  | 83/112 [00:34<00:09,  3.11it/s]LLM关键词分析:  75%|███████▌  | 84/112 [00:34<00:08,  3.48it/s]LLM关键词分析:  78%|███████▊  | 87/112 [00:34<00:04,  5.67it/s]LLM关键词分析:  79%|███████▊  | 88/112 [00:34<00:05,  4.76it/s]LLM关键词分析:  79%|███████▉  | 89/112 [00:35<00:05,  3.84it/s]LLM关键词分析:  81%|████████▏ | 91/112 [00:35<00:04,  5.16it/s]LLM关键词分析:  83%|████████▎ | 93/112 [00:35<00:03,  5.11it/s]LLM关键词分析:  85%|████████▍ | 95/112 [00:36<00:03,  5.59it/s]LLM关键词分析:  86%|████████▌ | 96/112 [00:36<00:03,  5.19it/s]LLM关键词分析:  87%|████████▋ | 97/112 [00:36<00:02,  5.22it/s]LLM关键词分析:  88%|████████▊ | 98/112 [00:37<00:03,  3.97it/s]LLM关键词分析:  88%|████████▊ | 99/112 [00:37<00:03,  3.51it/s]LLM关键词分析: 100%|██████████| 112/112 [00:37<00:00,  2.98it/s]
-INFO:data_processing.workflow.workflow_manager:LLM关键词提取完成 - 从 112 条记录中提取了 87 条匹配记录
-INFO:data_processing.workflow.workflow_manager:匹配关键词统计: {'Hooks': 15, 'Callbacks': 26, 'Preload': 58, 'Transaction': 57, 'Scopes': 68, 'FindInBatches': 49, 'FirstOrInit': 45, 'Association': 46, 'Locking': 37, 'Pluck': 30, 'AutoMigrate': 17, 'ForeignKey': 17, 'References': 12, 'NamedQuery': 12, 'save': 10, 'NamedParameters': 12, 'createorupdate': 4}
-INFO:data_processing.workflow.workflow_manager:开始使用LLM处理 87 条关键词数据: process_keyword_data_step2
-Processing keyword data with LLM:   0%|          | 0/87 [00:00<?, ?it/s]Processing keyword data with LLM:   1%|          | 1/87 [00:11<16:14, 11.33s/it]Processing keyword data with LLM:   2%|▏         | 2/87 [00:11<06:44,  4.76s/it]Processing keyword data with LLM:   3%|▎         | 3/87 [00:11<03:43,  2.66s/it]Processing keyword data with LLM:   5%|▍         | 4/87 [00:11<02:18,  1.67s/it]Processing keyword data with LLM:   6%|▌         | 5/87 [00:13<02:27,  1.79s/it]Processing keyword data with LLM:   7%|▋         | 6/87 [00:14<01:51,  1.38s/it]Processing keyword data with LLM:   9%|▉         | 8/87 [00:14<00:59,  1.32it/s]Processing keyword data with LLM:  10%|█         | 9/87 [00:14<00:46,  1.66it/s]Processing keyword data with LLM:  14%|█▍        | 12/87 [00:14<00:23,  3.22it/s]Processing keyword data with LLM:  18%|█▊        | 16/87 [00:15<00:12,  5.74it/s]Processing keyword data with LLM:  24%|██▍       | 21/87 [00:15<00:07,  9.42it/s]Processing keyword data with LLM:  31%|███       | 27/87 [00:15<00:04, 14.47it/s]Processing keyword data with LLM:  36%|███▌      | 31/87 [00:15<00:03, 15.65it/s]Processing keyword data with LLM:  39%|███▉      | 34/87 [00:16<00:04, 10.93it/s]Processing keyword data with LLM:  41%|████▏     | 36/87 [00:16<00:07,  6.76it/s]Processing keyword data with LLM:  44%|████▎     | 38/87 [00:17<00:06,  7.28it/s]Processing keyword data with LLM:  48%|████▊     | 42/87 [00:17<00:04, 10.25it/s]Processing keyword data with LLM:  51%|█████     | 44/87 [00:17<00:04,  9.12it/s]Processing keyword data with LLM:  54%|█████▍    | 47/87 [00:17<00:03, 10.57it/s]Processing keyword data with LLM:  56%|█████▋    | 49/87 [00:17<00:03, 10.74it/s]Processing keyword data with LLM:  59%|█████▊    | 51/87 [00:18<00:03, 10.13it/s]Processing keyword data with LLM:  62%|██████▏   | 54/87 [00:18<00:02, 11.15it/s]Processing keyword data with LLM:  64%|██████▍   | 56/87 [00:18<00:03,  8.25it/s]Processing keyword data with LLM:  67%|██████▋   | 58/87 [00:19<00:04,  6.27it/s]Processing keyword data with LLM:  68%|██████▊   | 59/87 [00:19<00:05,  4.96it/s]Processing keyword data with LLM:  69%|██████▉   | 60/87 [00:20<00:06,  4.13it/s]Processing keyword data with LLM:  70%|███████   | 61/87 [00:20<00:05,  4.43it/s]Processing keyword data with LLM:  71%|███████▏  | 62/87 [00:20<00:04,  5.05it/s]Processing keyword data with LLM:  72%|███████▏  | 63/87 [00:20<00:04,  4.84it/s]Processing keyword data with LLM:  75%|███████▍  | 65/87 [00:21<00:04,  5.00it/s]Processing keyword data with LLM:  78%|███████▊  | 68/87 [00:21<00:03,  6.08it/s]Processing keyword data with LLM:  79%|███████▉  | 69/87 [00:21<00:02,  6.32it/s]Processing keyword data with LLM:  84%|████████▍ | 73/87 [00:21<00:01, 10.76it/s]Processing keyword data with LLM:  86%|████████▌ | 75/87 [00:22<00:01,  7.46it/s]Processing keyword data with LLM:  89%|████████▊ | 77/87 [00:22<00:01,  6.98it/s]Processing keyword data with LLM:  91%|█████████ | 79/87 [00:23<00:01,  4.86it/s]Processing keyword data with LLM:  92%|█████████▏| 80/87 [00:23<00:01,  5.18it/s]Processing keyword data with LLM:  93%|█████████▎| 81/87 [00:28<00:06,  1.12s/it]Processing keyword data with LLM:  94%|█████████▍| 82/87 [00:33<00:10,  2.03s/it]Processing keyword data with LLM:  95%|█████████▌| 83/87 [00:35<00:08,  2.00s/it]Processing keyword data with LLM:  97%|█████████▋| 84/87 [00:35<00:04,  1.58s/it]Processing keyword data with LLM:  98%|█████████▊| 85/87 [00:40<00:04,  2.46s/it]Processing keyword data with LLM:  99%|█████████▉| 86/87 [00:41<00:01,  1.85s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-Processing keyword data with LLM: 100%|██████████| 87/87 [01:15<00:00, 11.09s/it]Processing keyword data with LLM: 100%|██████████| 87/87 [01:15<00:00,  1.15it/s]
-INFO:data_processing.workflow.workflow_manager:关键词数据处理完成 - 输入 87 条, 输出 87 条, 成功处理 87 条, 失败 0 条.
-INFO:data_processing.workflow.workflow_manager:关键词数据处理前后变化：提取 87 → 处理后 87
-INFO:data_processing.workflow.workflow_manager:开始对全体数据集进行SQL清洗: sql_cleaning_after_extraction
-INFO:data_processing.cleaning.sql_cleaner:SQL清洗器初始化完成
-INFO:data_processing.cleaning.sql_cleaner:开始SQL清洗，数据集大小: 25 条记录
-INFO:data_processing.cleaning.sql_cleaner:清洗进度: 0/25 (0.0%)
-INFO:data_processing.cleaning.sql_cleaner:SQL清洗完成，开始保存结果...
-INFO:data_processing.cleaning.sql_cleaner:已跳过 ORM SQL 指纹分析（交由后续工作流步骤处理）
-INFO:data_processing.cleaning.sql_cleaner:清洗结果已保存到: workflow_output/workflow_20250717_193425/cleaning_steps/sql_cleaning_after_extraction_20250717_193618
-INFO:data_processing.cleaning.sql_cleaner:清洗统计 - 总记录: 25, 修改记录: 0, 移除无效SQL: 0
-INFO:data_processing.workflow.workflow_manager:未检测到ORM指纹分析结果，加载清洗后的数据...
-INFO:data_processing.workflow.workflow_manager:ORM指纹分析未执行或执行失败
-INFO:data_processing.workflow.workflow_manager:全体数据集SQL清洗完成 - 移除了 0 个无效SQL，修改了 0 条记录
-INFO:data_processing.workflow.workflow_manager:开始重新分析包含 <NO SQL GENERATE> 的记录: remove_no_sql_records_step
-INFO:data_processing.validation.validator:使用自定义输出目录: workflow_output/workflow_20250717_193425/remove_no_sql_records_step/reanalysis_details
-INFO:data_processing.workflow.workflow_manager:✅ 成功初始化 RerunValidator
-INFO:data_processing.workflow.workflow_manager:📁 详细分析结果将保存到: workflow_output/workflow_20250717_193425/remove_no_sql_records_step/reanalysis_details
-INFO:data_processing.workflow.workflow_manager:从 25 条记录中处理了 0 条 '<NO SQL GENERATE>' 记录:
-INFO:data_processing.workflow.workflow_manager:  - 重新分析并更新成功: 0 条
-INFO:data_processing.workflow.workflow_manager:  - 重新分析后仍无SQL（已保留）: 0 条
-INFO:data_processing.workflow.workflow_manager:  - 最终记录总数: 25 条 (无记录被删除)
-INFO:data_processing.workflow.workflow_manager:处理完成 - 重新分析并更新 0 条，保留 0 条无SQL记录，最终记录数 25
-INFO:data_processing.workflow.workflow_manager:开始冗余SQL验证(新版接口): redundant_sql_validation_with_fix
-INFO:data_processing.workflow.workflow_manager:未找到可用的候选项文件，将执行 ORM SQL 指纹分析以动态生成。
-INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:开始执行指纹差异分析...
-INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:开始分析 25 个ORM代码的指纹差异...
-分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (b *Bucket) QueryBucketWh]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (b *Bucket) QueryBucketRe]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (ae *ApprovalEvent) Query]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (c *User) findIncomeIndus]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (r *UpdatePlsRequest) IsE]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (q *Quota) FindQuotasByAp]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (d *Device) FindTotalDevi]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (d *Device) FindTotalChan]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (d *Device) FindChannelSt]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (d *Device) FindDevicesBy]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (d *Device) FindChannelCo]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (dm *DeviceChanManger) Fi]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (c *GBinvite) CountGBinvi]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (r *Record) FindTotalTask]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (r *Record) FindTotalTemp]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (r *Record) FindPlanChann]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (r *Record) FindTaskChann]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (o *Overview) FindUserApp]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (o *Overview) FindUserCou]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (o *Overview) FindUserBil]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (o *Overview) FindSingleU]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (o *Overview) FindUserOnl]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (o *Overview) FindUserWhi]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (o *Overview) FindUserAct]分析ORM指纹差异:   0%|          | 0/25 [00:00<?, ?it/s, ORM=func (c *Daily) CountDailyRepo]分析ORM指纹差异: 100%|██████████| 25/25 [00:00<00:00, 36779.24it/s, ORM=func (c *Daily) CountDailyRepo]
-INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:指纹差异分析报告已保存到: workflow_output/workflow_20250717_193425/redundant_sql_validation/fingerprint_analysis/orm_fingerprint_analysis.json
-INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:参考集合报告已保存到: workflow_output/workflow_20250717_193425/redundant_sql_validation/fingerprint_analysis/reference_sets.json
-INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:生成全量LLM验证候选项...
-INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:生成全量LLM验证候选项: 冗余=0, 新增指纹=0, 缺漏=0, 总计=0
-INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:全量LLM验证候选项已保存到: workflow_output/workflow_20250717_193425/redundant_sql_validation/fingerprint_analysis/llm_validation_candidates.json
-INFO:data_processing.cleaning.orm_sql_fingerprint_analyzer:分析摘要已保存到: workflow_output/workflow_20250717_193425/redundant_sql_validation/fingerprint_analysis/analysis_summary.json
-INFO:data_processing.workflow.workflow_manager:读取到 0 个LLM验证候选项
-INFO:data_processing.validation.redundant_sql_validator:冗余SQL验证器（重构版）初始化完成，输出目录: workflow_output/workflow_20250717_193425/redundant_sql_validation
-INFO:data_processing.validation.redundant_sql_validator:没有候选项需要验证
-INFO:data_processing.workflow.workflow_manager:修复应用完成:
-INFO:data_processing.workflow.workflow_manager:  - 删除冗余SQL: 0 个
-INFO:data_processing.workflow.workflow_manager:  - 删除错误新增SQL: 0 个
-INFO:data_processing.workflow.workflow_manager:  - 添加缺失SQL: 0 个
-INFO:data_processing.workflow.workflow_manager:  - 修改记录数: 0
-INFO:data_processing.workflow.workflow_manager:  - 删除记录数: 0
-INFO:data_processing.workflow.workflow_manager:  - 记录总数变化: 25 -> 25
-INFO:data_processing.workflow.workflow_manager:已根据fix_recommendations应用修复到当前数据集
-INFO:data_processing.workflow.workflow_manager:冗余SQL验证(新版接口)完成
-INFO:data_processing.workflow.workflow_manager:非关键词数据清洗前后变化：原始 25 → 清洗后 25
-INFO:data_processing.workflow.workflow_manager:开始执行控制流验证步骤...
-INFO:data_processing.workflow.workflow_manager:开始验证控制流记录: control_flow_validation_step
-INFO:data_processing.validation.control_flow_validator:控制流验证器初始化完成，输出目录: workflow_output/workflow_20250717_193425/control_flow_validation
-INFO:data_processing.validation.control_flow_validator:开始验证数据集的控制流，共 112 条记录
-INFO:data_processing.validation.control_flow_validator:检测到 101 条包含控制流语句的记录
-INFO:data_processing.validation.control_flow_validator:开始验证 101 条控制流记录
-验证控制流记录:   0%|          | 0/101 [00:00<?, ?it/s]验证控制流记录:   1%|          | 1/101 [00:30<50:59, 30.59s/it]验证控制流记录:   2%|▏         | 2/101 [00:30<20:56, 12.70s/it]验证控制流记录:   3%|▎         | 3/101 [00:31<12:02,  7.37s/it]验证控制流记录:   4%|▍         | 4/101 [00:32<07:38,  4.73s/it]验证控制流记录:   5%|▍         | 5/101 [00:32<04:57,  3.10s/it]验证控制流记录:   6%|▌         | 6/101 [00:33<03:31,  2.22s/it]验证控制流记录:   7%|▋         | 7/101 [00:34<02:59,  1.91s/it]验证控制流记录:   9%|▉         | 9/101 [00:34<01:35,  1.04s/it]验证控制流记录:  10%|▉         | 10/101 [00:34<01:15,  1.21it/s]验证控制流记录:  11%|█         | 11/101 [00:35<01:01,  1.46it/s]验证控制流记录:  13%|█▎        | 13/101 [00:35<00:39,  2.21it/s]验证控制流记录:  15%|█▍        | 15/101 [00:35<00:26,  3.27it/s]验证控制流记录:  17%|█▋        | 17/101 [00:35<00:18,  4.48it/s]验证控制流记录:  19%|█▉        | 19/101 [00:35<00:15,  5.46it/s]验证控制流记录:  20%|█▉        | 20/101 [00:36<00:15,  5.34it/s]验证控制流记录:  21%|██        | 21/101 [00:36<00:16,  4.86it/s]验证控制流记录:  24%|██▍       | 24/101 [00:36<00:10,  7.19it/s]验证控制流记录:  27%|██▋       | 27/101 [00:36<00:08,  8.43it/s]验证控制流记录:  32%|███▏      | 32/101 [00:37<00:05, 13.70it/s]验证控制流记录:  36%|███▌      | 36/101 [00:37<00:04, 14.33it/s]验证控制流记录:  38%|███▊      | 38/101 [00:37<00:05, 11.43it/s]验证控制流记录:  40%|███▉      | 40/101 [00:37<00:04, 12.25it/s]验证控制流记录:  42%|████▏     | 42/101 [00:38<00:07,  7.82it/s]验证控制流记录:  45%|████▍     | 45/101 [00:38<00:08,  6.86it/s]验证控制流记录:  47%|████▋     | 47/101 [00:38<00:06,  8.03it/s]验证控制流记录:  49%|████▊     | 49/101 [00:39<00:06,  7.65it/s]验证控制流记录:  50%|█████     | 51/101 [00:39<00:07,  7.05it/s]验证控制流记录:  52%|█████▏    | 53/101 [00:40<00:11,  4.22it/s]验证控制流记录:  55%|█████▌    | 56/101 [00:41<00:10,  4.20it/s]验证控制流记录:  57%|█████▋    | 58/101 [00:41<00:08,  4.88it/s]验证控制流记录:  58%|█████▊    | 59/101 [00:41<00:07,  5.26it/s]验证控制流记录:  59%|█████▉    | 60/101 [00:41<00:07,  5.39it/s]验证控制流记录:  60%|██████    | 61/101 [00:42<00:09,  4.19it/s]验证控制流记录:  62%|██████▏   | 63/101 [00:42<00:06,  5.92it/s]验证控制流记录:  63%|██████▎   | 64/101 [00:42<00:06,  5.97it/s]验证控制流记录:  65%|██████▌   | 66/101 [00:42<00:04,  8.07it/s]验证控制流记录:  67%|██████▋   | 68/101 [00:42<00:04,  7.26it/s]验证控制流记录:  69%|██████▉   | 70/101 [00:43<00:04,  7.44it/s]验证控制流记录:  71%|███████▏  | 72/101 [00:43<00:03,  8.15it/s]验证控制流记录:  73%|███████▎  | 74/101 [00:43<00:04,  6.50it/s]验证控制流记录:  75%|███████▌  | 76/101 [00:44<00:03,  7.25it/s]验证控制流记录:  78%|███████▊  | 79/101 [00:44<00:02,  9.25it/s]验证控制流记录:  80%|████████  | 81/101 [00:44<00:02,  7.94it/s]验证控制流记录:  81%|████████  | 82/101 [00:44<00:02,  7.91it/s]验证控制流记录:  82%|████████▏ | 83/101 [00:44<00:02,  6.90it/s]验证控制流记录:  83%|████████▎ | 84/101 [00:45<00:05,  3.39it/s]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-验证控制流记录:  84%|████████▍ | 85/101 [00:54<00:38,  2.38s/it]验证控制流记录:  85%|████████▌ | 86/101 [01:05<01:07,  4.51s/it]验证控制流记录:  86%|████████▌ | 87/101 [01:08<00:56,  4.06s/it]验证控制流记录:  87%|████████▋ | 88/101 [01:16<01:06,  5.15s/it]验证控制流记录:  88%|████████▊ | 89/101 [01:16<00:45,  3.76s/it]验证控制流记录:  89%|████████▉ | 90/101 [01:19<00:37,  3.38s/it]验证控制流记录:  90%|█████████ | 91/101 [01:19<00:24,  2.43s/it]验证控制流记录:  91%|█████████ | 92/101 [01:20<00:17,  1.90s/it]验证控制流记录:  92%|█████████▏| 93/101 [01:20<00:11,  1.50s/it]验证控制流记录:  94%|█████████▍| 95/101 [01:20<00:05,  1.15it/s]WARNING:utils.llm_client:❌ V3 格式验证失败 (尝试 2/10)
-WARNING:utils.llm_client:   响应内容: ```json
-{
-    "control_flow_analysis": {
-        "switch_statements": [],
-        "if_statements": [
-            {
-                "line_range": "577-577", 
-                "condition": "d.DeviceQuery...
-WARNING:utils.llm_client:   即将重试，等待 2.0 秒...
-验证控制流记录:  95%|█████████▌| 96/101 [01:23<00:06,  1.32s/it]验证控制流记录:  96%|█████████▌| 97/101 [01:24<00:04,  1.17s/it]验证控制流记录:  97%|█████████▋| 98/101 [01:24<00:02,  1.03it/s]验证控制流记录:  98%|█████████▊| 99/101 [01:26<00:02,  1.21s/it]验证控制流记录:  99%|█████████▉| 100/101 [01:29<00:01,  1.66s/it]验证控制流记录: 100%|██████████| 101/101 [01:42<00:00,  4.87s/it]验证控制流记录: 100%|██████████| 101/101 [01:42<00:00,  1.01s/it]
-INFO:data_processing.validation.control_flow_validator:开始重新生成 12 条记录的SQL...
-重新生成SQL:   0%|          | 0/12 [00:00<?, ?it/s]重新生成SQL:   8%|▊         | 1/12 [00:02<00:28,  2.60s/it]重新生成SQL:  17%|█▋        | 2/12 [00:04<00:19,  1.97s/it]重新生成SQL:  25%|██▌       | 3/12 [00:05<00:14,  1.57s/it]重新生成SQL:  50%|█████     | 6/12 [00:06<00:04,  1.36it/s]重新生成SQL:  58%|█████▊    | 7/12 [00:06<00:03,  1.60it/s]重新生成SQL:  67%|██████▋   | 8/12 [00:07<00:03,  1.30it/s]重新生成SQL:  75%|███████▌  | 9/12 [00:39<00:27,  9.01s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 1/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 2/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-重新生成SQL:  83%|████████▎ | 10/12 [02:00<00:57, 28.90s/it]WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 3/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 4/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 5/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 6/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 7/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 8/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-WARNING:utils.llm_client:❌ V3 异步API调用失败 (尝试 9/10)
-WARNING:utils.llm_client:   错误详情: 异步操作超时: 
-ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
-ERROR:utils.llm_client:   错误详情: 异步操作超时: 
-ERROR:utils.llm_client:❌ V3 异步API调用失败，已达到最大重试次数
-ERROR:utils.llm_client:   错误详情: 异步操作超时: 
-重新生成SQL:  92%|█████████▏| 11/12 [08:24<02:09, 129.52s/it]重新生成SQL: 100%|██████████| 12/12 [08:24<00:00, 42.07s/it] 
-INFO:data_processing.validation.control_flow_validator:发现 12 条有问题的控制流记录，已保存到: workflow_output/workflow_20250717_193425/control_flow_validation/problematic_control_flow_records.json
-INFO:data_processing.validation.control_flow_validator:控制流验证完成 - 正确: 89, 错误: 12, 异常: 0, 重新生成: 10
-INFO:data_processing.validation.control_flow_validator:数据集控制流验证完成:
-INFO:data_processing.validation.control_flow_validator:  - 总记录数: 112
-INFO:data_processing.validation.control_flow_validator:  - 控制流记录: 101 (90.18%)
-INFO:data_processing.validation.control_flow_validator:  - 验证正确: 89
-INFO:data_processing.validation.control_flow_validator:  - 验证错误: 12
-INFO:data_processing.validation.control_flow_validator:  - 验证异常: 0
-INFO:data_processing.workflow.workflow_manager:控制流验证完成 - 检测到 101 条控制流记录，验证正确: 89, 错误: 12
-INFO:data_processing.workflow.workflow_manager:最终数据已导出: workflow_output/workflow_20250717_193425/final_processed_dataset.json
-INFO:data_processing.workflow.workflow_manager:工作流摘要已保存: workflow_output/workflow_20250717_193425/workflow_summary.json
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 25968 (\N{CJK UNIFIED IDEOGRAPH-6570}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 25454 (\N{CJK UNIFIED IDEOGRAPH-636E}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 22788 (\N{CJK UNIFIED IDEOGRAPH-5904}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 29702 (\N{CJK UNIFIED IDEOGRAPH-7406}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 24037 (\N{CJK UNIFIED IDEOGRAPH-5DE5}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 20316 (\N{CJK UNIFIED IDEOGRAPH-4F5C}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 27969 (\N{CJK UNIFIED IDEOGRAPH-6D41}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 21521 (\N{CJK UNIFIED IDEOGRAPH-5411}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 22270 (\N{CJK UNIFIED IDEOGRAPH-56FE}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 21407 (\N{CJK UNIFIED IDEOGRAPH-539F}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 22987 (\N{CJK UNIFIED IDEOGRAPH-59CB}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 26465 (\N{CJK UNIFIED IDEOGRAPH-6761}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 20851 (\N{CJK UNIFIED IDEOGRAPH-5173}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 38190 (\N{CJK UNIFIED IDEOGRAPH-952E}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 35789 (\N{CJK UNIFIED IDEOGRAPH-8BCD}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 25552 (\N{CJK UNIFIED IDEOGRAPH-63D0}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 21462 (\N{CJK UNIFIED IDEOGRAPH-53D6}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 25104 (\N{CJK UNIFIED IDEOGRAPH-6210}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 21151 (\N{CJK UNIFIED IDEOGRAPH-529F}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 38750 (\N{CJK UNIFIED IDEOGRAPH-975E}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 28165 (\N{CJK UNIFIED IDEOGRAPH-6E05}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 27927 (\N{CJK UNIFIED IDEOGRAPH-6D17}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 31227 (\N{CJK UNIFIED IDEOGRAPH-79FB}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 38500 (\N{CJK UNIFIED IDEOGRAPH-9664}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 26080 (\N{CJK UNIFIED IDEOGRAPH-65E0}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 20887 (\N{CJK UNIFIED IDEOGRAPH-5197}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 20313 (\N{CJK UNIFIED IDEOGRAPH-4F59}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 39564 (\N{CJK UNIFIED IDEOGRAPH-9A8C}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 35777 (\N{CJK UNIFIED IDEOGRAPH-8BC1}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 20462 (\N{CJK UNIFIED IDEOGRAPH-4FEE}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 25913 (\N{CJK UNIFIED IDEOGRAPH-6539}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 21512 (\N{CJK UNIFIED IDEOGRAPH-5408}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 24182 (\N{CJK UNIFIED IDEOGRAPH-5E76}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 25511 (\N{CJK UNIFIED IDEOGRAPH-63A7}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 21046 (\N{CJK UNIFIED IDEOGRAPH-5236}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 26816 (\N{CJK UNIFIED IDEOGRAPH-68C0}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 27979 (\N{CJK UNIFIED IDEOGRAPH-6D4B}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 27491 (\N{CJK UNIFIED IDEOGRAPH-6B63}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 30830 (\N{CJK UNIFIED IDEOGRAPH-786E}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 26368 (\N{CJK UNIFIED IDEOGRAPH-6700}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 32456 (\N{CJK UNIFIED IDEOGRAPH-7EC8}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 36755 (\N{CJK UNIFIED IDEOGRAPH-8F93}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 20986 (\N{CJK UNIFIED IDEOGRAPH-51FA}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 20445 (\N{CJK UNIFIED IDEOGRAPH-4FDD}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 30041 (\N{CJK UNIFIED IDEOGRAPH-7559}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 29575 (\N{CJK UNIFIED IDEOGRAPH-7387}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 20837 (\N{CJK UNIFIED IDEOGRAPH-5165}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 20998 (\N{CJK UNIFIED IDEOGRAPH-5206}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 31163 (\N{CJK UNIFIED IDEOGRAPH-79BB}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 36807 (\N{CJK UNIFIED IDEOGRAPH-8FC7}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 28388 (\N{CJK UNIFIED IDEOGRAPH-6EE4}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 128202 (\N{BAR CHART}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 32479 (\N{CJK UNIFIED IDEOGRAPH-7EDF}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 35745 (\N{CJK UNIFIED IDEOGRAPH-8BA1}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 20449 (\N{CJK UNIFIED IDEOGRAPH-4FE1}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 24687 (\N{CJK UNIFIED IDEOGRAPH-606F}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 35760 (\N{CJK UNIFIED IDEOGRAPH-8BB0}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 24405 (\N{CJK UNIFIED IDEOGRAPH-5F55}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 127919 (\N{DIRECT HIT}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 25351 (\N{CJK UNIFIED IDEOGRAPH-6307}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 26631 (\N{CJK UNIFIED IDEOGRAPH-6807}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 23436 (\N{CJK UNIFIED IDEOGRAPH-5B8C}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 25972 (\N{CJK UNIFIED IDEOGRAPH-6574}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:190: UserWarning: Glyph 24615 (\N{CJK UNIFIED IDEOGRAPH-6027}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-INFO:utils.workflow_visualizer:数据流向图已保存: workflow_output/workflow_20250717_193425/visualizations/data_flow_diagram_20250717_193425.png
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 21407 (\N{CJK UNIFIED IDEOGRAPH-539F}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 22987 (\N{CJK UNIFIED IDEOGRAPH-59CB}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 25968 (\N{CJK UNIFIED IDEOGRAPH-6570}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 25454 (\N{CJK UNIFIED IDEOGRAPH-636E}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 20851 (\N{CJK UNIFIED IDEOGRAPH-5173}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 38190 (\N{CJK UNIFIED IDEOGRAPH-952E}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 35789 (\N{CJK UNIFIED IDEOGRAPH-8BCD}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 25552 (\N{CJK UNIFIED IDEOGRAPH-63D0}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 21462 (\N{CJK UNIFIED IDEOGRAPH-53D6}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 22788 (\N{CJK UNIFIED IDEOGRAPH-5904}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 29702 (\N{CJK UNIFIED IDEOGRAPH-7406}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 28165 (\N{CJK UNIFIED IDEOGRAPH-6E05}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 27927 (\N{CJK UNIFIED IDEOGRAPH-6D17}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 26080 (\N{CJK UNIFIED IDEOGRAPH-65E0}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 31227 (\N{CJK UNIFIED IDEOGRAPH-79FB}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 38500 (\N{CJK UNIFIED IDEOGRAPH-9664}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 20887 (\N{CJK UNIFIED IDEOGRAPH-5197}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 20313 (\N{CJK UNIFIED IDEOGRAPH-4F59}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 39564 (\N{CJK UNIFIED IDEOGRAPH-9A8C}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 35777 (\N{CJK UNIFIED IDEOGRAPH-8BC1}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 26368 (\N{CJK UNIFIED IDEOGRAPH-6700}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 32456 (\N{CJK UNIFIED IDEOGRAPH-7EC8}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 36755 (\N{CJK UNIFIED IDEOGRAPH-8F93}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 20986 (\N{CJK UNIFIED IDEOGRAPH-51FA}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 35760 (\N{CJK UNIFIED IDEOGRAPH-8BB0}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 24405 (\N{CJK UNIFIED IDEOGRAPH-5F55}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 37327 (\N{CJK UNIFIED IDEOGRAPH-91CF}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 21464 (\N{CJK UNIFIED IDEOGRAPH-53D8}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 21270 (\N{CJK UNIFIED IDEOGRAPH-5316}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 36235 (\N{CJK UNIFIED IDEOGRAPH-8D8B}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 21183 (\N{CJK UNIFIED IDEOGRAPH-52BF}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 25104 (\N{CJK UNIFIED IDEOGRAPH-6210}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 21151 (\N{CJK UNIFIED IDEOGRAPH-529F}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 29575 (\N{CJK UNIFIED IDEOGRAPH-7387}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 22833 (\N{CJK UNIFIED IDEOGRAPH-5931}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 36133 (\N{CJK UNIFIED IDEOGRAPH-8D25}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 20445 (\N{CJK UNIFIED IDEOGRAPH-4FDD}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 30041 (\N{CJK UNIFIED IDEOGRAPH-7559}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 30334 (\N{CJK UNIFIED IDEOGRAPH-767E}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 20998 (\N{CJK UNIFIED IDEOGRAPH-5206}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 27604 (\N{CJK UNIFIED IDEOGRAPH-6BD4}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 25511 (\N{CJK UNIFIED IDEOGRAPH-63A7}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 21046 (\N{CJK UNIFIED IDEOGRAPH-5236}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 27969 (\N{CJK UNIFIED IDEOGRAPH-6D41}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 21508 (\N{CJK UNIFIED IDEOGRAPH-5404}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 27169 (\N{CJK UNIFIED IDEOGRAPH-6A21}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 22359 (\N{CJK UNIFIED IDEOGRAPH-5757}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 24037 (\N{CJK UNIFIED IDEOGRAPH-5DE5}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 20316 (\N{CJK UNIFIED IDEOGRAPH-4F5C}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 24615 (\N{CJK UNIFIED IDEOGRAPH-6027}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 33021 (\N{CJK UNIFIED IDEOGRAPH-80FD}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Glyph 26512 (\N{CJK UNIFIED IDEOGRAPH-6790}) missing from font(s) DejaVu Sans.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:330: UserWarning: Tight layout not applied. tight_layout cannot make Axes height small enough to accommodate all Axes decorations.
-  plt.tight_layout()
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 35760 (\N{CJK UNIFIED IDEOGRAPH-8BB0}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 24405 (\N{CJK UNIFIED IDEOGRAPH-5F55}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 25968 (\N{CJK UNIFIED IDEOGRAPH-6570}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 37327 (\N{CJK UNIFIED IDEOGRAPH-91CF}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 25454 (\N{CJK UNIFIED IDEOGRAPH-636E}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 21464 (\N{CJK UNIFIED IDEOGRAPH-53D8}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 21270 (\N{CJK UNIFIED IDEOGRAPH-5316}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 36235 (\N{CJK UNIFIED IDEOGRAPH-8D8B}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 21183 (\N{CJK UNIFIED IDEOGRAPH-52BF}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 21407 (\N{CJK UNIFIED IDEOGRAPH-539F}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 22987 (\N{CJK UNIFIED IDEOGRAPH-59CB}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 20851 (\N{CJK UNIFIED IDEOGRAPH-5173}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 38190 (\N{CJK UNIFIED IDEOGRAPH-952E}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 35789 (\N{CJK UNIFIED IDEOGRAPH-8BCD}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 25552 (\N{CJK UNIFIED IDEOGRAPH-63D0}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 21462 (\N{CJK UNIFIED IDEOGRAPH-53D6}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 22788 (\N{CJK UNIFIED IDEOGRAPH-5904}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 29702 (\N{CJK UNIFIED IDEOGRAPH-7406}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 28165 (\N{CJK UNIFIED IDEOGRAPH-6E05}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 27927 (\N{CJK UNIFIED IDEOGRAPH-6D17}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 26080 (\N{CJK UNIFIED IDEOGRAPH-65E0}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 31227 (\N{CJK UNIFIED IDEOGRAPH-79FB}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 38500 (\N{CJK UNIFIED IDEOGRAPH-9664}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 20887 (\N{CJK UNIFIED IDEOGRAPH-5197}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 20313 (\N{CJK UNIFIED IDEOGRAPH-4F59}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 39564 (\N{CJK UNIFIED IDEOGRAPH-9A8C}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 35777 (\N{CJK UNIFIED IDEOGRAPH-8BC1}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 26368 (\N{CJK UNIFIED IDEOGRAPH-6700}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 32456 (\N{CJK UNIFIED IDEOGRAPH-7EC8}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 36755 (\N{CJK UNIFIED IDEOGRAPH-8F93}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 20986 (\N{CJK UNIFIED IDEOGRAPH-51FA}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 25104 (\N{CJK UNIFIED IDEOGRAPH-6210}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 21151 (\N{CJK UNIFIED IDEOGRAPH-529F}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 29575 (\N{CJK UNIFIED IDEOGRAPH-7387}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 22833 (\N{CJK UNIFIED IDEOGRAPH-5931}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 36133 (\N{CJK UNIFIED IDEOGRAPH-8D25}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 30334 (\N{CJK UNIFIED IDEOGRAPH-767E}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 20998 (\N{CJK UNIFIED IDEOGRAPH-5206}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 27604 (\N{CJK UNIFIED IDEOGRAPH-6BD4}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 20445 (\N{CJK UNIFIED IDEOGRAPH-4FDD}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 30041 (\N{CJK UNIFIED IDEOGRAPH-7559}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 21508 (\N{CJK UNIFIED IDEOGRAPH-5404}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 27169 (\N{CJK UNIFIED IDEOGRAPH-6A21}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 22359 (\N{CJK UNIFIED IDEOGRAPH-5757}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 25511 (\N{CJK UNIFIED IDEOGRAPH-63A7}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 21046 (\N{CJK UNIFIED IDEOGRAPH-5236}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 27969 (\N{CJK UNIFIED IDEOGRAPH-6D41}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 24037 (\N{CJK UNIFIED IDEOGRAPH-5DE5}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 20316 (\N{CJK UNIFIED IDEOGRAPH-4F5C}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 24615 (\N{CJK UNIFIED IDEOGRAPH-6027}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 33021 (\N{CJK UNIFIED IDEOGRAPH-80FD}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-/home/wuyu/code2sql/utils/workflow_visualizer.py:336: UserWarning: Glyph 26512 (\N{CJK UNIFIED IDEOGRAPH-6790}) missing from font(s) DejaVu Sans.
-  plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
-INFO:utils.workflow_visualizer:性能分析图已保存: workflow_output/workflow_20250717_193425/visualizations/performance_analysis_20250717_193425.png
-INFO:data_processing.workflow.workflow_manager:📊 工作流可视化图表已生成:
-INFO:data_processing.workflow.workflow_manager:   📈 flow_diagram: workflow_output/workflow_20250717_193425/visualizations/data_flow_diagram_20250717_193425.png
-INFO:data_processing.workflow.workflow_manager:   📈 performance_chart: workflow_output/workflow_20250717_193425/visualizations/performance_analysis_20250717_193425.png
-INFO:data_processing.workflow.workflow_manager:   📈 stats_file: workflow_output/workflow_20250717_193425/visualizations/workflow_stats_20250717_193425.json
-
-================================================================================
-📋 工作流执行摘要
-================================================================================
-🆔 工作流ID: workflow_20250717_193425
-📁 输出目录: workflow_output/workflow_20250717_193425
-⏱️  总步骤数: 9
-📊 最终数据量: 112 条记录
-🎯 提取数据量: 87 条记录
-
-📝 执行步骤:
-
-  1. load_raw_dataset (data_loading)
-     ⏰ 时间: 2025-07-17T19:34:25.541608
-     📊 加载记录: 112
-     💾 数据大小: 0.53 MB
-
-  2. keyword_extraction_step1 (llm_keyword_extraction)
-     ⏰ 时间: 2025-07-17T19:35:03.102884
-
-  3. process_keyword_data_step2 (keyword_data_processing)
-     ⏰ 时间: 2025-07-17T19:36:18.790787
-
-  4. data_separation_and_processing (data_separation)
-     ⏰ 时间: 2025-07-17T19:36:18.791038
-
-  5. sql_cleaning_after_extraction (sql_cleaning)
-     ⏰ 时间: 2025-07-17T19:36:18.796216
-     📊 输入记录: 25
-     📊 输出记录: 25
-     🗑️  无效SQL删除: 0
-     ✏️  记录修改: 0
-     📈 修改率: 0.00%
-
-  6. remove_no_sql_records_step (remove_no_sql_records)
-     ⏰ 时间: 2025-07-17T19:36:18.799849
-
-  7. redundant_sql_validation_with_fix (redundant_sql_validation)
-     ⏰ 时间: 2025-07-17T19:36:18.835944
-
-  8. control_flow_validation_step (control_flow_validation)
-     ⏰ 时间: 2025-07-17T19:46:25.802305
-     📊 总记录数: 112
-     🔍 控制流记录: 101
-     📈 控制流比例: 90.18%
-     ✅ 验证正确: 89
-     ❌ 验证错误: 12
-     🔥 验证异常: 0
-     🔄 重新生成: 10
-
-  9. data_processing_summary (data_processing)
-     ⏰ 时间: 2025-07-17T19:46:25.802609
-
-💾 输出文件:
-   📁 keyword_extraction_step1: workflow_output/workflow_20250717_193425/keyword_extraction_llm
-   📄 process_keyword_data_step2: workflow_output/workflow_20250717_193425/keyword_data_processing/process_keyword_data_step2.json
-   📁 sql_cleaning_after_extraction: workflow_output/workflow_20250717_193425/cleaning_steps/sql_cleaning_after_extraction_20250717_193618
-   📄 remove_no_sql_records_step: workflow_output/workflow_20250717_193425/remove_no_sql_records/remove_no_sql_records_step.json
-
-✅ 工作流执行成功!
-📁 输出目录: workflow_output/workflow_20250717_193425
-📄 最终数据: workflow_output/workflow_20250717_193425/final_processed_dataset.json
-📋 摘要文件: workflow_output/workflow_20250717_193425/workflow_summary.json
