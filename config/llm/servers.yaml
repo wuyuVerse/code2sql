@@ -1,7 +1,7 @@
 # LLM服务器配置文件
 servers:
   v3:
-    host: "182.254.152.117"
+    host: "10.0.0.31"
     port: 8081
     model_name: "v3"
     timeout: 120  # 增加到120秒，适应复杂任务

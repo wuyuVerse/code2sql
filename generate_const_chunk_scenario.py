@@ -22,8 +22,10 @@ async def main():
         result = await run_synthetic_data_generation_workflow(
             base_output_dir="synthetic_output",
             # scenarios=["对象const+chunk"],  # 指定要生成的场景
-            scenarios=["table_mapping_incomplete"],
-            count_per_scenario=10,  # 每个场景生成100个数据包
+            # scenarios=["table_name_from_caller"],
+            # scenarios=["with_first", "with_last", "with_take", "with_find_no_limit", "with_count"],
+            scenarios=["with_count"],
+            count_per_scenario=300,  # 每个场景生成100个数据包
             llm_server="v3",  # 使用v3服务器
             temperature=0.7,
             max_tokens=4096,

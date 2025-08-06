@@ -48,10 +48,11 @@ logging.basicConfig(
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 # 导入评估维度模块
-from .eval_dimensions.sql_validity import async_evaluate_sql_validity
-from .eval_dimensions.llm_consistency import async_evaluate_llm_consistency
-from .eval_dimensions.keyword_alignment import async_evaluate_keyword_alignment
-from .eval_dimensions.control_flow_penalty import async_evaluate_control_flow_penalty
+from model.rl.eval_dimensions.sql_validity import async_evaluate_sql_validity
+from model.rl.eval_dimensions.llm_consistency import async_evaluate_llm_consistency
+from model.rl.eval_dimensions.keyword_alignment import async_evaluate_keyword_alignment
+from model.rl.eval_dimensions.control_flow_penalty import async_evaluate_control_flow_penalty
+from model.rl.eval_dimensions.branch_exclusivity import async_evaluate_branch_exclusivity
 
 
 def load_rl_config() -> Dict[str, Any]:
@@ -402,7 +403,7 @@ def format_and_llm_reward(data_source: dict, solution_str: str, ground_truth: st
     async def async_runner():
         """异步执行器，管理AsyncClient生命周期"""
         # 配置API连接
-        api_base = os.getenv("V3_API_URL", "http://182.254.152.117:8081/v1")  # 使用环境变量
+        api_base = os.getenv("V3_API_URL", "http://212.64.90.3:8081/v1")  # 使用环境变量
         api_key = "EMPTY"
         
         print(f"[API] 连接地址: {api_base}")  # 始终打印API地址

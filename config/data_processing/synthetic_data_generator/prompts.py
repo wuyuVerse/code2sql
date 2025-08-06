@@ -1143,3 +1143,707 @@ ORM代码块:
 
 只返回JSON格式，不要包含markdown标记或其他文本。
 """ 
+
+# raw_sql_in_code场景专用ORM提示词
+PROMPT_ORM_RAW_SQL_IN_CODE = """
+你需要根据"raw_sql_in_code"场景生成一个真实的Go语言ORM方法。
+
+场景标签: "raw_sql_in_code"
+场景描述: ORM方法中直接包含原始SQL语句，使用db.Raw()方法执行自定义SQL查询。通常用于复杂的多表关联查询、聚合查询或需要特殊优化的场景。
+
+参考以下真实样例（但生成完全不同的内容）:
+{example}
+
+请严格按照以下JSON格式输出，确保字段完整：
+```json
+{{
+    "scenario": "raw_sql_in_code",
+    "code_key": "方法名（使用{method_examples}等不同命名）",
+    "code_value": "完整的Go代码（使用{entity_examples}等实体，{table_examples}等表名）",
+    "sql_pattern_cnt": 1,
+    "callers": [],
+    "callees": [],
+    "code_meta_data": [
+        {{
+            "code_key": "结构体名",
+            "code_value": "类型定义代码"
+        }},
+        {{
+            "code_key": "SQLQuery",
+            "code_value": "原始SQL查询语句"
+        }}
+    ]
+}}
+```
+
+代码要求：
+1. 使用多样化的变量名，避免重复使用User、Order等常见名词
+2. 实体名使用：{entity_examples}
+3. 表名使用：{table_examples}  
+4. 方法名使用：{method_examples}
+5. 字段名使用：{field_examples}
+6. 代码必须是完整可运行的Go代码，使用GORM框架
+7. 代码长度控制在35行以内
+8. **重要**：ORM方法必须包含硬编码的原始SQL语句
+9. **重要**：使用db.Raw(sql)方法执行SQL查询
+10. **重要**：使用Scan()方法将结果映射到结构体
+11. **重要**：SQL语句应该包含复杂的查询逻辑（如多表JOIN、聚合函数、子查询等）
+12. **重要**：SQL语句应该使用具体的表名和字段名，不能使用占位符
+13. **重要**：在code_meta_data中必须包含SQLQuery字段，包含完整的SQL语句
+14. **重要**：SQL语句应该包含WHERE条件、JOIN操作、聚合函数等复杂逻辑
+15. **重要**：生成的SQL应该是有意义的业务查询，如统计报表、数据分析等
+16. 包含适当的错误处理和日志记录
+17. 生成的内容必须与参考样例完全不同，使用不同的业务域、变量名、逻辑结构
+
+**SQL多样性要求：**
+18. **SQL特性选择**：从以下特性中选择2-6个组合使用，不要全部使用：
+    - JOIN类型：INNER JOIN、LEFT JOIN、RIGHT JOIN
+    - 聚合函数：COUNT、SUM、AVG、MAX、MIN
+    - 子查询：EXISTS、IN、NOT IN、子查询
+    - 窗口函数：ROW_NUMBER、RANK、LAG、LEAD
+    - 条件逻辑：CASE WHEN、IF、COALESCE
+    - 字符串函数：CONCAT、SUBSTRING、REPLACE、UPPER、LOWER
+    - 日期函数：DATE_FORMAT、DATEDIFF、DATE_ADD、YEAR、MONTH
+    - 数学函数：ROUND、CEIL、FLOOR、ABS
+    - 模糊查询：LIKE、NOT LIKE、REGEXP（使用%、_等通配符）
+    - 排序分组：ORDER BY、GROUP BY、HAVING
+    - 分页查询：LIMIT、OFFSET
+    - 去重查询：DISTINCT、GROUP BY去重
+19. **业务场景多样性**：生成不同类型的业务查询（用户分析、销售统计、库存报表、性能监控、财务分析等）
+20. **查询复杂度多样性**：包含简单查询、中等复杂度查询、高复杂度查询
+
+**SQL生成指导：**
+- 每个SQL选择2-4个特性组合，避免过度复杂
+- 优先选择多表关联查询
+- 包含有意义的WHERE条件和业务逻辑
+- 使用业务相关的字段名和表名
+- 确保SQL语法正确且可执行
+- 根据业务场景选择合适的SQL特性组合
+
+只返回JSON格式，不要包含markdown标记或其他文本。
+"""
+
+# with_first场景第一步：判断是否可以添加First()
+PROMPT_WITH_FIRST_JUDGE = """
+你需要分析以下ORM代码，判断是否可以添加First()方法。
+
+原始ORM代码:
+{orm_code}
+
+请严格按照以下JSON格式输出：
+```json
+{{
+    "can_add_first": true/false,
+    "reason": "判断原因（如果可以添加First，说明原因；如果不可以添加，详细说明原因）"
+}}
+```
+
+判断规则：
+**可以添加First()的情况：**
+- Find()查询返回结构体切片：`var users []User` → `var user User`
+- Raw()查询返回结构体切片：`var results []Result` → `var result Result`
+- Select()查询返回基本类型切片：`var ids []int64` → `var id int64`
+- 查询链中包含Find()、Raw()、Select()等查询方法
+
+**已经是First()的情况（重要：这种情况返回true）：**
+- 如果代码中已经包含First()方法，**必须返回true**，生成时保持原样不变
+- 如果已经是`db.First(&user)`形式，**返回true**
+- 如果已经是`db.Where(...).First(&user)`形式，**返回true**
+
+**不可以添加First()的情况：**
+- Create()、Update()、Delete()等写操作
+- Count()、Sum()、Avg()、Max()、Min()等聚合操作
+- 批量操作：Create([]User{{...}})
+- 事务操作：Transaction()
+- 关联操作：Association()
+- 预加载操作：Preload()
+- 已经包含Take()、Last()等其他限制方法
+
+**特别注意：**
+- **最高优先级**：如果代码中已经是First()操作，**无条件返回true**
+- 如果代码中有多个查询操作，只要有一个可以添加First()就返回true
+- 如果代码中有写操作或聚合操作，返回false
+- 如果代码中没有查询操作，返回false
+- 如果代码中已经包含其他限制方法（Take、Last），返回false
+
+只返回JSON格式，不要包含markdown标记或其他文本。
+"""
+
+# with_first场景第二步：生成添加First()后的完整数据
+PROMPT_WITH_FIRST_GENERATE = """
+你需要为以下ORM代码添加First()方法，生成完整的with_first场景数据。
+
+原始ORM代码:
+{orm_code}
+
+原始场景: {original_scenario}
+
+原始caller代码:
+{caller_code}
+
+原始code_meta_data（作为参考）:
+{original_code_meta_data}
+
+请严格按照以下JSON格式输出，确保字段完整：
+```json
+{{
+    "scenario": "with_first",
+    "code_key": "方法名（保持原方法名不变）",
+    "code_value": "添加First()方法后的完整Go代码",
+    "sql_pattern_cnt": 1,
+    "callers": [
+        {{
+            "code_key": "调用者方法名（保持原方法名不变）",
+            "code_value": "修改后的调用者代码"
+        }}
+    ],
+    "callees": [],
+    "code_meta_data": [
+        {{
+            "code_key": "结构体名或类型名",
+            "code_value": "更新后的Go类型定义（适配First()方法的返回类型变化）"
+        }}
+    ]
+}}
+```
+
+修改要求：
+1. **方法名保持**：保持原有的方法名不变
+2. **返回类型修改**：
+   - `[]User` → `User`
+   - `[]int64` → `int64`
+   - `[]string` → `string`
+   - `[]map[string]interface{{}}` → `map[string]interface{{}}`
+3. **查询链修改**：在查询链的最后添加`.First()`
+4. **code_meta_data要求**：
+   - 基于原始code_meta_data进行适当调整
+   - 根据返回类型的变化（[]User → User），更新相关的结构体定义
+   - 如果返回类型从切片变为单个对象，确保结构体定义正确
+   - 保持其他必要的类型定义和常量定义
+   - 如果原始code_meta_data为空，生成适当的类型定义
+5. **错误处理**：保持原有的错误处理逻辑
+5. **代码结构**：保持原有的代码结构和注释
+6. **变量名**：保持原有的变量名，只修改返回类型
+7. **导入语句**：保持原有的import语句
+
+**Caller修改要求：**
+8. **Caller方法名保持**：保持原有的caller方法名不变
+9. **Caller调用保持**：保持对ORM方法的调用不变
+10. **Caller变量处理**：如果caller中处理返回结果，需要相应调整（从切片改为单个对象）
+11. **Caller错误处理**：保持原有的错误处理逻辑
+12. **Caller代码结构**：保持原有的代码结构和注释
+
+**重要**：确保生成的代码语法正确，可以编译运行。
+
+只返回JSON格式，不要包含markdown标记或其他文本。
+""" 
+
+# with_take场景第一步：判断是否可以添加Take()
+PROMPT_WITH_TAKE_JUDGE = """
+你需要分析以下ORM代码，判断是否可以添加Take(1)方法。
+
+原始ORM代码:
+{orm_code}
+
+请严格按照以下JSON格式输出：
+```json
+{{
+    "can_add_take": true/false,
+    "reason": "判断原因（如果可以添加Take，说明原因；如果不可以添加，详细说明原因）"
+}}
+```
+
+判断规则：
+**可以添加Take()的情况：**
+- Find()查询：`db.Find(&users)` → `db.Take(1).Find(&users)`
+- Raw()查询：`db.Raw(sql).Scan(&results)` → `db.Raw(sql).Take(1).Scan(&results)`
+- Select()查询：`db.Select("id").Find(&ids)` → `db.Select("id").Take(1).Find(&ids)`
+- 查询链中包含Find()、Raw()、Select()等查询方法
+- 返回结构体切片或基本类型切片的查询
+
+**已经是Take()的情况（重要：这种情况返回true）：**
+- 如果代码中已经包含Take()方法，**必须返回true**，生成时保持原样不变
+- 如果已经是`db.Take(1).Find(&users)`形式，**返回true**
+- 如果已经是`db.Where(...).Take(1).Find(&users)`形式，**返回true**
+
+**不可以添加Take()的情况：**
+- Create()、Update()、Delete()等写操作
+- Count()、Sum()、Avg()、Max()、Min()等聚合操作
+- 批量操作：Create([]User{{...}})
+- 事务操作：Transaction()
+- 关联操作：Association()
+- 预加载操作：Preload()
+- 已经包含First()、Last()等其他限制方法的查询
+
+**特别注意：**
+- **最高优先级**：如果代码中已经是Take()操作，**无条件返回true**
+- 如果代码中有多个查询操作，只要有一个可以添加Take()就返回true
+- 如果代码中有写操作或聚合操作，返回false
+- 如果代码中没有查询操作，返回false
+- 如果代码中已经包含其他限制方法（First、Last），返回false
+- Take(1)会自动生成LIMIT 1的SQL
+
+只返回JSON格式，不要包含markdown标记或其他文本。
+"""
+
+# with_take场景第二步：生成添加Take()后的完整数据
+PROMPT_WITH_TAKE_GENERATE = """
+你需要为以下ORM代码添加Take(1)方法，生成完整的with_take场景数据。
+
+原始ORM代码:
+{orm_code}
+
+原始场景: {original_scenario}
+
+原始caller代码:
+{caller_code}
+
+原始code_meta_data（作为参考）:
+{original_code_meta_data}
+
+请严格按照以下JSON格式输出，确保字段完整：
+```json
+{{
+    "scenario": "with_take",
+    "code_key": "方法名（保持原方法名不变）",
+    "code_value": "添加Take(1)方法后的完整Go代码",
+    "sql_pattern_cnt": 1,
+    "callers": [
+        {{
+            "code_key": "调用者方法名（保持原方法名不变）",
+            "code_value": "修改后的调用者代码"
+        }}
+    ],
+    "callees": [],
+    "code_meta_data": [
+        {{
+            "code_key": "结构体名或类型名",
+            "code_value": "相关的Go类型定义（Take()方法通常保持切片类型）"
+        }}
+    ]
+}}
+```
+
+修改要求：
+1. **方法名保持**：保持原有的方法名不变
+2. **查询链修改**：在查询链中添加`.Take(1)`，通常放在Where()之后，Find()之前
+3. **code_meta_data要求**：
+   - 基于原始code_meta_data进行适当调整
+   - Take()方法通常保持原有的返回类型（切片类型）
+   - 保持相关的结构体定义和常量定义
+   - 确保类型定义与Take()方法的使用场景匹配
+   - 如果原始code_meta_data为空，生成适当的类型定义
+4. **返回类型保持**：保持原有的返回类型（切片类型）
+5. **错误处理**：保持原有的错误处理逻辑
+6. **代码结构**：保持原有的代码结构和注释
+7. **变量名**：保持原有的变量名
+8. **导入语句**：保持原有的import语句
+
+**Take()方法的使用规则：**
+- 在查询链中添加`.Take(1)`
+- 通常放在条件设置之后，执行方法之前
+- 例如：`db.Where("status = ?", 1).Take(1).Find(&users)`
+- 会自动生成`LIMIT 1`的SQL
+
+**Caller修改要求：**
+9. **Caller方法名保持**：保持原有的caller方法名不变
+10. **Caller调用保持**：保持对ORM方法的调用不变
+11. **Caller变量处理**：caller中处理返回结果时，需要考虑结果被限制为1条记录
+12. **Caller错误处理**：保持原有的错误处理逻辑
+13. **Caller代码结构**：保持原有的代码结构和注释
+
+**重要**：确保生成的代码语法正确，可以编译运行。
+
+只返回JSON格式，不要包含markdown标记或其他文本。
+""" 
+
+# with_last场景第一步：判断是否可以添加Last()
+PROMPT_WITH_LAST_JUDGE = """
+你需要分析以下ORM代码，判断是否可以添加Last()方法。
+
+原始ORM代码:
+{orm_code}
+
+请严格按照以下JSON格式输出：
+```json
+{{
+    "can_add_last": true/false,
+    "reason": "判断原因（如果可以添加Last，说明原因；如果不可以添加，详细说明原因）"
+}}
+```
+
+判断规则：
+**可以添加Last()的情况：**
+- Find()查询：`db.Find(&users)` → `db.Last(&user)`
+- Raw()查询：`db.Raw(sql).Scan(&results)` → `db.Raw(sql).Last(&result)`
+- Select()查询：`db.Select("id").Find(&ids)` → `db.Select("id").Last(&id)`
+- 查询链中包含Find()、Raw()、Select()等查询方法
+- 返回结构体切片或基本类型切片的查询
+
+**已经是Last()的情况（重要：这种情况返回true）：**
+- 如果代码中已经包含Last()方法，**必须返回true**，生成时保持原样不变
+- 如果已经是`db.Last(&user)`形式，**返回true**
+- 如果已经是`db.Where(...).Last(&user)`形式，**返回true**
+
+**不可以添加Last()的情况：**
+- Create()、Update()、Delete()等写操作
+- Count()、Sum()、Avg()、Max()、Min()等聚合操作
+- 批量操作：Create([]User{{...}})
+- 事务操作：Transaction()
+- 关联操作：Association()
+- 预加载操作：Preload()
+- 已经包含First()、Take()等其他限制方法的查询
+
+**特别注意：**
+- **最高优先级**：如果代码中已经是Last()操作，**无条件返回true**
+- 如果代码中有多个查询操作，只要有一个可以添加Last()就返回true
+- 如果代码中有写操作或聚合操作，返回false
+- 如果代码中没有查询操作，返回false
+- 如果代码中已经包含其他限制方法（First、Take），返回false
+- Last()会自动生成LIMIT 1和ORDER BY主键DESC的SQL
+
+只返回JSON格式，不要包含markdown标记或其他文本。
+"""
+
+# with_last场景第二步：生成添加Last()后的完整数据
+PROMPT_WITH_LAST_GENERATE = """
+你需要为以下ORM代码添加Last()方法，生成完整的with_last场景数据。
+
+原始ORM代码:
+{orm_code}
+
+原始场景: {original_scenario}
+
+原始caller代码:
+{caller_code}
+
+原始code_meta_data（作为参考）:
+{original_code_meta_data}
+
+请严格按照以下JSON格式输出，确保字段完整：
+```json
+{{
+    "scenario": "with_last",
+    "code_key": "方法名（保持原方法名不变）",
+    "code_value": "添加Last()方法后的完整Go代码",
+    "sql_pattern_cnt": 1,
+    "callers": [
+        {{
+            "code_key": "调用者方法名（保持原方法名不变）",
+            "code_value": "修改后的调用者代码"
+        }}
+    ],
+    "callees": [],
+    "code_meta_data": [
+        {{
+            "code_key": "结构体名或类型名",
+            "code_value": "更新后的Go类型定义（适配Last()方法的返回类型变化）"
+        }}
+    ]
+}}
+```
+
+修改要求：
+1. **方法名保持**：保持原有的方法名不变
+2. **返回类型修改**：
+   - `[]User` → `User`
+   - `[]int64` → `int64`
+   - `[]string` → `string`
+   - `[]map[string]interface{{}}` → `map[string]interface{{}}`
+3. **查询链修改**：将查询链中的Find()替换为Last()，或添加.Last()
+4. **code_meta_data要求**：
+   - 基于原始code_meta_data进行适当调整
+   - 根据返回类型的变化（[]User → User），更新相关的结构体定义
+   - 如果返回类型从切片变为单个对象，确保结构体定义正确
+   - 保持其他必要的类型定义和常量定义
+   - 如果原始code_meta_data为空，生成适当的类型定义
+5. **错误处理**：保持原有的错误处理逻辑
+6. **代码结构**：保持原有的代码结构和注释
+7. **变量名**：保持原有的变量名，只修改返回类型
+8. **导入语句**：保持原有的import语句
+
+**Last()方法的使用规则：**
+- 将 `db.Find(&users)` 替换为 `db.Last(&user)`
+- 将 `db.Raw(sql).Scan(&results)` 替换为 `db.Raw(sql).Last(&result)`
+- 会自动生成 `LIMIT 1` 和 `ORDER BY 主键 DESC` 的SQL
+- 返回单个对象而不是切片
+
+**Caller修改要求：**
+9. **Caller方法名保持**：保持原有的caller方法名不变
+10. **Caller调用保持**：保持对ORM方法的调用不变
+11. **Caller变量处理**：如果caller中处理返回结果，需要相应调整（从切片改为单个对象）
+12. **Caller错误处理**：保持原有的错误处理逻辑
+13. **Caller代码结构**：保持原有的代码结构和注释
+
+**重要**：确保生成的代码语法正确，可以编译运行。
+
+只返回JSON格式，不要包含markdown标记或其他文本。
+""" 
+
+# with_find_no_limit场景第一步：判断是否可以使用Find()方法且不添加LIMIT
+PROMPT_WITH_FIND_NO_LIMIT_JUDGE = """
+你需要分析以下ORM代码，判断是否可以转换为使用Find()方法且不添加LIMIT限制。
+
+原始ORM代码:
+{orm_code}
+
+请严格按照以下JSON格式输出：
+```json
+{{
+    "can_use_find_no_limit": true/false,
+    "reason": "判断原因（如果可以使用Find，说明原因；如果不可以使用，详细说明原因）"
+}}
+```
+
+判断规则：
+**可以使用Find()且不添加LIMIT的情况：**
+- First()查询：`db.First(&user)` → `db.Find(&users)`
+- Take()查询：`db.Take(&user)` → `db.Find(&users)`
+- Last()查询：`db.Last(&user)` → `db.Find(&users)`
+- Select()查询：`db.Select("id").First(&id)` → `db.Select("id").Find(&ids)`
+- 查询链中包含First()、Take()、Last()等限制方法的查询
+- 返回单个结构体的查询可以转换为返回结构体切片
+
+**已经是Find()的情况（重要：这种情况返回true）：**
+- 如果代码中已经包含Find()方法且没有LIMIT限制，**必须返回true**，生成时保持原样不变
+- 如果已经是`db.Find(&users)`形式，**返回true**
+- 如果已经是`db.Where(...).Find(&users)`形式，**返回true**
+
+**不可以使用Find()且不添加LIMIT的情况：**
+- Create()、Update()、Delete()等写操作
+- Count()、Sum()、Avg()、Max()、Min()等聚合操作
+- 批量操作：Create([]User{{...}})
+- 事务操作：Transaction()
+- 关联操作：Association()
+- 预加载操作：Preload()（除非是查询操作）
+- Raw()查询（通常需要保持原样）
+
+**特别注意：**
+- **最高优先级**：如果代码中已经是Find()且无LIMIT，**无条件返回true**
+- 如果代码中有多个查询操作，只要有一个可以转换为Find()就返回true
+- 如果代码中有写操作或聚合操作，返回false
+- 如果代码中没有查询操作，返回false
+- Find()方法会返回多条记录的完整结果集
+
+只返回JSON格式，不要包含markdown标记或其他文本。
+"""
+
+# with_find_no_limit场景第二步：生成使用Find()且不添加LIMIT的完整数据
+PROMPT_WITH_FIND_NO_LIMIT_GENERATE = """
+你需要为以下ORM代码转换为使用Find()方法且不添加LIMIT限制，生成完整的with_find_no_limit场景数据。
+
+原始ORM代码:
+{orm_code}
+
+原始场景: {original_scenario}
+
+原始caller代码:
+{caller_code}
+
+原始code_meta_data（作为参考）:
+{original_code_meta_data}
+
+请严格按照以下JSON格式输出，确保字段完整：
+```json
+{{
+    "scenario": "with_find_no_limit",
+    "code_key": "方法名（保持原方法名不变）",
+    "code_value": "转换为Find()且不添加LIMIT后的完整Go代码",
+    "sql_pattern_cnt": 1,
+    "callers": [
+        {{
+            "code_key": "调用者方法名（保持原方法名不变）",
+            "code_value": "修改后的调用者代码"
+        }}
+    ],
+    "callees": [],
+    "code_meta_data": [
+        {{
+            "code_key": "结构体名或类型名",
+            "code_value": "更新后的Go类型定义（适配Find()方法的返回类型变化）"
+        }}
+    ]
+}}
+```
+
+修改要求：
+1. **方法名保持**：保持原有的方法名不变
+2. **特殊处理-已有Find()方法**：
+   - 如果原始代码已经包含Find()方法且无LIMIT限制，保持原样不变
+   - 如果已经是`db.Find(&users)`形式，直接保持
+   - 如果已经是`db.Where(...).Find(&users)`形式，直接保持
+3. **返回类型修改**：
+   - `User` → `[]User`
+   - `int64` → `[]int64`
+   - `string` → `[]string`
+   - `map[string]interface{{}}` → `[]map[string]interface{{}}`
+   - 如果原本就是切片类型，保持不变
+4. **查询链修改**：
+   - 将First()、Take()、Last()替换为Find()
+   - 如果已经是Find()，保持不变
+   - 移除任何可能的LIMIT限制
+5. **code_meta_data要求**：
+   - 基于原始code_meta_data进行适当调整
+   - 根据返回类型的变化（User → []User），更新相关的结构体定义
+   - 如果返回类型从单个对象变为切片，确保结构体定义正确
+   - 保持其他必要的类型定义和常量定义
+   - 如果原始code_meta_data为空，生成适当的类型定义
+6. **错误处理**：保持原有的错误处理逻辑
+7. **代码结构**：保持原有的代码结构和注释
+8. **变量名**：调整变量名以反映返回多条记录（如user→users）
+9. **导入语句**：保持原有的import语句
+
+**Find()方法的使用规则：**
+- 将 `db.First(&user)` 替换为 `db.Find(&users)`
+- 将 `db.Take(&user)` 替换为 `db.Find(&users)`
+- 将 `db.Last(&user)` 替换为 `db.Find(&users)`
+- 将 `db.Select("id").First(&id)` 替换为 `db.Select("id").Find(&ids)`
+- Find()会返回多条记录，不添加LIMIT限制
+- 返回结构体切片而不是单个对象
+
+**Caller修改要求：**
+10. **Caller方法名保持**：保持原有的caller方法名不变
+11. **Caller调用保持**：保持对ORM方法的调用不变
+12. **Caller变量处理**：如果caller中处理返回结果，需要相应调整（从单个对象改为切片处理）
+13. **Caller错误处理**：保持原有的错误处理逻辑
+14. **Caller代码结构**：保持原有的代码结构和注释
+
+**重要**：确保生成的代码语法正确，可以编译运行。
+
+只返回JSON格式，不要包含markdown标记或其他文本。
+""" 
+
+# with_count场景第一步：判断是否可以转换为Count()方法
+PROMPT_WITH_COUNT_JUDGE = """
+你需要分析以下ORM代码，判断是否可以转换为使用Count()方法生成SELECT COUNT(*)查询。
+
+原始ORM代码:
+{orm_code}
+
+请严格按照以下JSON格式输出：
+```json
+{{
+    "can_use_count": true/false,
+    "reason": "判断原因（如果可以使用Count，说明原因；如果不可以使用，详细说明原因）"
+}}
+```
+
+判断规则：
+**可以使用Count()的情况：**
+- Find()查询：`db.Find(&users)` → `db.Model(&User{{}}).Count(&count)`
+- First()查询：`db.First(&user)` → `db.Model(&User{{}}).Count(&count)`
+- Take()查询：`db.Take(&user)` → `db.Model(&User{{}}).Count(&count)`
+- Last()查询：`db.Last(&user)` → `db.Model(&User{{}}).Count(&count)`
+- Select()查询：`db.Select("id").Find(&ids)` → `db.Model(&User{{}}).Count(&count)`
+- 查询链中包含Where()条件的查询
+- 任何用于查询记录的操作都可以转换为统计操作
+
+**已经是Count()的情况（重要：这种情况返回true）：**
+- 如果代码中已经包含Count()方法，**必须返回true**，生成时保持原样不变
+- 如果已经是`db.Model(&User{{}}).Count(&count)`形式，**返回true**
+- 如果已经是`db.Table("users").Count(&count)`形式，**返回true**
+
+**不可以使用Count()的情况：**
+- Create()、Update()、Delete()等写操作
+- 其他聚合操作：Sum()、Avg()、Max()、Min()（Count除外）
+- 批量操作：Create([]User{{...}})
+- 事务操作：Transaction()
+- 关联操作：Association()
+- Raw()查询（通常需要保持原样，除非是简单查询）
+
+**特别注意：**
+- **最高优先级**：如果代码中已经是Count()操作，**无条件返回true**
+- 如果代码中有多个查询操作，只要有一个可以转换为Count()就返回true
+- 如果代码中有写操作，返回false
+- Count()方法会生成SELECT COUNT(*)查询，返回记录数量
+
+只返回JSON格式，不要包含markdown标记或其他文本。
+"""
+
+# with_count场景第二步：生成使用Count()的完整数据
+PROMPT_WITH_COUNT_GENERATE = """
+你需要为以下ORM代码转换为使用Count()方法生成SELECT COUNT(*)查询，生成完整的with_count场景数据。
+
+原始ORM代码:
+{orm_code}
+
+原始场景: {original_scenario}
+
+原始caller代码:
+{caller_code}
+
+原始code_meta_data（作为参考）:
+{original_code_meta_data}
+
+请严格按照以下JSON格式输出，确保字段完整：
+```json
+{{
+    "scenario": "with_count",
+    "code_key": "方法名（保持原方法名不变）",
+    "code_value": "转换为Count()的完整Go代码",
+    "sql_pattern_cnt": 1,
+    "callers": [
+        {{
+            "code_key": "调用者方法名（保持原方法名不变）",
+            "code_value": "修改后的调用者代码"
+        }}
+    ],
+    "callees": [],
+    "code_meta_data": [
+        {{
+            "code_key": "结构体名或类型名",
+            "code_value": "更新后的Go类型定义（适配Count()方法的返回类型变化）"
+        }}
+    ]
+}}
+```
+
+修改要求：
+1. **方法名保持**：保持原有的方法名不变
+2. **特殊处理-已有Count()方法**：
+   - 如果原始代码已经包含Count()方法，保持原样不变
+   - 如果已经是`db.Model(&User{{}}).Count(&count)`形式，直接保持
+   - 如果已经是`db.Table("users").Count(&count)`形式，直接保持
+3. **返回类型修改**：
+   - `User` → `int64`
+   - `[]User` → `int64`
+   - `string` → `int64`
+   - `[]string` → `int64`
+   - `map[string]interface{{}}` → `int64`
+   - 所有返回类型都改为int64（记录数量）
+4. **查询链修改**：
+   - 将Find()、First()、Take()、Last()等替换为Count()
+   - 使用Model()指定查询的表/模型
+   - 保留所有Where()条件
+   - 移除Select()中的字段选择（Count不需要）
+5. **code_meta_data要求**：
+   - 基于原始code_meta_data进行适当调整
+   - 根据返回类型的变化（转为int64），更新相关的类型定义
+   - Count()方法返回记录数量，可能不需要复杂的结构体定义
+   - 保持必要的常量定义（如表名）
+   - 如果原始code_meta_data为空，生成适当的类型定义
+6. **错误处理**：保持原有的错误处理逻辑
+7. **代码结构**：保持原有的代码结构和注释
+8. **变量名**：调整变量名以反映计数结果（如users→count, user→count）
+9. **导入语句**：保持原有的import语句
+
+**Count()方法的使用规则：**
+- 将 `db.Find(&users)` 替换为 `db.Model(&User{{}}).Count(&count)`
+- 将 `db.First(&user)` 替换为 `db.Model(&User{{}}).Count(&count)`
+- 将 `db.Where("status = ?", 1).Find(&users)` 替换为 `db.Model(&User{{}}).Where("status = ?", 1).Count(&count)`
+- Count()返回满足条件的记录数量
+- 返回值类型为int64
+
+**Caller修改要求：**
+10. **Caller方法名保持**：保持原有的caller方法名不变
+11. **Caller调用保持**：保持对ORM方法的调用不变
+12. **Caller变量处理**：如果caller中处理返回结果，需要相应调整（处理计数结果而不是记录对象）
+13. **Caller错误处理**：保持原有的错误处理逻辑
+14. **Caller代码结构**：保持原有的代码结构和注释
+
+**重要**：确保生成的代码语法正确，可以编译运行。
+
+只返回JSON格式，不要包含markdown标记或其他文本。
+""" 
+
+ 

@@ -47,7 +47,7 @@ async def test_all_scenarios():
     
     # 测试配置
     test_config = {
-        "base_output_dir": "comprehensive_test_output",
+        "base_output_dir": "workflow_output",
         "scenarios": all_scenarios,
         "count_per_scenario": 10,  # 每个场景生成10个案例
         "llm_server": "v3",        # 使用v3服务器

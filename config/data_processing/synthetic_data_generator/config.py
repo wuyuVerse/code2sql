@@ -34,6 +34,12 @@ SCENARIOS = {
     "where_condition_mixed": "ORM方法在where条件中同时包含固定值和动态条件。固定值直接在代码中指定（如status=0, deleted_at IS NULL），同时包含if-else等动态条件判断。固定条件用于基础过滤，动态条件根据传入参数进行灵活查询",
     "mutual_exclusive_conditions": "ORM方法接收包含互斥条件的filter参数，使用if-else逻辑处理不同的条件组合。每个条件对应不同的SQL查询策略，条件之间互斥（不会同时出现）。Caller层面使用if-else if-else if-else结构检查不同的参数，ORM层面使用if-else逻辑处理不同的条件组合，确保每次只有一个条件生效。",
     "table_name_from_caller": "ORM方法的表名信息从caller中传递过来，而不是在ORM方法内部硬编码。Caller负责确定具体的固定表名，ORM方法接收表名作为参数或通过其他方式获取。Caller中的表名应该是确定的、固定的表名，而不是动态生成的占位符。这种模式适用于需要动态切换表名的场景，如多租户系统、分表查询等。必须确保callers不为空，因为表名信息依赖于caller的上下文。",
+    "raw_sql_in_code": "ORM方法中直接包含原始SQL语句，使用db.Raw()方法执行自定义SQL查询。通常用于复杂的多表关联查询、聚合查询或需要特殊优化的场景。SQL语句在代码中硬编码，通过Scan()方法将结果映射到结构体。这种模式适用于GORM无法直接表达的复杂查询逻辑。",
+    "with_first": "基于其他场景生成的ORM方法，在数据库查询语句中添加First()方法，自动生成LIMIT 1的SQL。如果无法添加First()方法（如聚合查询、批量操作等），则返回no并丢弃该数据。",
+    "with_take": "基于其他场景生成的ORM方法，在数据库查询语句中添加Take()方法，自动生成LIMIT 1的SQL。如果无法添加Take()方法（如聚合查询、批量操作等），则返回no并丢弃该数据。",
+    "with_last": "基于其他场景生成的ORM方法，在数据库查询语句中添加Last()方法，自动生成LIMIT 1和ORDER BY主键DESC的SQL。如果无法添加Last()方法（如聚合查询、批量操作等），则返回no并丢弃该数据。",
+    "with_find_no_limit": "基于其他场景生成的ORM方法，确保使用Find()方法而不添加任何LIMIT限制，返回多条记录的完整结果集。如果原始查询已经包含First()、Take()、Last()等限制方法，则将其替换为Find()方法。适用于需要获取全部匹配记录的查询场景。",
+    "with_count": "基于其他场景生成的ORM方法，使用Count()方法生成SELECT COUNT(*)查询，用于统计满足条件的记录数量。将原始的查询操作（Find、First、Take、Last等）转换为Count()操作，返回int64类型的计数结果。适用于数据统计和分析场景。",
 }
 
 # 变量名词库 - 确保生成不同的变量名
@@ -625,6 +631,93 @@ VARIABLE_NAMES = {
         "SpaceDebris", "CollisionRisk", "OrbitalDecay", "ReentryTime", "AtmosphericDrag", "SolarRadiation", "CosmicRays", "Microgravity", "VacuumLevel", "TemperatureExtreme"
     ]
 }
+
+
+# === Auto-generated extensions to enlarge VARIABLE_NAMES ===
+from itertools import product
+
+
+def _extend_list(target: list, items):
+    """Append unique items to target list, preserving order."""
+    for itm in items:
+        if itm not in target:
+            target.append(itm)
+
+
+def _extend_variable_names():
+    """Dynamically generate additional variable names to greatly enlarge
+    the available vocabulary for synthetic data generation. The goal is to
+    create hundreds of extra plausible names without having to maintain a
+    huge static list manually. This keeps the original hand-crafted examples
+    while massively increasing variety.
+    """
+    # 1) Table names: adjective + noun pattern (e.g., archived_events)
+    adjectives = [
+        "archived", "historic", "temp", "backup", "staging", "raw", "processed",
+        "aggregated", "daily", "monthly", "hourly", "delta", "snapshot",
+        "transient", "secure", "encrypted", "public", "private", "regional",
+        "central", "edge", "mobile", "web", "api", "system", "external",
+    ]
+    base_table_nouns = [
+        "logs", "events", "metrics", "sessions", "configs", "changes",
+        "jobs", "tasks", "errors", "alerts", "notifications", "messages",
+        "audits", "analytics", "profiles", "settings", "requests",
+        "responses", "archives", "attachments", "uploads", "downloads",
+        "activities", "permissions",
+    ]
+    _extend_list(
+        VARIABLE_NAMES["tables"],
+        [f"{adj}_{noun}" for adj, noun in product(adjectives, base_table_nouns)],
+    )
+
+    # 2) Entity names: CamelCase version of adjective + noun (e.g., ArchivedEvent)
+    base_entity_nouns = [
+        "Log", "Event", "Metric", "Session", "Config", "Change", "Job",
+        "Task", "Error", "Alert", "Notification", "Message", "Audit",
+        "Profile", "Setting", "Request", "Response", "Archive",
+        "Attachment", "Upload", "Download", "Activity", "Permission",
+    ]
+    _extend_list(
+        VARIABLE_NAMES["entities"],
+        [f"{adj.capitalize()}{noun}" for adj, noun in product(adjectives, base_entity_nouns)],
+    )
+
+    # 3) Method names: Verb + Noun (e.g., SyncData, PurgeCache)
+    verbs = [
+        "Sync", "Refresh", "Reload", "Purge", "Clean", "Flush", "Archive",
+        "Validate", "Sanitize", "Process", "Analyze", "Monitor", "Collect",
+        "Generate", "Compute", "Update", "Load", "Export", "Import", "Encrypt",
+        "Decrypt", "Sign", "Verify", "Compress", "Decompress",
+    ]
+    method_objects = [
+        "Data", "Cache", "Logs", "Metrics", "Schema", "Backup", "Index",
+        "Report", "Snapshot", "Job", "Queue", "Message", "Alert", "Record",
+        "Entry", "Session", "Token", "Request", "Response", "Archive",
+    ]
+    _extend_list(
+        VARIABLE_NAMES["methods"],
+        [f"{verb}{obj}" for verb, obj in product(verbs, method_objects)],
+    )
+
+    # 4) Field names: noun + suffix / prefix patterns
+    field_bases = [
+        "Retry", "Error", "Warning", "Info", "Debug", "Max", "Min",
+        "Average", "Median", "StdDev", "Threshold", "Limit", "Quota",
+        "Offset", "Cursor", "Flag", "Enabled", "Disabled",
+    ]
+    suffixes = [
+        "Count", "Total", "Rate", "Time", "Duration", "Size", "Value",
+        "Level", "Code", "Id", "Hash", "Checksum", "Timestamp",
+    ]
+    _extend_list(
+        VARIABLE_NAMES["fields"],
+        [f"{base}{suffix}" for base, suffix in product(field_bases, suffixes)],
+    )
+
+
+# Invoke the extension once at import time
+_extend_variable_names()
+# === End of auto-generated extensions ===
 
 
 class SyntheticDataConfig:
